@@ -12,7 +12,7 @@ import re
 from cclib.parser import Gaussian
 from cclib.parser.utils import convertor 
 from mdtraj import Trajectory
-from simtk.unit import Quantity, kilojoules_per_mole
+from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 
 
 def read_scan_logfile(logfiles, topology):
@@ -96,6 +96,7 @@ class TorsionScanSet(Trajectory):
 
     Attributes
     ----------
+    openmm_coords: simtk.unit.Quantity((n_frames, n_atoms, 3), unit=nanometers)
     qm_energy: simtk.unit.Quantity((n_frames, 1), unit=kilojoule/mole)
     mm_energy: simtk.unit.Quantity((n_frames, 1), unit=kilojoule/mole)
     delta_energy: simtk.unit.Quantity((n_frames, 1), unit=kilojoule/mole)
@@ -108,6 +109,7 @@ class TorsionScanSet(Trajectory):
         """Create new TorsionScanSet object"""
         assert isinstance(topology, object)
         super(TorsionScanSet, self).__init__(positions, topology)
+        self.openmm_coords = Quantity(value=positions, unit=nanometers)
         self.qm_energy = qm_energy
         self.mm_energy = Quantity()
         self.delta_energy = Quantity()
@@ -133,7 +135,7 @@ class TorsionScanSet(Trajectory):
         return torsion_set
 
     def _string_summary_basic(self):
-        """Basic summary of traj in string form."""
+        """Basic summary of TorsionScanSet in string form."""
         energy_str = 'and MM Energy' if self._have_mm_energy else 'without MM Energy'
         value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues,  %s" % (
                      self.n_frames, self.n_atoms, self.n_residues, energy_str)
@@ -144,15 +146,11 @@ class TorsionScanSet(Trajectory):
         for i, step in enumerate(self.steps):
             try:
                 if step[1] != self.steps[i+1][1]:
-                    print step
                     key.append(i)
             except IndexError:
                 key.append(i)
         new_TorsionScanSet = self.slice(key)
         return new_TorsionScanSet
-
-
-
 
     @property
     def _have_mm_energy(self):
