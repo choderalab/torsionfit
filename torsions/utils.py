@@ -13,7 +13,7 @@ import numpy as np
 from copy import deepcopy
 
 def to_optimize(param, stream, penalty = 10):
-    ''' returns a list of dihdrals to optimize and updates CharmmParameterSet
+    ''' returns a list of dihedrals to optimize and updates CharmmParameterSet
     with stream files
     
     Parameters
@@ -31,23 +31,7 @@ def to_optimize(param, stream, penalty = 10):
     return [k for k in param.dihedral_types.iterkeys() 
     if k not in keys and param.dihedral_types[k].penalty >= penalty]
         
-def compute_energy(param, structure, pdb):
-    '''
-    Computes energy for a given structure with a given parameter set
-    
-    Parameters
-    ----------
-    param: chemistry.charmm.CharmmParameterSet
-    structure: chemistry.structure
-    pdb: openmm PDBFile
-    '''
-    integrator = mm.VerletIntegrator(0.004)
-    system = structure.createSystem(param)
-    sim = app.Simulation(pdb.topology, system, integrator)
-    sim.context.setPositions(pdb.positions)
-    state = sim.context.getState(getEnergy = True)
-    del sim.context, sim
-    return state.getPotentialEnergy()
+
 
 def compute_energy_from_positions(param, structure, positions, platform=None):
     '''
