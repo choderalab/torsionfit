@@ -85,9 +85,16 @@ def read_scan_logfile(logfiles, topology):
 class TorsionScanSet(Trajectory):
     """container object for torsion scan
     
-    A TorsionScanSet should be constructed by loading Gaussian log files from the 
-    scan with a topology - usually a PDB file
-    
+    A TorsionScanSet should be constructed by loading Gaussian 09 torsion scan log files from disk
+    with an mdtraj.Topology object
+
+    Examples
+    --------
+    >>> torsion_set = read_scan_logfile('FRG.scanN.dir.log')
+    >>> print torsion_set
+    <torsions.TorsionScanSet with 346 frames, 22 atoms, 1 residues, 4 unique torsions without MM Energy at 0x10b099b10>
+
+
     Attributes
     ----------
     qm_energy: simtk.unit.Quantity((n_frames, 1), unit=kilojoule/mole)
@@ -123,4 +130,30 @@ class TorsionScanSet(Trajectory):
                                                    "MM_energy KJ/mole", "delta KJ/mole"])
 
         return torsion_set
+
+    def _string_summary_basic(self):
+        """Basic summary of traj in string form."""
+        energy_str = 'and MM Energy' if self._have_mm_energy else 'without MM Energy'
+        value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues, %d unique torsions %s" % (
+                     self.n_frames, self.n_atoms, self.n_residues, self._unique_torsions[0], energy_str)
+        return value
+
+    @property
+    def _have_mm_energy(self):
+        return len(self.mm_energy) is not 0
+
+    @property
+    def _unique_torsions(self):
+        torsions = []
+        for i in range(len(self.torsion_index)):
+            try:
+                if (self.torsion_index[i] != self.torsion_index[i+1]).all():
+                    torsions.append(self.torsion_index[i]), torsions.append(self.torsion_index[i+1])
+            except:
+                pass
+        return len(torsions), torsions
+
+
+
+
 
