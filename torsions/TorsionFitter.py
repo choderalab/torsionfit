@@ -4,15 +4,15 @@ Created on Thu May  7 19:32:22 2015
 
 @author: sternc1
 """
-from collections import OrderedDict
 import pandas as pd
+import numpy as np
+import mdtraj as md
+from copy import copy, deepcopy
+import re
 from cclib.parser import Gaussian
 from cclib.parser.utils import convertor 
-import re
 from mdtraj import Trajectory
-import numpy as np
-import simtk.openmm as mm
-from simtk.unit import Quantity, kilojoules_per_mole, nanometer
+from simtk.unit import Quantity, kilojoules_per_mole
 
 
 def read_scan_logfile(logfiles, topology):
@@ -38,13 +38,12 @@ def read_scan_logfile(logfiles, topology):
         logfiles = [logfiles]
 
     for file in logfiles:
-        print file
+        print "loading %s" % file
         direction = np.ndarray((1,1))
         torsion = np.ndarray((1,4), dtype=int)
         step = []
         index = (2, 12, -1)
         f = file.split('/')[-1].split('.')
-        print f[2]
         if f[2] == 'pos':
             direction[0][0] = 1
         else:
@@ -107,13 +106,15 @@ class TorsionScanSet(Trajectory):
 
     def __init__(self, positions, topology, torsions, directions, steps, qm_energy):
         """Create new TorsionScanSet object"""
-        Trajectory.__init__(self, positions, topology)
+        assert isinstance(topology, object)
+        super(TorsionScanSet, self).__init__(positions, topology)
         self.qm_energy = qm_energy
         self.mm_energy = Quantity()
         self.delta_energy = Quantity()
         self.torsion_index = torsions
         self.direction = directions
         self.steps = steps
+        
 
     def to_dataframe(self):
         """ convert TorsionScanSet to pandas dataframe """
@@ -134,25 +135,95 @@ class TorsionScanSet(Trajectory):
     def _string_summary_basic(self):
         """Basic summary of traj in string form."""
         energy_str = 'and MM Energy' if self._have_mm_energy else 'without MM Energy'
-        value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues, %d unique torsions %s" % (
-                     self.n_frames, self.n_atoms, self.n_residues, self._unique_torsions[0], energy_str)
+        value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues,  %s" % (
+                     self.n_frames, self.n_atoms, self.n_residues, energy_str)
         return value
+
+    def extract_geom_opt(self):
+        key = []
+        for i, step in enumerate(self.steps):
+            try:
+                if step[1] != self.steps[i+1][1]:
+                    print step
+                    key.append(i)
+            except IndexError:
+                key.append(i)
+        new_TorsionScanSet = self.slice(key)
+        return new_TorsionScanSet
+
+
+
 
     @property
     def _have_mm_energy(self):
         return len(self.mm_energy) is not 0
 
-    @property
-    def _unique_torsions(self):
-        torsions = []
-        for i in range(len(self.torsion_index)):
-            try:
-                if (self.torsion_index[i] != self.torsion_index[i+1]).all():
-                    torsions.append(self.torsion_index[i]), torsions.append(self.torsion_index[i+1])
-            except:
-                pass
-        return len(torsions), torsions
+    # @property
+    # def _unique_torsions(self):
+    # Not returning the right amount. debug
+    #     torsions = []
+    #     for i in range(len(self.torsion_index)):
+    #         try:
+    #             if (self.torsion_index[i] != self.torsion_index[i+1]).all():
+    #                 torsions.append(self.torsion_index[i]), torsions.append(self.torsion_index[i+1])
+    #         except:
+    #             pass
+    #     return len(torsions), torsions
 
+
+    def __getitem__(self, key):
+        "Get a slice of this trajectory"
+        return self.slice(key)
+
+    def slice(self, key, copy=True):
+        """Slice trajectory, by extracting one or more frames into a separate object
+
+        This method can also be called using index bracket notation, i.e
+        `traj[1] == traj.slice(1)`
+
+        Parameters
+        ----------
+        key : {int, np.ndarray, slice}
+            The slice to take. Can be either an int, a list of ints, or a slice
+            object.
+        copy : bool, default=True
+            Copy the arrays after slicing. If you set this to false, then if
+            you modify a slice, you'll modify the original array since they
+            point to the same data.
+        """
+        xyz = self.xyz[key]
+        time = self.time[key]
+        torsions = self.torsion_index[key]
+        direction = self.direction[key]
+        steps = self.steps[key]
+        qm_energy = self.qm_energy[key]
+        unitcell_lengths, unitcell_angles = None, None
+        if self.unitcell_angles is not None:
+            unitcell_angles = self.unitcell_angles[key]
+        if self.unitcell_lengths is not None:
+            unitcell_lengths = self.unitcell_lengths[key]
+
+        if copy:
+            xyz = xyz.copy()
+            time = time.copy()
+            topology = deepcopy(self._topology)
+            torsions = torsions.copy()
+            direction = direction.copy()
+            steps = steps.copy()
+            qm_energy = qm_energy.copy()
+
+            if self.unitcell_angles is not None:
+                unitcell_angles = unitcell_angles.copy()
+            if self.unitcell_lengths is not None:
+                unitcell_lengths = unitcell_lengths.copy()
+
+        newtraj = self.__class__(
+            xyz, topology, torsions, direction, steps, qm_energy)
+
+        if self._rmsd_traces is not None:
+            newtraj._rmsd_traces = np.array(self._rmsd_traces[key],
+                                            ndmin=1, copy=True)
+        return newtraj
 
 
 
