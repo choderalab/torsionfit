@@ -6,6 +6,7 @@ Created on Thu May  7 19:32:22 2015
 """
 import pandas as pd
 import numpy as np
+import simtk.openmm as mm
 import mdtraj as md
 from copy import copy, deepcopy
 import re
@@ -15,8 +16,55 @@ from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 
 
-def read_scan_logfile(logfiles, topology):
+def to_optimize(param, stream, penalty = 10):
+    """ returns a list of dihedrals to optimize and updates CharmmParameterSet
+    with stream files
+
+    Parameters
+    ----------
+    param : CharmmParameterSet
+    stream: list of stream files
+    penalty: int for CGenFF penalty cutoff (Default = 10)
+
+    Returns list of tuples containing dihedrals to optimize
+
     """
+    keys = [i for i in param.dihedral_types.iterkeys()]
+    for j in stream:
+        param.read_stream_file(j)
+    return [k for k in param.dihedral_types.iterkeys()
+    if k not in keys and param.dihedral_types[k].penalty >= penalty]
+
+
+def compute_energy_from_positions(param, structure, TorsionScanSet, platform=None):
+    """ Computes energy for a given structure with a given parameter set
+
+    Parameters
+    ----------
+    param: chemistry.charmm.CharmmParameterSet
+    structure: chemistry.structure
+    positions: simtk.unit.Quantity([natoms,ndim], unit=nanometer)
+    platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
+    """
+    energy = []
+    for i in range(TorsionScanSet.n_frames):
+        integrator = mm.VerletIntegrator(0.004)
+        system = structure.createSystem(param, )
+        if platform != None:
+            context = mm.Context(system, integrator, platform)
+        else:
+            context = mm.Context(system, integrator)
+        context.setPositions(TorsionScanSet.openmm_coords[i])
+        state = context.getState(getEnergy=True)
+        del context
+        energy.append(TorsionScanSet.qm_energy[i]._value - state.getPotentialEnergy()._value)
+    delta_energy = np.asarray(energy)
+    return Quantity(value=delta_energy, unit=kilojoules_per_mole)
+
+
+def read_scan_logfile(logfiles, structure):
+    """ parses Guassian09 torsion-scan log file
+
     parameters
     ----------
     logfiles: str of list of str
@@ -27,9 +75,9 @@ def read_scan_logfile(logfiles, topology):
     -------
     TorsionScanSet
     """
-
+    topology = md.load_psf(structure)
     positions = np.ndarray((0, topology.n_atoms, 3))
-    energies = np.ndarray(0)
+    qm_energies = np.ndarray(0)
     torsions = np.ndarray((0, 4), dtype=int)
     directions = np.ndarray((0, 1), dtype=int)
     steps = np.ndarray((0, 3), dtype=int)
@@ -38,7 +86,7 @@ def read_scan_logfile(logfiles, topology):
         logfiles = [logfiles]
 
     for file in logfiles:
-        print "loading %s" % file
+        print("loading %s" % file)
         direction = np.ndarray((1,1))
         torsion = np.ndarray((1,4), dtype=int)
         step = []
@@ -71,14 +119,13 @@ def read_scan_logfile(logfiles, topology):
         data = log.parse()
         # convert angstroms to nanometers
         positions = np.append(positions, data.atomcoords*0.1, axis=0)
-        energies = np.append(energies, convertor(data.scfenergies, "eV", "kJmol-1"), axis=0)
+        qm_energies = np.append(qm_energies, convertor(data.scfenergies, "eV", "kJmol-1"), axis=0)
         for i in range(len(data.scfenergies)):
             torsions = np.append(torsions, torsion, axis=0)
             directions = np.append(directions, direction, axis=0)
 
-    qm_energy = Quantity(value=energies, unit=kilojoules_per_mole)
 
-    return TorsionScanSet(positions, topology, torsions, directions, steps, qm_energy)
+    return TorsionScanSet(positions, topology, torsions, directions, steps, qm_energies)
 
 
 class TorsionScanSet(Trajectory):
@@ -105,12 +152,12 @@ class TorsionScanSet(Trajectory):
     direction: {np.ndarray, shape(n_frame, 1)}
     """
 
-    def __init__(self, positions, topology, torsions, directions, steps, qm_energy):
+    def __init__(self, positions, topology, torsions, directions, steps, qm_energies):
         """Create new TorsionScanSet object"""
         assert isinstance(topology, object)
         super(TorsionScanSet, self).__init__(positions, topology)
         self.openmm_coords = Quantity(value=positions, unit=nanometers)
-        self.qm_energy = qm_energy
+        self.qm_energy = Quantity(value=qm_energies, unit=kilojoules_per_mole)
         self.mm_energy = Quantity()
         self.delta_energy = Quantity()
         self.torsion_index = torsions
@@ -149,8 +196,8 @@ class TorsionScanSet(Trajectory):
                     key.append(i)
             except IndexError:
                 key.append(i)
-        new_TorsionScanSet = self.slice(key)
-        return new_TorsionScanSet
+        new_torsionScanSet = self.slice(key)
+        return new_torsionScanSet
 
     @property
     def _have_mm_energy(self):
