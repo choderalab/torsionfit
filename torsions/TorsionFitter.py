@@ -14,6 +14,7 @@ from cclib.parser import Gaussian
 from cclib.parser.utils import convertor 
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
+from chemistry.charmm import CharmmPsfFile
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -76,6 +77,7 @@ def read_scan_logfile(logfiles, structure):
     TorsionScanSet
     """
     topology = md.load_psf(structure)
+    structure = CharmmPsfFile(structure)
     positions = np.ndarray((0, topology.n_atoms, 3))
     qm_energies = np.ndarray(0)
     torsions = np.ndarray((0, 4), dtype=int)
@@ -125,7 +127,7 @@ def read_scan_logfile(logfiles, structure):
             directions = np.append(directions, direction, axis=0)
 
 
-    return TorsionScanSet(positions, topology, torsions, directions, steps, qm_energies)
+    return TorsionScanSet(positions, topology, structure, torsions, directions, steps, qm_energies)
 
 
 class TorsionScanSet(Trajectory):
@@ -152,11 +154,12 @@ class TorsionScanSet(Trajectory):
     direction: {np.ndarray, shape(n_frame, 1)}
     """
 
-    def __init__(self, positions, topology, torsions, directions, steps, qm_energies):
+    def __init__(self, positions, topology, structure, torsions, directions, steps, qm_energies):
         """Create new TorsionScanSet object"""
         assert isinstance(topology, object)
         super(TorsionScanSet, self).__init__(positions, topology)
         self.openmm_coords = Quantity(value=positions, unit=nanometers)
+        self.structure = structure
         self.qm_energy = Quantity(value=qm_energies, unit=kilojoules_per_mole)
         self.mm_energy = Quantity()
         self.delta_energy = Quantity()
@@ -252,6 +255,7 @@ class TorsionScanSet(Trajectory):
             xyz = xyz.copy()
             time = time.copy()
             topology = deepcopy(self._topology)
+            structure = deepcopy(self.structure)
             torsions = torsions.copy()
             direction = direction.copy()
             steps = steps.copy()
@@ -263,7 +267,7 @@ class TorsionScanSet(Trajectory):
                 unitcell_lengths = unitcell_lengths.copy()
 
         newtraj = self.__class__(
-            xyz, topology, torsions, direction, steps, qm_energy)
+            xyz, topology, structure, torsions, direction, steps, qm_energy)
 
         if self._rmsd_traces is not None:
             newtraj._rmsd_traces = np.array(self._rmsd_traces[key],
