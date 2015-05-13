@@ -34,33 +34,7 @@ def to_optimize(param, stream, penalty = 10):
     for j in stream:
         param.read_stream_file(j)
     return [k for k in param.dihedral_types.iterkeys()
-    if k not in keys and param.dihedral_types[k].penalty >= penalty]
-
-
-def compute_energy_from_positions(param, structure, TorsionScanSet, platform=None):
-    """ Computes energy for a given structure with a given parameter set
-
-    Parameters
-    ----------
-    param: chemistry.charmm.CharmmParameterSet
-    structure: chemistry.structure
-    positions: simtk.unit.Quantity([natoms,ndim], unit=nanometer)
-    platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
-    """
-    energy = []
-    for i in range(TorsionScanSet.n_frames):
-        integrator = mm.VerletIntegrator(0.004)
-        system = structure.createSystem(param, )
-        if platform != None:
-            context = mm.Context(system, integrator, platform)
-        else:
-            context = mm.Context(system, integrator)
-        context.setPositions(TorsionScanSet.openmm_coords[i])
-        state = context.getState(getEnergy=True)
-        del context
-        energy.append(TorsionScanSet.qm_energy[i]._value - state.getPotentialEnergy()._value)
-    delta_energy = np.asarray(energy)
-    return Quantity(value=delta_energy, unit=kilojoules_per_mole)
+            if k not in keys and param.dihedral_types[k].penalty >= penalty]
 
 
 def read_scan_logfile(logfiles, structure):
@@ -146,9 +120,10 @@ class TorsionScanSet(Trajectory):
     Attributes
     ----------
     openmm_coords: simtk.unit.Quantity((n_frames, n_atoms, 3), unit=nanometers)
-    qm_energy: simtk.unit.Quantity((n_frames, 1), unit=kilojoule/mole)
-    mm_energy: simtk.unit.Quantity((n_frames, 1), unit=kilojoule/mole)
-    delta_energy: simtk.unit.Quantity((n_frames, 1), unit=kilojoule/mole)
+    structure: chemistry.Structure
+    qm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
+    mm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
+    delta_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
     torsion_index: {np.ndarray, shape(n_frames, 4)}
     step: {np.ndarray, shape(n_frame, 3)}
     direction: {np.ndarray, shape(n_frame, 1)}
@@ -167,7 +142,6 @@ class TorsionScanSet(Trajectory):
         self.direction = directions
         self.steps = steps
         
-
     def to_dataframe(self):
         """ convert TorsionScanSet to pandas dataframe """
 
@@ -186,7 +160,7 @@ class TorsionScanSet(Trajectory):
 
     def _string_summary_basic(self):
         """Basic summary of TorsionScanSet in string form."""
-        energy_str = 'and MM Energy' if self._have_mm_energy else 'without MM Energy'
+        energy_str = 'with MM Energy' if self._have_mm_energy else 'without MM Energy'
         value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues,  %s" % (
                      self.n_frames, self.n_atoms, self.n_residues, energy_str)
         return value
@@ -201,6 +175,32 @@ class TorsionScanSet(Trajectory):
                 key.append(i)
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
+
+    def compute_energy_from_positions(self, param, platform=None):
+        """ Computes energy for a given structure with a given parameter set
+
+        Parameters
+        ----------
+        param: chemistry.charmm.CharmmParameterSet
+        platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
+        """
+        mm_energy = []
+        delta_energy = []
+        for i in range(self.n_frames):
+            integrator = mm.VerletIntegrator(0.004)
+            system = self.structure.createSystem(param)
+            if platform != None:
+                context = mm.Context(system, integrator, platform)
+            else:
+                context = mm.Context(system, integrator)
+            context.setPositions(self.openmm_coords[i])
+            state = context.getState(getEnergy=True)
+            del context
+            energy = state.getPotentialEnergy()._value
+            mm_energy.append(energy)
+            delta_energy.append(self.qm_energy[i]._value - energy)
+        self.mm_energy = Quantity(value=np.asarray(mm_energy), unit=kilojoules_per_mole)
+        self.delta_energy = Quantity(value=np.asarray(delta_energy), unit=kilojoules_per_mole)
 
     @property
     def _have_mm_energy(self):
