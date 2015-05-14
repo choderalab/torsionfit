@@ -55,7 +55,7 @@ def read_scan_logfile(logfiles, structure):
     positions = np.ndarray((0, topology.n_atoms, 3))
     qm_energies = np.ndarray(0)
     torsions = np.ndarray((0, 4), dtype=int)
-    directions = np.ndarray((0, 1), dtype=int)
+    directions = np.ndarray(0, dtype=int)
     steps = np.ndarray((0, 3), dtype=int)
 
     if type(logfiles) != list:
@@ -63,15 +63,15 @@ def read_scan_logfile(logfiles, structure):
 
     for file in logfiles:
         print("loading %s" % file)
-        direction = np.ndarray((1,1))
+        direction = np.ndarray(1)
         torsion = np.ndarray((1,4), dtype=int)
         step = []
         index = (2, 12, -1)
         f = file.split('/')[-1].split('.')
         if f[2] == 'pos':
-            direction[0][0] = 1
+            direction[0] = 1
         else:
-            direction[0][0] = 0
+            direction[0] = 0
 
         fi = open(file, 'r')
         for line in fi:
@@ -126,14 +126,13 @@ class TorsionScanSet(Trajectory):
     delta_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
     torsion_index: {np.ndarray, shape(n_frames, 4)}
     step: {np.ndarray, shape(n_frame, 3)}
-    direction: {np.ndarray, shape(n_frame, 1)}
+    direction: {np.ndarray, shape(n_frame)}. 0 = negative, 1 = positive
     """
 
     def __init__(self, positions, topology, structure, torsions, directions, steps, qm_energies):
         """Create new TorsionScanSet object"""
         assert isinstance(topology, object)
         super(TorsionScanSet, self).__init__(positions, topology)
-        self.openmm_coords = Quantity(value=positions, unit=nanometers)
         self.structure = structure
         self.qm_energy = Quantity(value=qm_energies, unit=kilojoules_per_mole)
         self.mm_energy = Quantity()
@@ -193,7 +192,7 @@ class TorsionScanSet(Trajectory):
                 context = mm.Context(system, integrator, platform)
             else:
                 context = mm.Context(system, integrator)
-            context.setPositions(self.openmm_coords[i])
+            context.setPositions(self.openmm_positions(i))
             state = context.getState(getEnergy=True)
             del context
             energy = state.getPotentialEnergy()._value
