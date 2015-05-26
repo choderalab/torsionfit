@@ -30,6 +30,8 @@ def to_optimize(param, stream, penalty = 10):
     Returns list of tuples containing dihedrals to optimize
 
     """
+    if type(stream) != list:
+        stream = [stream]
     keys = [i for i in param.dihedral_types.iterkeys()]
     for j in stream:
         param.read_stream_file(j)
