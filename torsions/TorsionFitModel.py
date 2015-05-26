@@ -49,30 +49,43 @@ class TorsionFitModel(object):
 
         self.frags = frags
 
-    # def update_param(self, param):
-    #     """
-    #     Update param set based on current pymc model parameters.
-    #
-    #     :return:
-    #     """
-    #     multiplicities = [1, 2, 3, 4, 6]
-    #     multiplicity_bitstrings = dict()
-    #     for p in self.parameters_to_optimize:
-    #         torsion_name = p[0]+'_'+p[1]+'_'+p[2]+'_'+p[3]
-    #         multiplicity_bitstring = multiplicity_bitstrings[torsion_name]
-    #
-    #         for i in range(len(param.dihedral_types[p])):
-    #             m = param.dihedral_types[p][i].per
-    #             multiplicity_bitmask = 2**(m-1) # multiplicity bitmask
-    #             if multiplicity_bitstring & multiplicity_bitmask:
-    #                 if m == 5: continue
-    #                 name = torsion_name + '_' + str(m) + '_K'
-    #                 pymc_variable = getattr(self, name)
-    #                 param.dihedral_types[p][i].phi_k = pymc_variable.value
-    #             else:
-    #                 # This torsion periodicity is disabled.
-    #                 param.dihedral_types[p][i].phi_k = 0
-    #
+    def update_param(self, param):
+        """
+        Update param set based on current pymc model parameters.
+
+        :return:
+        """
+        multiplicities = [1, 2, 3, 4, 6]
+        # multiplicity_bitstrings = dict()
+        for p in self.parameters_to_optimize:
+            torsion_name = p[0]+'_'+p[1]+'_'+p[2]+'_'+p[3]
+            # multiplicity_bitstring = multiplicity_bitstrings[torsion_name]
+            multiplicity_bitstring = self.multiplicity_bitstring[torsion_name + '_multiplicity_bitstring'].value
+            print multiplicity_bitstring
+
+            for i in range(len(param.dihedral_types[p])):
+                m = int(param.dihedral_types[p][i].per)
+                multiplicity_bitmask = 2**(m-1) # multiplicity bitmask
+                print multiplicity_bitmask
+                if multiplicity_bitstring & multiplicity_bitmask:
+                    print multiplicity_bitstring
+                    print multiplicity_bitmask
+                    print "multiplicity = %s" % m
+                    print "True"
+                    if m == 5:
+                        continue
+                    k = torsion_name + '_' + str(m) + '_K'
+                    phase = torsion_name + '_' + str(m) + '_Phase'
+                    # pymc_variable = getattr(self, name)
+                    pymc_variable = self.pymc_parameters[k]
+                    param.dihedral_types[p][i].phi_k = pymc_variable.value
+                    pymc_variable = self.pymc_parameters[phase]
+                    param.dihedral_types[p][i].phase = pymc_variable.value
+                else:
+                    # This torsion periodicity is disabled.
+                    param.dihedral_types[p][i].phi_k = 0
+
+
 
 
 
