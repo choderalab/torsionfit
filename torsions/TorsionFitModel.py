@@ -61,17 +61,13 @@ class TorsionFitModel(object):
             torsion_name = p[0]+'_'+p[1]+'_'+p[2]+'_'+p[3]
             # multiplicity_bitstring = multiplicity_bitstrings[torsion_name]
             multiplicity_bitstring = self.multiplicity_bitstring[torsion_name + '_multiplicity_bitstring'].value
-            print multiplicity_bitstring
+
 
             for i in range(len(param.dihedral_types[p])):
                 m = int(param.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2**(m-1) # multiplicity bitmask
                 print multiplicity_bitmask
                 if multiplicity_bitstring & multiplicity_bitmask:
-                    print multiplicity_bitstring
-                    print multiplicity_bitmask
-                    print "multiplicity = %s" % m
-                    print "True"
                     if m == 5:
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
