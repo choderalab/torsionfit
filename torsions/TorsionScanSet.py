@@ -17,6 +17,7 @@ from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from chemistry.charmm import CharmmPsfFile
 
 
+
 def to_optimize(param, stream, penalty = 10):
     """ returns a list of dihedrals to optimize and updates CharmmParameterSet
     with stream files
@@ -46,7 +47,7 @@ def read_scan_logfile(logfiles, structure):
     ----------
     logfiles: str of list of str
                 Name of Guassian 09 torsion scan log file
-    topology: mdtraj.Topology
+    structure: charmm psf file
 
     returns
     -------
