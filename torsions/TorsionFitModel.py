@@ -1,6 +1,7 @@
 from pymc import Uniform, DiscreteUniform
 import TorsionScanSet
 import numpy as np
+from chemistry.topologyobjects import DihedralType
 
 
 class TorsionFitModel(object):
@@ -49,6 +50,20 @@ class TorsionFitModel(object):
 
         self.frags = frags
 
+    def add_missing(self, param):
+        """
+        Update param set with missing multiplicities. 
+        :return:
+        """
+        multiplicities = [1, 2, 3, 4, 6]
+        for p in self.parameters_to_optimize:
+            per = []
+            for i in range(len(param.dihedral_types[p])):
+                per.append(param.dihedral_types[p][i].per)
+            for j in multiplicities:
+                if j not in per:
+                    param.dihedral_types[p].append(DihedralType(0, j, 0))
+
     def update_param(self, param):
         """
         Update param set based on current pymc model parameters.
@@ -66,7 +81,6 @@ class TorsionFitModel(object):
             for i in range(len(param.dihedral_types[p])):
                 m = int(param.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2**(m-1) # multiplicity bitmask
-                print multiplicity_bitmask
                 if multiplicity_bitstring & multiplicity_bitmask:
                     if m == 5:
                         continue
