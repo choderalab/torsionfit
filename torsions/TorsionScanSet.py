@@ -122,7 +122,6 @@ class TorsionScanSet(Trajectory):
 
     Attributes
     ----------
-    openmm_coords: simtk.unit.Quantity((n_frames, n_atoms, 3), unit=nanometers)
     structure: chemistry.Structure
     qm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
     mm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)

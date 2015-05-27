@@ -1,15 +1,22 @@
 from pymc import Uniform, DiscreteUniform
 import TorsionScanSet
-import numpy as np
 from chemistry.topologyobjects import DihedralType
 
 
 class TorsionFitModel(object):
+    """pymc model
+
+    Attributes:
+    ----------
+    pymc_parameters: dict() of pymc parameters
+    parameters_to_optimize: list of tuples (dihedrals to optimize)
+    fags: list of fragments
+
+    """
 
     def __init__(self, param, stream, frags):
 
         self.pymc_parameters = dict()
-        self.multiplicity_bitstring = dict()
 
         multiplicities = [1, 2, 3, 4, 6]
         multiplicity_bitstrings = dict()
@@ -46,14 +53,17 @@ class TorsionFitModel(object):
         for torsion_name in multiplicity_bitstrings.keys():
             name = torsion_name + '_multiplicity_bitstring'
             bitstring = DiscreteUniform(name, lower=0, upper=63, value=multiplicity_bitstrings[torsion_name])
-            self.multiplicity_bitstring[name] = bitstring
+            self.pymc_parameters[name] = bitstring
 
         self.frags = frags
 
     def add_missing(self, param):
         """
-        Update param set with missing multiplicities. 
-        :return:
+        Update param set with missing multiplicities.
+
+        :param: chemistry.charmm.CharmmParameterSet
+
+        :return: updated CharmmParameterSet with multiplicities 1-6 for parameters to optimize
         """
         multiplicities = [1, 2, 3, 4, 6]
         for p in self.parameters_to_optimize:
@@ -68,15 +78,14 @@ class TorsionFitModel(object):
         """
         Update param set based on current pymc model parameters.
 
-        :return:
+        :param: chemistry.charmm.CharmmParameterSet
+
+        :return: updated CharmmParmaterSet based on current TorsionFitModel parameters
         """
         multiplicities = [1, 2, 3, 4, 6]
-        # multiplicity_bitstrings = dict()
         for p in self.parameters_to_optimize:
             torsion_name = p[0]+'_'+p[1]+'_'+p[2]+'_'+p[3]
-            # multiplicity_bitstring = multiplicity_bitstrings[torsion_name]
             multiplicity_bitstring = self.multiplicity_bitstring[torsion_name + '_multiplicity_bitstring'].value
-
 
             for i in range(len(param.dihedral_types[p])):
                 m = int(param.dihedral_types[p][i].per)
@@ -86,7 +95,6 @@ class TorsionFitModel(object):
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
                     phase = torsion_name + '_' + str(m) + '_Phase'
-                    # pymc_variable = getattr(self, name)
                     pymc_variable = self.pymc_parameters[k]
                     param.dihedral_types[p][i].phi_k = pymc_variable.value
                     pymc_variable = self.pymc_parameters[phase]
