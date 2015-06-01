@@ -33,10 +33,10 @@ def to_optimize(param, stream, penalty = 10):
     """
     if type(stream) != list:
         stream = [stream]
-    keys = [i for i in param.dihedral_types.iterkeys()]
+    keys = [i for i in param.dihedral_types.keys()]
     for j in stream:
         param.read_stream_file(j)
-    return [k for k in param.dihedral_types.iterkeys()
+    return [k for k in param.dihedral_types.keys()
             if k not in keys and param.dihedral_types[k].penalty >= penalty]
 
 
