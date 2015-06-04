@@ -17,6 +17,9 @@ class TorsionFitModel(object):
 
     def __init__(self, param, stream, frags):
 
+        if type(frags) != list:
+            frags = [frags]
+
         self.pymc_parameters = dict()
         self.frags = frags
 
