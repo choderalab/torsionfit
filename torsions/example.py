@@ -14,7 +14,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import time
 import cProfile
-import re
+import pstats
+import StringIO
 
 param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm')
 stream = '../structures/Pyrrol/pyrrol.str'
@@ -28,4 +29,9 @@ model = TorsionFitModel.TorsionFitModel(param, stream, pyrrol_opt)
 model.add_missing(param)
 sampler = MCMC(model.pymc_parameters)
 
-cProfile.run('sampler.sample(iter=3, burn=0, thin=1)')
+cProfile.run('sampler.sample(iter=1, burn=0, thin=1)', 'statfile')
+stream = StringIO.StringIO()
+stats = pstats.Stats('statfile', stream=stream)
+stats.print_stats()
+
+print(stream.getvalue())
