@@ -7,6 +7,7 @@ Created on Thu May  7 19:32:22 2015
 import pandas as pd
 import numpy as np
 import simtk.openmm as mm
+import simtk.unit as u
 import mdtraj as md
 from copy import copy, deepcopy
 import re
@@ -177,7 +178,7 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    def compute_energy_from_positions(self, param, platform=None):
+    def compute_energy(self, param, platform=None):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
@@ -188,7 +189,7 @@ class TorsionScanSet(Trajectory):
         mm_energy = []
         delta_energy = []
         for i in range(self.n_frames):
-            integrator = mm.VerletIntegrator(0.004)
+            integrator = mm.VerletIntegrator(0.004*u.picoseconds)
             system = self.structure.createSystem(param)
             if platform != None:
                 context = mm.Context(system, integrator, platform)
