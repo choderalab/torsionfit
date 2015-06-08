@@ -24,12 +24,13 @@ scan = glob.glob('../structures/Pyrrol/torsion-scan/*.log')
 pyrrol_scan = TorsionScanSet.read_scan_logfile(scan, structure)
 pyrrol_opt = pyrrol_scan.extract_geom_opt()
 #create pymc model
-model = TorsionFitModel.TorsionFitModel(param, stream, pyrrol_opt)
+platform = mm.Platform.getPlatformByName('Reference')
+model = TorsionFitModel.TorsionFitModel(param, stream, pyrrol_opt, platform=platform)
 #update param with missing parameters
 model.add_missing(param)
 sampler = MCMC(model.pymc_parameters)
 
-cProfile.run('sampler.sample(iter=1, burn=0, thin=1)', 'statfile')
+cProfile.run('sampler.sample(iter=10, burn=0, thin=1)', 'statfile')
 stream = StringIO.StringIO()
 stats = pstats.Stats('statfile', stream=stream)
 stats.print_stats()

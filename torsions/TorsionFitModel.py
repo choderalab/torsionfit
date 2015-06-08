@@ -12,16 +12,33 @@ class TorsionFitModel(object):
     pymc_parameters: dict() of pymc parameters
     parameters_to_optimize: list of tuples (dihedrals to optimize)
     fags: list of TorsionScanSet for fragments
+    platform: OpenMM platform to use for potential energy calculations
 
     """
 
-    def __init__(self, param, stream, frags):
+    def __init__(self, param, stream, frags, platform=None):
+        """Create a PyMC model for fitting torsions.
+
+        Parameters
+        ---------
+        param : parmed ParameterSet
+            Set of parameters that will not be optimized.
+        stream : parmed ParameterSet
+            Set of parameters including those that will be optimized.
+            Existing parameters will be used as initial parameters.
+        frags : list of fragments
+            List of small molecule fragments with QM torsion data to fit.
+        platform : simtk.openmm.Platform
+            OpenMM Platform to use for computing potential energies.
+
+        """
 
         if type(frags) != list:
             frags = [frags]
 
         self.pymc_parameters = dict()
         self.frags = frags
+        self.platform = platform
 
         multiplicities = [1, 2, 3, 4, 6]
         multiplicity_bitstrings = dict()
@@ -71,7 +88,7 @@ class TorsionFitModel(object):
             self.update_param(param)
             mm_energy = np.ndarray(0)
             for frag in self.frags:
-                frag.compute_energy(param)
+                frag.compute_energy(param, platform=self.platform)
                 mm_energy = np.append(mm_energy, frag.mm_energy)
             return mm_energy
 
