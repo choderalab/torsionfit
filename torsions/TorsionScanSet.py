@@ -202,7 +202,7 @@ class TorsionScanSet(Trajectory):
             state = context.getState(getEnergy=True)
             energy = state.getPotentialEnergy()._value
             mm_energy.append(energy)
-            print "frame %5d / %5d : %8.3f kJ/mol" % (i, self.n_frames, energy) # DEBUG
+            #print "frame %5d / %5d : %8.3f kJ/mol" % (i, self.n_frames, energy) # DEBUG
             delta_energy.append(self.qm_energy[i]._value - energy)
         self.mm_energy = Quantity(value=np.asarray(mm_energy), unit=kilojoules_per_mole)
         self.delta_energy = Quantity(value=np.asarray(delta_energy), unit=kilojoules_per_mole)
