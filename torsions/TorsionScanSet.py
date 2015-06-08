@@ -110,7 +110,7 @@ def read_scan_logfile(logfiles, structure):
 
 class TorsionScanSet(Trajectory):
     """container object for torsion scan
-    
+
     A TorsionScanSet should be constructed by loading Gaussian 09 torsion scan log files from disk
     with an mdtraj.Topology object
 
@@ -143,7 +143,7 @@ class TorsionScanSet(Trajectory):
         self.torsion_index = torsions
         self.direction = directions
         self.steps = steps
-        
+
     def to_dataframe(self):
         """ convert TorsionScanSet to pandas dataframe """
 
@@ -186,23 +186,29 @@ class TorsionScanSet(Trajectory):
         param: chemistry.charmm.CharmmParameterSet
         platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
         """
+        # Create Context.
+        integrator = mm.VerletIntegrator(0.004*u.picoseconds)
+        system = self.structure.createSystem(param)
+        if platform != None:
+            context = mm.Context(system, integrator, platform)
+        else:
+            context = mm.Context(system, integrator)
+
+        # Compute potential energies for all snapshots.
         mm_energy = []
         delta_energy = []
         for i in range(self.n_frames):
-            integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-            system = self.structure.createSystem(param)
-            if platform != None:
-                context = mm.Context(system, integrator, platform)
-            else:
-                context = mm.Context(system, integrator)
             context.setPositions(self.openmm_positions(i))
             state = context.getState(getEnergy=True)
-            del context
             energy = state.getPotentialEnergy()._value
             mm_energy.append(energy)
+            #print "frame %5d / %5d : %8.3f kJ/mol" % (i, self.n_frames, energy) # DEBUG
             delta_energy.append(self.qm_energy[i]._value - energy)
         self.mm_energy = Quantity(value=np.asarray(mm_energy), unit=kilojoules_per_mole)
         self.delta_energy = Quantity(value=np.asarray(delta_energy), unit=kilojoules_per_mole)
+
+        # Clean up.
+        del context
 
     @property
     def _have_mm_energy(self):
