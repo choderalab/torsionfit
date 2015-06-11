@@ -2,7 +2,7 @@
 import simtk.openmm as mm
 
 # ParmEd imports
-from chemistry.charmm.parameters import CharmmParameterSet
+from parmed.charmm.parameters import CharmmParameterSet
 
 import TorsionScanSet, TorsionFitModel
 import glob

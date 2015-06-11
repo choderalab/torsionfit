@@ -1,6 +1,6 @@
 import pymc
 import TorsionScanSet
-from chemistry.topologyobjects import DihedralType
+from parmed.topologyobjects import DihedralType
 import numpy as np
 
 
