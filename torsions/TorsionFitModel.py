@@ -85,7 +85,7 @@ class TorsionFitModel(object):
             bitstring = pymc.DiscreteUniform(name, lower=0, upper=63, value=multiplicity_bitstrings[torsion_name])
             self.pymc_parameters[name] = bitstring
 
-        self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=0, value=np.log(0.01))
+        self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=5, value=np.log(0.01))
         self.pymc_parameters['sigma'] = pymc.Lambda('sigma',
                                                     lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                         log_sigma))
