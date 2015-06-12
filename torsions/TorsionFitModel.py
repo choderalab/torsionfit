@@ -1,6 +1,6 @@
 import pymc
 import TorsionScanSet
-from parmed.topologyobjects import DihedralType
+from chemistry.topologyobjects import DihedralType
 import numpy as np
 
 
@@ -47,7 +47,8 @@ class TorsionFitModel(object):
         # offset
         for frag in self.frags:
             name = '%s_offset' % frag.topology._residues[0]
-            offset = pymc.Uniform(name, lower=min(frag.qm_energy._value), upper=max(frag.qm_energy._value))
+            offset = pymc.Normal(name, mu=np.mean(frag.qm_energy._value), tau=(max(frag.qm_energy._value) -
+                                                                               min(frag.qm_energy._value))**(-2))
             self.pymc_parameters[name] = offset
 
         for p in self.parameters_to_optimize:
