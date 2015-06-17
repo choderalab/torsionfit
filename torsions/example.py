@@ -3,12 +3,13 @@ import simtk.openmm as mm
 
 # ParmEd imports
 from chemistry.charmm.parameters import CharmmParameterSet
-import cProfile
-import pstats
-import StringIO
+#import cProfile
+#import pstats
+#import StringIO
 import TorsionScanSet, TorsionFitModel
 import glob
 from pymc import MCMC
+#from memory_profiler import profile
 
 param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm')
 stream = '../structures/Pyrrol/pyrrol.str'
@@ -23,9 +24,11 @@ model = TorsionFitModel.TorsionFitModel(param, stream, pyrrol_opt, platform=plat
 model.add_missing(param)
 sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='pyrrol.database', verbose=5)
 
-cProfile.run('sampler.sample(iter=100)', 'statfile')
-sampler.db.close()
-strem = StringIO.StringIO()
-stats.print_stats()
+sampler.sample(iter=10000)
 
-print(stream.getvalue())
+#cProfile.run('sampler.sample(iter=50)', 'statfile')
+#sampler.db.close()
+#stream = StringIO.StringIO()
+#pstats.print_stats()
+
+#print(stream.getvalue())
