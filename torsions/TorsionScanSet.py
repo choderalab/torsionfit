@@ -16,7 +16,7 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from chemistry.charmm import CharmmPsfFile
-
+#from memory_profiler import profile
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -178,7 +178,8 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    def compute_energy(self, param, platform=None):
+    #@profile
+    def compute_energy(self, param, offset, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
@@ -203,12 +204,16 @@ class TorsionScanSet(Trajectory):
             energy = state.getPotentialEnergy()._value
             mm_energy.append(energy)
             #print "frame %5d / %5d : %8.3f kJ/mol" % (i, self.n_frames, energy) # DEBUG
-            delta_energy.append(self.qm_energy[i]._value - energy)
-        self.mm_energy = Quantity(value=np.asarray(mm_energy), unit=kilojoules_per_mole)
-        self.delta_energy = Quantity(value=np.asarray(delta_energy), unit=kilojoules_per_mole)
+	    delta_energy.append(float(self.qm_energy[i]._value) - float(energy) + float(offset))
+        #del self.mm_energy, self.delta_energy
+        self.mm_energy = Quantity(value=np.array(mm_energy), unit=kilojoules_per_mole)
+        self.delta_energy = Quantity(value=np.array(delta_energy), unit=kilojoules_per_mole)
 
         # Clean up.
         del context
+	del system
+	del integrator
+	#print('Heap at end of compute_energy'), hp.heeap()
 
     @property
     def _have_mm_energy(self):

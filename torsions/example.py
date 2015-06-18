@@ -1,21 +1,15 @@
 # opemm imports
-import simtk.unit as u
 import simtk.openmm as mm
-import simtk.openmm.app as app
 
 # ParmEd imports
-from chemistry.charmm import  CharmmPsfFile
 from chemistry.charmm.parameters import CharmmParameterSet
-
+#import cProfile
+#import pstats
+#import StringIO
 import TorsionScanSet, TorsionFitModel
 import glob
 from pymc import MCMC
-import matplotlib
-import matplotlib.pyplot as plt
-import time
-import cProfile
-import pstats
-import StringIO
+#from memory_profiler import profile
 
 param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm')
 stream = '../structures/Pyrrol/pyrrol.str'
@@ -28,11 +22,13 @@ platform = mm.Platform.getPlatformByName('Reference')
 model = TorsionFitModel.TorsionFitModel(param, stream, pyrrol_opt, platform=platform)
 #update param with missing parameters
 model.add_missing(param)
-sampler = MCMC(model.pymc_parameters)
+sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='pyrrol.database', verbose=5)
 
-cProfile.run('sampler.sample(iter=10, burn=0, thin=1)', 'statfile')
-stream = StringIO.StringIO()
-stats = pstats.Stats('statfile', stream=stream)
-stats.print_stats()
+sampler.sample(iter=10000)
 
-print(stream.getvalue())
+#cProfile.run('sampler.sample(iter=50)', 'statfile')
+#sampler.db.close()
+#stream = StringIO.StringIO()
+#pstats.print_stats()
+
+#print(stream.getvalue())
