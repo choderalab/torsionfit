@@ -99,7 +99,8 @@ def read_scan_logfile(logfiles, structure):
         data = log.parse()
         # convert angstroms to nanometers
         positions = np.append(positions, data.atomcoords*0.1, axis=0)
-        qm_energies = np.append(qm_energies, convertor(data.scfenergies, "eV", "kJmol-1"), axis=0)
+        qm_energies = np.append(qm_energies, (convertor(data.scfenergies, "eV", "kJmol-1") -
+                                              min(convertor(data.scfenergies, "eV", "kJmol-1"))), axis=0)
         for i in range(len(data.scfenergies)):
             torsions = np.append(torsions, torsion, axis=0)
             directions = np.append(directions, direction, axis=0)
@@ -203,17 +204,20 @@ class TorsionScanSet(Trajectory):
             state = context.getState(getEnergy=True)
             energy = state.getPotentialEnergy()._value
             mm_energy.append(energy)
-            #print "frame %5d / %5d : %8.3f kJ/mol" % (i, self.n_frames, energy) # DEBUG
-	    delta_energy.append(float(self.qm_energy[i]._value) - float(energy) + float(offset))
-        #del self.mm_energy, self.delta_energy
+            delta_energy.append(float(self.qm_energy[i]._value) - float(energy) + float(offset))
+            # print "frame %5d / %5d : %8.3f kJ/mol" % (i, self.n_frames, energy) # DEBUG
         self.mm_energy = Quantity(value=np.array(mm_energy), unit=kilojoules_per_mole)
-        self.delta_energy = Quantity(value=np.array(delta_energy), unit=kilojoules_per_mole)
+        # delta_energy.append(float(self.qm_energy) - float(self.mm_energy) + float(offset))
+        # del self.mm_energy, self.delta_energy
+
+        self.delta_energy = Quantity(value=(np.array(delta_energy) - min(np.array(delta_energy))),
+                                     unit=kilojoules_per_mole)
 
         # Clean up.
         del context
-	del system
-	del integrator
-	#print('Heap at end of compute_energy'), hp.heeap()
+        del system
+        del integrator
+        # print('Heap at end of compute_energy'), hp.heeap()
 
     @property
     def _have_mm_energy(self):
