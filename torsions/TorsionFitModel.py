@@ -96,21 +96,21 @@ class TorsionFitModel(object):
         @pymc.deterministic
         def mm_potential(pymc_parameters=self.pymc_parameters, param=param):
             self.update_param(param)
-            mm_energy = np.ndarray(0)
+            delta_energy = np.ndarray(0)
             for frag in self.frags:
                 frag.compute_energy(param, offset=self.pymc_parameters['%s_offset' % frag.topology._residues[0]],
                                     platform=self.platform, )
-                mm_energy = np.append(mm_energy, frag.mm_energy)
-            return mm_energy
+                delta_energy = np.append(delta_energy, frag.delta_energy)
+            return delta_energy
 
         size = [len(i.mm_energy) for i in self.frags]
-        qm_potential = np.ndarray(0)
+        qm_energy = np.ndarray(0)
         for i in range(len(frags)):
-            qm_potential = np.append(qm_potential, frags[i].qm_energy)
+            qm_energy = np.append(qm_energy, frags[i].qm_energy)
         self.pymc_parameters['mm_potential'] = mm_potential
         self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_potential'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
-                                                     value=qm_potential)
+                                                     value=qm_energy)
 
     def add_missing(self, param):
         """
