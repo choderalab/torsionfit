@@ -197,21 +197,18 @@ class TorsionScanSet(Trajectory):
             context = mm.Context(system, integrator)
 
         # Compute potential energies for all snapshots.
-        mm_energy = []
-        delta_energy = []
+        self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
         for i in range(self.n_frames):
             context.setPositions(self.openmm_positions(i))
             state = context.getState(getEnergy=True)
-            energy = state.getPotentialEnergy()._value
-            mm_energy.append(energy)
-            delta_energy.append(float(self.qm_energy[i]._value) - float(energy) + float(offset))
-            # print "frame %5d / %5d : %8.3f kJ/mol" % (i, self.n_frames, energy) # DEBUG
-        self.mm_energy = Quantity(value=np.array(mm_energy), unit=kilojoules_per_mole)
-        # delta_energy.append(float(self.qm_energy) - float(self.mm_energy) + float(offset))
-        # del self.mm_energy, self.delta_energy
+            self.mm_energy[i] = state.getPotentialEnergy() + Quantity(value=offset.value, unit=kilojoules_per_mole)
 
-        self.delta_energy = Quantity(value=(np.array(delta_energy) - min(np.array(delta_energy))),
-                                     unit=kilojoules_per_mole)
+        # Subtract off minimum of mm_energy
+        self.mm_energy -= self.mm_energy.min()
+        self.delta_energy = (self.qm_energy - self.mm_energy)
+
+        # Compute deviation between MM and QM energies with offset
+        #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
 
         # Clean up.
         del context

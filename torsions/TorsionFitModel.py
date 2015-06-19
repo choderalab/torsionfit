@@ -2,6 +2,7 @@ import pymc
 import TorsionScanSet
 from chemistry.topologyobjects import DihedralType
 import numpy as np
+from simtk.unit import kilojoules_per_mole
 
 
 class TorsionFitModel(object):
@@ -47,8 +48,7 @@ class TorsionFitModel(object):
         # offset
         for frag in self.frags:
             name = '%s_offset' % frag.topology._residues[0]
-            offset = pymc.Normal(name, mu=np.mean(frag.qm_energy._value), tau=(max(frag.qm_energy._value) -
-                                                                               min(frag.qm_energy._value))**(-2))
+            offset = pymc.Uniform(name, lower=-10, upper=10, value=0)
             self.pymc_parameters[name] = offset
 
         for p in self.parameters_to_optimize:
@@ -85,7 +85,7 @@ class TorsionFitModel(object):
             bitstring = pymc.DiscreteUniform(name, lower=0, upper=63, value=multiplicity_bitstrings[torsion_name])
             self.pymc_parameters[name] = bitstring
 
-        self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=5, value=np.log(0.01))
+        self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=0, value=np.log(0.01))
         self.pymc_parameters['sigma'] = pymc.Lambda('sigma',
                                                     lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                         log_sigma))
@@ -94,21 +94,21 @@ class TorsionFitModel(object):
                                                             -2 * log_sigma))
 
         @pymc.deterministic
-        def mm_potential(pymc_parameters=self.pymc_parameters, param=param):
+        def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             self.update_param(param)
-            delta_energy = np.ndarray(0)
+            mm_energy = np.ndarray(0)
             for frag in self.frags:
                 frag.compute_energy(param, offset=self.pymc_parameters['%s_offset' % frag.topology._residues[0]],
-                                    platform=self.platform, )
-                delta_energy = np.append(delta_energy, frag.delta_energy)
-            return delta_energy
+                                    platform=self.platform)
+                mm_energy = np.append(mm_energy, frag.mm_energy / kilojoules_per_mole)
+            return mm_energy
 
-        size = [len(i.mm_energy) for i in self.frags]
+        size = [len(i.delta_energy) for i in self.frags]
         qm_energy = np.ndarray(0)
         for i in range(len(frags)):
             qm_energy = np.append(qm_energy, frags[i].qm_energy)
-        self.pymc_parameters['mm_potential'] = mm_potential
-        self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_potential'],
+        self.pymc_parameters['mm_energy'] = mm_energy
+        self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
                                                      value=qm_energy)
 
