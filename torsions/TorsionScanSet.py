@@ -201,7 +201,7 @@ class TorsionScanSet(Trajectory):
         for i in range(self.n_frames):
             context.setPositions(self.openmm_positions(i))
             state = context.getState(getEnergy=True)
-            self.mm_energy[i] = state.getPotentialEnergy() + Quantity(value=offset.value, unit=kilojoules_per_mole)
+            self.mm_energy[i] = state.getPotentialEnergy() + Quantity(value=float(offset.value), unit=kilojoules_per_mole)
 
         # Subtract off minimum of mm_energy
         self.mm_energy -= self.mm_energy.min()
