@@ -3,7 +3,7 @@ import TorsionScanSet
 from chemistry.topologyobjects import DihedralType
 import numpy as np
 from simtk.unit import kilojoules_per_mole
-from memory_profiler import profile
+#from memory_profiler import profile
 
 class TorsionFitModel(object):
     """pymc model
@@ -16,7 +16,7 @@ class TorsionFitModel(object):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    @profile
+    #@profile
     def __init__(self, param, stream, frags, platform=None):
         """Create a PyMC model for fitting torsions.
 
@@ -48,7 +48,7 @@ class TorsionFitModel(object):
         # offset
         for frag in self.frags:
             name = '%s_offset' % frag.topology._residues[0]
-            offset = pymc.Uniform(name, lower=-10, upper=10, value=0)
+            offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
 
         for p in self.parameters_to_optimize:
@@ -85,7 +85,7 @@ class TorsionFitModel(object):
             bitstring = pymc.DiscreteUniform(name, lower=0, upper=63, value=multiplicity_bitstrings[torsion_name])
             self.pymc_parameters[name] = bitstring
 
-        self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=0, value=np.log(0.01))
+        self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=3, value=np.log(0.01))
         self.pymc_parameters['sigma'] = pymc.Lambda('sigma',
                                                     lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                         log_sigma))
@@ -111,7 +111,7 @@ class TorsionFitModel(object):
         self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
                                                      value=qm_energy)
-    @profile
+    #@profile
     def add_missing(self, param):
         """
         Update param set with missing multiplicities.
@@ -128,7 +128,7 @@ class TorsionFitModel(object):
             for j in multiplicities:
                 if j not in per:
                     param.dihedral_types[p].append(DihedralType(0, j, 0))
-    @profile
+    #@profile
     def update_param(self, param):
         """
         Update param set based on current pymc model parameters.
