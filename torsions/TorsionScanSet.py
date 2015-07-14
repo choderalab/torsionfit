@@ -16,7 +16,6 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from chemistry.charmm import CharmmPsfFile
-#from memory_profiler import profile
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -179,7 +178,6 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    #@profile
     def compute_energy(self, param, offset, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 

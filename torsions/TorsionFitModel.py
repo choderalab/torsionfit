@@ -3,7 +3,7 @@ import TorsionScanSet
 from chemistry.topologyobjects import DihedralType
 import numpy as np
 from simtk.unit import kilojoules_per_mole
-#from memory_profiler import profile
+
 
 class TorsionFitModel(object):
     """pymc model
@@ -16,7 +16,6 @@ class TorsionFitModel(object):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    #@profile
     def __init__(self, param, stream, frags, platform=None):
         """Create a PyMC model for fitting torsions.
 
@@ -92,7 +91,6 @@ class TorsionFitModel(object):
         self.pymc_parameters['precision'] = pymc.Lambda('precision',
                                                         lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                             -2 * log_sigma))
-        #@profile
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             self.update_param(param)
@@ -111,7 +109,7 @@ class TorsionFitModel(object):
         self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
                                                      value=qm_energy)
-    #@profile
+
     def add_missing(self, param):
         """
         Update param set with missing multiplicities.
@@ -128,7 +126,7 @@ class TorsionFitModel(object):
             for j in multiplicities:
                 if j not in per:
                     param.dihedral_types[p].append(DihedralType(0, j, 0))
-    #@profile
+
     def update_param(self, param):
         """
         Update param set based on current pymc model parameters.
