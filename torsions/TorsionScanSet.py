@@ -16,7 +16,6 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from chemistry.charmm import CharmmPsfFile
-#from memory_profiler import profile
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -179,7 +178,6 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    #@profile
     def compute_energy(self, param, offset, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 
@@ -201,10 +199,10 @@ class TorsionScanSet(Trajectory):
         for i in range(self.n_frames):
             context.setPositions(self.openmm_positions(i))
             state = context.getState(getEnergy=True)
-            self.mm_energy[i] = state.getPotentialEnergy() + Quantity(value=float(offset.value), unit=kilojoules_per_mole)
+            self.mm_energy[i] = state.getPotentialEnergy()
 
         # Subtract off minimum of mm_energy
-        self.mm_energy -= self.mm_energy.min()
+        self.mm_energy -= self.mm_energy.min() + Quantity(value=float(offset.value), unit=kilojoules_per_mole)
         self.delta_energy = (self.qm_energy - self.mm_energy)
 
         # Compute deviation between MM and QM energies with offset
