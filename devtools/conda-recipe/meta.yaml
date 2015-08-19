@@ -8,7 +8,6 @@ source:
 requirements:
   build:
     - python
-    - numpy
     - pymc
     - cclib
     - pandas
@@ -18,7 +17,6 @@ requirements:
 
   run:
     - python
-    - numpy
     - pymc
     - cclib
     - openmm >=6.3
