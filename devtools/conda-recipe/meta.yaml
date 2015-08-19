@@ -31,7 +31,7 @@ test:
   imports:
     - torsionfit
   commands:
-    - nosetests torsions -v
+    - nosetests torsionfit -v
 
 about:
   home: http://github.com/choderalab/torsionfit

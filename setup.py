@@ -12,7 +12,6 @@ from os.path import relpath, join
 import numpy
 import versioneer
 
-from Cython.Build import cythonize
 from setuptools import setup, Extension, find_packages
 
 DOCLINES = __doc__.split("\n")
@@ -59,9 +58,8 @@ setup(
     url='https://github.com/choderalab/torsions',
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
     classifiers=CLASSIFIERS.splitlines(),
-    package_dir={'torsionfit': 'torsionfit'},
-    packages=find_packages(),
-    package_data={'bhmm': find_package_data('examples', 'bhmm')},  # NOTE: examples installs to torsionfit.egg/examples/, NOT torsionfit.egg/bhmm/examples/.  You need to do utils.get_data_filename("../examples/*/setup/").
+    packages=['torsionfit'],
+    package_data={'torsionfit': find_package_data('examples', 'torsionfit')},
     zip_safe=False,
     install_requires=[
         'numpy',
