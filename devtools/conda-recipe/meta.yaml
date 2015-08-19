@@ -1,0 +1,39 @@
+package:
+  name: torsionfit-dev
+  version: !!str 0.1.0.dev0
+
+source:
+  path: ../../
+
+requirements:
+  build:
+    - python
+    - numpy
+    - pymc
+    - cclib
+    - pandas
+    - openmm >=6.3
+    - parmed
+    - setuptools
+
+  run:
+    - python
+    - numpy
+    - pymc
+    - cclib
+    - openmm >=6.3
+    - parmed
+    - pandas
+
+test:
+  requires:
+    - nose
+  imports:
+    - torsionfit
+  commands:
+    - nosetests torsionfit -v
+
+about:
+  home: http://github.com/choderalab/torsionfit
+  license: GNU Lesser General Public License v2 or later (LGPLv2+)
+  summary: A toolkit for Bayesian torsion parameterization for molecular mechanics forcefields.
