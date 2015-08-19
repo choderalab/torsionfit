@@ -9,6 +9,6 @@ bash $MINICONDA -b
 
 
 export PATH=$HOME/miniconda/bin:$PATH
-conda install --yes conda-build jinja2 conda-server pip
+conda install --yes conda-build jinja2 anaconda-client pip
 conda config --add channels http://conda.binstar.org/omnia
 
