@@ -1,2 +1,4 @@
-# Torsions
-Tools for fitting dihedrals 
+# Torsionfit
+
+A toolkit for Bayesian torsion parameterization for molecular mechanics forcefields.
+
