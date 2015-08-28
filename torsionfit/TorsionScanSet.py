@@ -84,15 +84,7 @@ def read_scan_logfile(logfiles, structure):
         # Only add qm energies for structures that converged (because cclib throws out those coords but not other info)
         qm_energies = np.append(qm_energies, (convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1") -
                                               min(convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1"))), axis=0)
-        # remove steps that didn't converge
 
-
-
-        #qm_energies = np.append(qm_energies, (convertor(data.scfenergies, "eV", "kJmol-1") -
-                                              #min(convertor(data.scfenergies, "eV", "kJmol-1"))), axis=0)
-        # debug
-        print 'atomcoords %s, positions, %s, scfenergies %s, qm_energies %s' % (data.atomcoords.shape, positions.shape, data.scfenergies.shape, qm_energies.shape)
-        #qm_energies = np.array(convertor(data.scfenergies, "eV", "kJmol-1") - min(convertor(data.scfenergies, "eV", "kJmol-1")))
 
         fi = open(file, 'r')
         for line in fi:
