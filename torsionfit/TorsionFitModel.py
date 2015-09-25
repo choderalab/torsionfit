@@ -104,7 +104,7 @@ class TorsionFitModel(object):
                 mm_energy = np.append(mm_energy, frag.mm_energy / kilojoules_per_mole)
             return mm_energy
 
-        size = [len(i.delta_energy) for i in self.frags]
+        size = sum([len(i.delta_energy) for i in self.frags])
         qm_energy = np.ndarray(0)
         for i in range(len(frags)):
             qm_energy = np.append(qm_energy, frags[i].qm_energy)
