@@ -26,7 +26,7 @@ platform = mm.Platform.getPlatformByName('Reference')
 model = TorsionFitModel.TorsionFitModel(param, stream, frags, platform=platform)
 #update param with missing parameters
 model.add_missing(param)
-sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='fragments.database', verbose=5)
+sampler = MCMC(model.pymc_parameters, db='hdf5', dbcomplevle=0, dbname='fragments.db.hdf5', verbose=5)
 
 sampler.sample(iter=10000)
 
