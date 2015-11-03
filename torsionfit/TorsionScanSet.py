@@ -15,7 +15,7 @@ from cclib.parser import Gaussian
 from cclib.parser.utils import convertor 
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
-from chemistry.charmm import CharmmPsfFile
+from parmed.charmm import CharmmPsfFile
 
 
 def to_optimize(param, stream, penalty = 10):
