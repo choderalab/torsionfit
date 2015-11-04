@@ -18,15 +18,15 @@ structure = ['pyrrole/pyrrol.psf', 'pyrrole-2/methyl-pyrrol.psf']
 scan = glob.glob('pyrrole/torsion-scan/*.log')
 pyrrol_scan = TorsionScanSet.read_scan_logfile(scan, structure[0])
 pyrrol_opt = pyrrol_scan.extract_geom_opt()
-pyrrol_2_scan = TorsionScanSet.read_scan_logfile(glob.glob('pyrrole-2/torsion-scan/*.log'), structure[1])
-pyrrol_2_opt = pyrrol_2_scan.extract_geom_opt()
-frags = [pyrrol_opt, pyrrol_2_opt]
+#pyrrol_2_scan = TorsionScanSet.read_scan_logfile(glob.glob('pyrrole-2/torsion-scan/*.log'), structure[1])
+#pyrrol_2_opt = pyrrol_2_scan.extract_geom_opt()
+frags = [pyrrol_opt]
 #create pymc model
 platform = mm.Platform.getPlatformByName('Reference')
-model = TorsionFitModel.TorsionFitModel(param, stream, frags, platform=platform)
+model = TorsionFitModel.TorsionFitModel(param, stream[0], frags[0], platform=platform)
 #update param with missing parameters
 model.add_missing(param)
-sampler = MCMC(model.pymc_parameters, db='hdf5', dbcomplevle=0, dbname='fragments.db.hdf5', verbose=5)
+sampler = MCMC(model.pymc_parameters, db='txt', dbname='phase.test.db.txt', verbose=5)
 
 sampler.sample(iter=10000)
 
