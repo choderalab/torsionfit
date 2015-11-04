@@ -5,10 +5,12 @@ if [[ $MINICONDA_MD5 != $(md5sum $MINICONDA | cut -d ' ' -f 1) ]]; then
     echo "Miniconda MD5 mismatch"
     exit 1
 fi
+cd $HOME
 bash $MINICONDA -b -p miniconda
-ls -ltr
 
 export PATH=$HOME/miniconda/bin:$PATH
+which conda
+ls $HOME/miniconda/bin
 conda install --yes conda-build jinja2 anaconda-client pip
 conda config --add channels omnia
 
