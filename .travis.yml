@@ -9,9 +9,17 @@ install:
   - source devtools/travis-ci/install.sh
   - export PYTHONUNBUFFERED=true
 
+install:
+  - source devtools/travis-ci/install.sh
+  - export PYTHONUNBUFFERED=true
+  - export CC=gcc
+  - export CXX=g++
+
 script:
-  - conda config --add channels omnia
+  - conda config --add channels ${ORGNAME}
   - conda build devtools/conda-recipe
+  - source activate _test
+  - cd devtools && nosetests $PACKAGENAME --nocapture --verbosity=2 --with-doctest --with-timer && cd ..
 
 env:
   matrix:
@@ -20,6 +28,8 @@ env:
     - python=3.5  CONDA_PY=35
 
   global:
+    - PACKAGENAME="torsionfit"
+    - ORGNAME="omnia"
     # encrypted BINSTAR_TOKEN for push of dev package to binstar
 
 after_success:

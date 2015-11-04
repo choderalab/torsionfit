@@ -1,5 +1,5 @@
 # Temporarily move to $HOME directory
-pushd
+pushd .
 cd $HOME
 
 MINICONDA=Miniconda-latest-Linux-x86_64.sh
