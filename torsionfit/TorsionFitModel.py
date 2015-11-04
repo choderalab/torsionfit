@@ -1,6 +1,6 @@
 import pymc
 import TorsionScanSet
-from chemistry.topologyobjects import DihedralType
+from parmed.topologyobjects import DihedralType
 import numpy as np
 from simtk.unit import kilojoules_per_mole
 
@@ -73,7 +73,7 @@ class TorsionFitModel(object):
                         if param.dihedral_types[p][i].phase == 0:
                             phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
                             break
-                        if param.dihedral_types[p][i].phase == 3.141592653589793:
+                        if param.dihedral_types[p][i].phase == 180.0:
                             phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
                             break
 
@@ -151,7 +151,13 @@ class TorsionFitModel(object):
                     pymc_variable = self.pymc_parameters[k]
                     param.dihedral_types[p][i].phi_k = pymc_variable.value
                     pymc_variable = self.pymc_parameters[phase]
-                    param.dihedral_types[p][i].phase = pymc_variable.value
+                    if pymc_variable == 1:
+                        param.dihedral_types[p][i].phase = 180
+                        break
+
+                    if pymc_variable == 0:
+                        param.dihedral_types[p][i].phase = 0
+                        break
                 else:
                     # This torsion periodicity is disabled.
                     param.dihedral_types[p][i].phi_k = 0
