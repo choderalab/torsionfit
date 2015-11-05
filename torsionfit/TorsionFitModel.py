@@ -1,8 +1,8 @@
 import pymc
-import TorsionScanSet
 from parmed.topologyobjects import DihedralType
 import numpy as np
 from simtk.unit import kilojoules_per_mole
+import torsionfit.TorsionScanSet
 
 
 class TorsionFitModel(object):
@@ -39,7 +39,7 @@ class TorsionFitModel(object):
         self.pymc_parameters = dict()
         self.frags = frags
         self.platform = platform
-        self.parameters_to_optimize = TorsionScanSet.to_optimize(param, stream)
+        self.parameters_to_optimize = torsionfit.TorsionScanSet.to_optimize(param, stream)
 
         multiplicities = [1, 2, 3, 4, 6]
         multiplicity_bitstrings = dict()
@@ -52,9 +52,10 @@ class TorsionFitModel(object):
 
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
+
             if torsion_name not in multiplicity_bitstrings.keys():
                 multiplicity_bitstrings[torsion_name] = 0
-
+        
             for m in multiplicities:
                 name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
                 k = pymc.Uniform(name, lower=0, upper=20, value=0)
@@ -64,6 +65,7 @@ class TorsionFitModel(object):
                         k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
                         break
 
+                    
                 self.pymc_parameters[name] = k
 
                 name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_Phase'
@@ -73,6 +75,7 @@ class TorsionFitModel(object):
                         if param.dihedral_types[p][i].phase == 0:
                             phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
                             break
+                                
                         if param.dihedral_types[p][i].phase == 180.0:
                             phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
                             break
@@ -101,7 +104,7 @@ class TorsionFitModel(object):
                 mm_energy = np.append(mm_energy, frag.mm_energy / kilojoules_per_mole)
             return mm_energy
 
-        size = [len(i.delta_energy) for i in self.frags]
+        size = sum([len(i.delta_energy) for i in self.frags])
         qm_energy = np.ndarray(0)
         for i in range(len(frags)):
             qm_energy = np.append(qm_energy, frags[i].qm_energy)
