@@ -116,7 +116,7 @@ class TorsionScanSet(Trajectory):
 
     Examples
     --------
-    >>> torsion_set = read_scan_logfile('FRG.scanN.dir.log')
+    >>> torsion_set = read_scan_logfile('FRG.scan.dir.log', structure)
     >>> print torsion_set
     <torsions.TorsionScanSet with 346 frames, 22 atoms, 1 residues, 4 unique torsions without MM Energy at 0x10b099b10>
 
