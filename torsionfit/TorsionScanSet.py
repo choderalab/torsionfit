@@ -68,13 +68,23 @@ def read_scan_logfile(logfiles, structure):
         #print("loading %s" % file)
         direction = np.ndarray(1)
         torsion = np.ndarray((1,4), dtype=int)
-        step = []
+        step = np.ndarray((0,3), dtype=int)
         index = (2, 12, -1)
         f = file.split('/')[-1].split('.')
         if f[2] == 'pos':
             direction[0] = 1
         else:
             direction[0] = 0
+
+
+        log = Gaussian(file)
+        data = log.parse()
+        # convert angstroms to nanometers
+        positions = np.append(positions, data.atomcoords*0.1, axis=0)
+        # Only add qm energies for structures that converged (because cclib throws out those coords but not other info)
+        qm_energies = np.append(qm_energies, (convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1") -
+                                              min(convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1"))), axis=0)
+
 
         fi = open(file, 'r')
         for line in fi:
@@ -87,20 +97,15 @@ def read_scan_logfile(logfiles, structure):
                     torsion[0][i] = (int(t[i]) - 1)
             if re.search('Step', line):
                 try:
-                    step = np.array(([int(line.rsplit()[j]) for j in index]))
-                    step = step[np.newaxis,:]
-                    steps = np.append(steps, step, axis=0)
+                    point = np.array(([int(line.rsplit()[j]) for j in index]))
+                    point = point[np.newaxis,:]
+                    step = np.append(step, point, axis=0)
                 except:
                     pass
         fi.close()
-
-        log = Gaussian(file)
-        data = log.parse()
-        # convert angstroms to nanometers
-        positions = np.append(positions, data.atomcoords*0.1, axis=0)
-        qm_energies = np.append(qm_energies, (convertor(data.scfenergies, "eV", "kJmol-1") -
-                                              min(convertor(data.scfenergies, "eV", "kJmol-1"))), axis=0)
-        for i in range(len(data.scfenergies)):
+        # only add scan points from converged structures
+        steps = np.append(steps, step[:len(data.atomcoords)], axis=0)
+        for i in range(len(data.atomcoords)):
             torsions = np.append(torsions, torsion, axis=0)
             directions = np.append(directions, direction, axis=0)
 
