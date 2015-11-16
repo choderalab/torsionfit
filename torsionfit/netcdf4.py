@@ -2,12 +2,13 @@ import netCDF4 as netcdf
 from pymc.database import base
 from pymc import six
 import pymc
+import numpy as np
 
 __all__ = ['Trace', 'Database']
 
 class Trace(base.Trace):
 
-    """netCDF4 Trace class."""
+    """netCDF4 Trace class"""
 
     def _initialize(self, chain, length):
         """Create a netCDF4 variable.
@@ -15,6 +16,9 @@ class Trace(base.Trace):
 
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
+
+
+
 
         # Determine size
         # try:
@@ -54,8 +58,24 @@ class Database(base.Database):
         self.trace_names = []
         self._traces = {} # dictionary of trace objects
         self.__Trace__ = Trace
+
+        # open netCDF4 file for writing
         self.ncfile = netcdf.Dataset(dbname, dbmode, version= 'NETCDF4')
-        self.ncfile.createDimension('nsamples', 0) # unlimited number of samples
+
+        # Set global attributes
+        setattr(self.ncfile, 'title', self.dbname)
+
+        # # create netCDF4 variable
+        # for name, fun in six.iteritems()
+        # self.ncvar = self.ncfile.createVariable(self.name, dtype, ('nsamples', self._getfunc()))
+
+    def _initialize(self, funs_to_tally, length=None):
+
+        # set dimensions
+        self.ncfile.createDimension('nsamples', 0) # unlimited number of iterations
+
+        for name, fun in six.iteritems(funs_to_tally):
+            self.ncfile.createVariable(name, np.asarray(fun()).dtype.str, ('nsamples',))
 
 
     def connect_model(self, model):
