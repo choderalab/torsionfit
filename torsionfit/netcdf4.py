@@ -24,7 +24,6 @@ class Trace(base.Trace):
         """
 
         value = self._getfunc()
-        index = self.model.db._current_iter
         self.db.ncfile.variables[self.name][index] = value
 
 
@@ -48,6 +47,8 @@ class Database(base.Database):
         self.trace_names = []
         self._traces = {} # dictionary of trace objects
         self.__Trace__ = Trace
+        self.tally_index = 0
+        # To do - tally index if appending to existing db
 
         # open netCDF4 file for writing
         self.ncfile = netcdf.Dataset(dbname, dbmode, version= 'NETCDF4')
@@ -129,7 +130,7 @@ class Database(base.Database):
         chain = range(self.chains)[chain]
         for name in self.trace_names[chain]:
             try:
-                self._traces[name].tally(chain)
+                self._traces[name].tally(chain, self.tally_index)
             except:
                 cls, inst, tb = sys.exc_info()
                 warnings.warn("""
@@ -139,6 +140,8 @@ as were tallyable last time you used the database file?
 Error:
 %s""" % (name, ''.join(traceback.format_exception(cls, inst, tb))))
                 self.trace_names[chain].remove(name)
+
+        self.tally_index += 1
 
 
 
