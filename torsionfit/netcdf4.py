@@ -17,27 +17,17 @@ class Trace(base.Trace):
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
 
+    def tally(self, index, chain=-1):
+        """ Add current value to chain
+        :param chain:
+        :return:
+        """
+
+        value = self._getfunc()
+        index = self.model.db._current_iter
+        self.db.ncfile.variables[self.name][index] = value
 
 
-
-        # Determine size
-        # try:
-        #     self._shape = np.shape(self._getfunc())
-        # except TypeError:
-        #     self._shape = None
-        #
-        # self._vstr = ', '.join(var_str(self._shape))
-        #
-        # # If the table already exists, exit now.
-        # if chain != 0:
-        #     return
-        #
-        # # Create the variable name strings.
-        # vstr = ', '.join(v + ' FLOAT' for v in var_str(self._shape))
-        # query = """CREATE TABLE IF NOT EXISTS [%s]
-        #              (recid INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        #               trace  int(5), %s)""" % (self.name, vstr)
-        # self.db.cur.execute(query)
 
 
 class Database(base.Database):
@@ -65,17 +55,27 @@ class Database(base.Database):
         # Set global attributes
         setattr(self.ncfile, 'title', self.dbname)
 
-        # # create netCDF4 variable
-        # for name, fun in six.iteritems()
-        # self.ncvar = self.ncfile.createVariable(self.name, dtype, ('nsamples', self._getfunc()))
 
     def _initialize(self, funs_to_tally, length=None):
+
+        for name, fun in six.iteritems(funs_to_tally):
+            if name not in self._traces:
+                self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
 
         # set dimensions
         self.ncfile.createDimension('nsamples', 0) # unlimited number of iterations
 
         for name, fun in six.iteritems(funs_to_tally):
-            self.ncfile.createVariable(name, np.asarray(fun()).dtype.str, ('nsamples',))
+            if not np.asarray(fun()).shape == ():
+                self.ncfile.createDimension(name, np.asarray(fun()).shape[0])
+                self.ncfile.createVariable(name, np.asarray(fun()).dtype.str, ('nsamples', name))
+            else:
+                self.ncfile.createVariable(name, np.asarray(fun()).dtype.str, ('nsamples',))
+
+
+        self.trace_names.append(list(funs_to_tally.keys()))
+
+        self.chains += 1
 
 
     def connect_model(self, model):
@@ -117,6 +117,28 @@ class Database(base.Database):
             for name, fun in six.iteritems(model._funs_to_tally):
                 if name not in self._traces:
                     self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
+
+    def tally(self, chain=-1):
+        """Append the current value of all tallyable object.
+       :Parameters:
+       chain : int
+         The index of the chain to append the values to. By default, the values
+         are appended to the last chain.
+        """
+
+        chain = range(self.chains)[chain]
+        for name in self.trace_names[chain]:
+            try:
+                self._traces[name].tally(chain)
+            except:
+                cls, inst, tb = sys.exc_info()
+                warnings.warn("""
+Error tallying %s, will not try to tally it again this chain.
+Did you make all the samevariables and step methods tallyable
+as were tallyable last time you used the database file?
+Error:
+%s""" % (name, ''.join(traceback.format_exception(cls, inst, tb))))
+                self.trace_names[chain].remove(name)
 
 
 
