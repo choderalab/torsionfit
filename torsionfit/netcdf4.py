@@ -27,8 +27,6 @@ class Trace(base.Trace):
         self.db.ncfile.variables[self.name][index] = value
 
 
-
-
 class Database(base.Database):
 
     """netCDF4 database"""
@@ -49,13 +47,13 @@ class Database(base.Database):
         self.__Trace__ = Trace
         self.tally_index = 0
         # To do - tally index if appending to existing db
+        self.chains = 0
 
         # open netCDF4 file for writing
         self.ncfile = netcdf.Dataset(dbname, dbmode, version= 'NETCDF4')
 
         # Set global attributes
         setattr(self.ncfile, 'title', self.dbname)
-
 
     def _initialize(self, funs_to_tally, length=None):
 
@@ -77,7 +75,6 @@ class Database(base.Database):
         self.trace_names.append(list(funs_to_tally.keys()))
 
         self.chains += 1
-
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -130,7 +127,7 @@ class Database(base.Database):
         chain = range(self.chains)[chain]
         for name in self.trace_names[chain]:
             try:
-                self._traces[name].tally(chain, self.tally_index)
+                self._traces[name].tally(self.tally_index, chain)
             except:
                 cls, inst, tb = sys.exc_info()
                 warnings.warn("""
