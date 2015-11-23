@@ -26,6 +26,46 @@ class Trace(base.Trace):
         value = self._getfunc()
         self.db.ncfile['Chain#%d' % chain].variables[self.name][index] = value
 
+    def gettrace(self, burn=0, thin=1, chain=-1, slicing=None):
+        """Return the trace (last by default).
+        :Parameters:
+        burn : integer
+          The number of transient steps to skip.
+        thin : integer
+          Keep one in thin.
+        chain : integer
+          The index of the chain to fetch. If None, return all chains. The
+          default is to return the last chain.
+        slicing : slice object
+          A slice overriding burn and thin assignement.
+        """
+
+        # XXX: handle chain == None case properly
+
+        if chain is None:
+            # to do: return all chains
+        chain = self.db.chains[chain]
+
+        arr = self.db.ncfile['chain#%d' % chain][self.name][:]
+
+        if slicing is not None:
+            burn, stop, thin = slicing.start, slicing.stop, slicing.step
+
+        if slicing is None:
+            stop = arr.nrows
+            return np.asarray(arr.read(start=burn, stop=stop, step=thin))
+
+     __call__ = gettrace
+
+    def __getitem__(self, i):
+        """Return the trace corresponding to item (or slice) i for the chain
+        defined by self._chain.
+        """
+        if isinstance(i, slice):
+            return self.gettrace(slicing=i, chain=self._chain)
+        else:
+            return self.gettrace(slicing=slice(i, i + 1), chain=self._chain)
+
 
 class Database(base.Database):
 
