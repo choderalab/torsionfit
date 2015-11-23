@@ -46,23 +46,29 @@ class Database(base.Database):
         self.trace_names = []
         self._traces = {} # dictionary of trace objects
         self.__Trace__ = Trace
-        # To do - tally index if appending to existing db
-        self.chains = 0
 
         # check if database exists
         db_exists = os.path.exists(self.dbname)
 
         if db_exists and self.mode == 'w':
+            print('overwriting file %s' % self.dbname)
             # overwrite
             os.remove(self.dbname)
 
         # open netCDF4 file
-        self.ncfile = netcdf.Dataset(dbname, dbmode, version= 'NETCDF4')
+        self.ncfile = netcdf.Dataset(dbname, self.mode, version= 'NETCDF4')
 
         # Set global attributes
         setattr(self.ncfile, 'title', self.dbname)
 
-
+        # Assign to self.chain to last chain
+        try:
+            self.chains = int(list(self.ncfile.groups)[-1].split('#')[-1])
+            print self.chains
+            self._chains = range(self.chains)
+            print self._chains
+        except:
+            self.chains = 0
 
     def _initialize(self, funs_to_tally, length=None):
 
@@ -73,20 +79,31 @@ class Database(base.Database):
 
         i = self.chains
         self.ncfile.createGroup("Chain#%d" % i)
-        # set dimensions
-        self.ncfile['Chain#%d' % i].createDimension('nsamples', 0) # unlimited number of iterations
 
+        # set dimensions
+        if 'nsamples' not in self.ncfile['Chain#%d' %i].dimensions:
+            self.ncfile['Chain#%d' % i].createDimension('nsamples', 0) # unlimited number of iterations
+
+        # sanity check that nsamples is unlimited
+        if self.ncfile['Chain#%d' % i].dimensions['nsamples'].isunlimited():
+            pass
+
+        # create variables for pymc variables
         for name, fun in six.iteritems(funs_to_tally):
-            if not np.asarray(fun()).shape == ():
+            if not np.asarray(fun()).shape == () and name not in self.ncfile['Chain#%d' % i].variables:
                 self.ncfile['Chain#%d' % i].createDimension(name, np.asarray(fun()).shape[0])
                 self.ncfile['Chain#%d' % i].createVariable(name, np.asarray(fun()).dtype.str, ('nsamples', name))
-            else:
+            elif name not in self.ncfile['Chain#%d' % i].variables:
                 self.ncfile['Chain#%d' % i].createVariable(name, np.asarray(fun()).dtype.str, ('nsamples',))
 
-        self.trace_names.append(list(funs_to_tally.keys()))
-
         self.chains += 1
-        self.tally_index = 0
+        self._chains = range(self.chains)
+        for chain in self._chains:
+            try:
+                self.trace_names.append(list(self.ncfile['Chain#%d' % chain].variables))
+            except IndexError:
+                self.trace_names.append(list(funs_to_tally.keys()))
+        self.tally_index = len(self.ncfile['Chain#%d' % i].dimensions['nsamples'])
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -151,6 +168,7 @@ Error:
                 self.trace_names[chain].remove(name)
 
         self.tally_index += 1
+
 
 def load(self, dbname, dbmode='a'):
     """ Load an existing netcdf database
