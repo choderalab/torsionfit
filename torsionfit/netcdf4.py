@@ -40,22 +40,20 @@ class Trace(base.Trace):
           A slice overriding burn and thin assignement.
         """
 
-        # XXX: handle chain == None case properly
-
-        if chain is None:
-            # to do: return all chains
-        chain = self.db.chains[chain]
-
-        arr = self.db.ncfile['chain#%d' % chain][self.name][:]
-
-        if slicing is not None:
-            burn, stop, thin = slicing.start, slicing.stop, slicing.step
+        try:
+            chain = self.db._chains[chain]
+            arr = self.db.ncfile['Chain#%d' % chain][self.name][:]
+        except TypeError:
+            arr = self.db.ncfile['Chain#0'][self.name][:]
+            for i in self.db._chains[1:]:
+                arr = np.append(arr, self.db.ncfile['Chain#%d' % i][self.name][:])
 
         if slicing is None:
-            stop = arr.nrows
-            return np.asarray(arr.read(start=burn, stop=stop, step=thin))
+            slicing = slice(burn, None, thin)
 
-     __call__ = gettrace
+        return arr[slicing]
+
+    __call__ = gettrace
 
     def __getitem__(self, i):
         """Return the trace corresponding to item (or slice) i for the chain
@@ -104,9 +102,7 @@ class Database(base.Database):
         # Assign to self.chain to last chain
         try:
             self.chains = int(list(self.ncfile.groups)[-1].split('#')[-1])
-            print self.chains
             self._chains = range(self.chains)
-            print self._chains
         except:
             self.chains = 0
 
