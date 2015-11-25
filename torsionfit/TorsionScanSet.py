@@ -65,7 +65,7 @@ def read_scan_logfile(logfiles, structure):
         logfiles = [logfiles]
 
     for file in logfiles:
-        print("loading %s" % file)
+        #print("loading %s" % file)
         direction = np.ndarray(1)
         torsion = np.ndarray((1,4), dtype=int)
         step = np.ndarray((0,3), dtype=int)
@@ -121,9 +121,9 @@ class TorsionScanSet(Trajectory):
 
     Examples
     --------
-    >>> torsion_set = read_scan_logfile('FRG.scanN.dir.log')
-    >>> print torsion_set
-    <torsions.TorsionScanSet with 346 frames, 22 atoms, 1 residues, 4 unique torsions without MM Energy at 0x10b099b10>
+    >>> torsion_set = read_scan_logfile('../examples/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/pyrrole/pyrrol.psf')
+    >>> print(torsion_set)
+    <torsions.TorsionScanSet with 40 frames, 22 atoms, 1 residues, without MM Energy>
 
 
     Attributes
@@ -168,7 +168,7 @@ class TorsionScanSet(Trajectory):
     def _string_summary_basic(self):
         """Basic summary of TorsionScanSet in string form."""
         energy_str = 'with MM Energy' if self._have_mm_energy else 'without MM Energy'
-        value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues,  %s" % (
+        value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues, %s" % (
                      self.n_frames, self.n_atoms, self.n_residues, energy_str)
         return value
 
