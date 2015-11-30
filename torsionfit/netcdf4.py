@@ -153,8 +153,6 @@ class Database(base.Database):
             except IndexError:
                 self.trace_names.append(list(funs_to_tally.keys()))
         self.tally_index = len(self.ncfile['Chain#%d' % self.chains].dimensions['nsamples'])
-        print('length trace_names = %d' % len(self.trace_names))
-        print('tally_index = %d' % self.tally_index)
         self.chains += 1
         self._chains = range(self.chains)
 
