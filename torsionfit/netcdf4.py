@@ -4,6 +4,9 @@ from pymc import six
 import pymc
 import numpy as np
 import os
+import sys
+import warnings
+import traceback
 
 __all__ = ['Trace', 'Database']
 
@@ -12,7 +15,7 @@ class Trace(base.Trace):
 
     """netCDF4 Trace class"""
 
-    def _initialize(self, chain, length):
+    def _initialize(self):
 
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
@@ -99,19 +102,31 @@ class Database(base.Database):
         # Set global attributes
         setattr(self.ncfile, 'title', self.dbname)
 
-        # Assign to self.chain to last chain
+        # Assign self.chain to last chain
         try:
             self.chains = int(list(self.ncfile.groups)[-1].split('#')[-1])
-            self._chains = range(self.chains)
+            self._chains = range(self.chains + 1)
         except:
             self.chains = 0
+
+        #Load existing data
+        existing_chains = self.ncfile.groups
+        for chain in existing_chains:
+            names = []
+            for var in self.ncfile[chain].variables:
+                if var not in self._traces:
+                    self._traces[var] = Trace(name=var, db=self)
+
+                names.append(var)
+            self.trace_names.append(names)
 
     def _initialize(self, funs_to_tally, length=None):
 
         for name, fun in six.iteritems(funs_to_tally):
             if name not in self._traces:
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
-                self._traces[name]._initialize(self.chains, length)
+            # if db is loaded from disk, it might not have its tallied step method
+            self._traces[name]._initialize()
 
         i = self.chains
         self.ncfile.createGroup("Chain#%d" % i)
@@ -132,14 +147,16 @@ class Database(base.Database):
             elif name not in self.ncfile['Chain#%d' % i].variables:
                 self.ncfile['Chain#%d' % i].createVariable(name, np.asarray(fun()).dtype.str, ('nsamples',))
 
-        self.chains += 1
-        self._chains = range(self.chains)
-        for chain in self._chains:
+        if len(self.trace_names) < len(self.ncfile.groups):
             try:
-                self.trace_names.append(list(self.ncfile['Chain#%d' % chain].variables))
+                self.trace_names.append(list(self.ncfile['Chain#%d' % self.chains].variables))
             except IndexError:
                 self.trace_names.append(list(funs_to_tally.keys()))
-        self.tally_index = len(self.ncfile['Chain#%d' % i].dimensions['nsamples'])
+        self.tally_index = len(self.ncfile['Chain#%d' % self.chains].dimensions['nsamples'])
+        print('length trace_names = %d' % len(self.trace_names))
+        print('tally_index = %d' % self.tally_index)
+        self.chains += 1
+        self._chains = range(self.chains)
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -197,7 +214,7 @@ class Database(base.Database):
                 cls, inst, tb = sys.exc_info()
                 warnings.warn("""
 Error tallying %s, will not try to tally it again this chain.
-Did you make all the samevariables and step methods tallyable
+Did you make all the same variables and step methods tallyable
 as were tallyable last time you used the database file?
 Error:
 %s""" % (name, ''.join(traceback.format_exception(cls, inst, tb))))
