@@ -224,8 +224,7 @@ Error:
         self.ncfile.close()
 
 
-
-def load(self, dbname, dbmode='a'):
+def load(dbname, dbmode='a'):
     """ Load an existing netcdf database
 
     :param dbname: name of netcdf file to open
