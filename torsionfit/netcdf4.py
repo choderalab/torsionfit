@@ -220,6 +220,10 @@ Error:
 
         self.tally_index += 1
 
+    def close(self):
+        self.ncfile.close()
+
+
 
 def load(self, dbname, dbmode='a'):
     """ Load an existing netcdf database
