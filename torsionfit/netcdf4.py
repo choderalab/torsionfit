@@ -67,6 +67,19 @@ class Trace(base.Trace):
         else:
             return self.gettrace(slicing=slice(i, i + 1), chain=self._chain)
 
+    def length(self, chain=-1):
+        """
+        :param chain: int or None
+            The chain index. If None return all chains. default is last chain
+        :return: int length of chain
+        """
+
+        return len(self.gettrace(chain=chain))
+
+
+
+
+
 
 class Database(base.Database):
 
