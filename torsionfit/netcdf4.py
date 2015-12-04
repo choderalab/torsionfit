@@ -44,7 +44,7 @@ class Trace(base.Trace):
         """
 
         try:
-            chain = self.db._chains[chain]
+            chain = range(self.db.chains)[chain]
             arr = self.db.ncfile['Chain#%d' % chain][self.name][:]
         except TypeError:
             arr = self.db.ncfile['Chain#0'][self.name][:]
@@ -75,10 +75,6 @@ class Trace(base.Trace):
         """
 
         return len(self.gettrace(chain=chain))
-
-
-
-
 
 
 class Database(base.Database):
@@ -117,12 +113,15 @@ class Database(base.Database):
 
         # Assign self.chain to last chain
         try:
-            self.chains = int(list(self.ncfile.groups)[-1].split('#')[-1])
-            self._chains = range(self.chains + 1)
+            i = int(list(self.ncfile.groups)[-1].split('#')[-1])
+            self.chains = i + 1
+            self._chains = range(self.chains)
         except:
             self.chains = 0
+            self._chains = range(self.chains + 1)
 
-        #Load existing data
+
+        # Load existing data
         existing_chains = self.ncfile.groups
         for chain in existing_chains:
             names = []
@@ -167,7 +166,6 @@ class Database(base.Database):
                 self.trace_names.append(list(funs_to_tally.keys()))
         self.tally_index = len(self.ncfile['Chain#%d' % self.chains].dimensions['nsamples'])
         self.chains += 1
-        self._chains = range(self.chains)
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
