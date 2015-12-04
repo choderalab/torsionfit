@@ -43,18 +43,18 @@ class Trace(base.Trace):
           A slice overriding burn and thin assignement.
         """
 
-        try:
+        if chain is not None:
             chain = range(self.db.chains)[chain]
             arr = self.db.ncfile['Chain#%d' % chain][self.name][:]
-        except TypeError:
+        elif chain is None:
             arr = self.db.ncfile['Chain#0'][self.name][:]
-            for i in self.db._chains[1:]:
+            for i in range(self.db.chains)[1:]:
                 arr = np.append(arr, self.db.ncfile['Chain#%d' % i][self.name][:])
 
         if slicing is None:
             slicing = slice(burn, None, thin)
 
-        return arr[slicing]
+        return arr[slicing].squeeze()
 
     __call__ = gettrace
 
