@@ -45,7 +45,10 @@ class Trace(base.Trace):
         """
 
         if chain is not None:
-            chain = range(self.db.chains)[chain]
+            if chain == 0:
+                chain = 0
+            elif chain == -1:
+                chain = range(self.db.chains)[chain]
             arr = self.db.ncfile['Chain#%d' % chain][self.name][:]
         elif chain is None:
             arr = self.db.ncfile['Chain#0'][self.name][:]
@@ -118,9 +121,9 @@ class Database(base.Database):
         # Assign self.chain to last chain
         try:
             i = int(list(self.ncfile.groups)[-1].split('#')[-1])
-            self.chains = i + 1 # keeps track of current chain
-            for i in self.ncfile.groups:
-                state = cPickle.loads(self.ncfile[i]['state'])
+            self.chains = (i + 1) # keeps track of current chain
+            for (i, group) in enumerate(self.ncfile.groups):
+                state = cPickle.loads(str(self.ncfile[group]['state'][0]))
                 self._chains[i] = state
         except:
             self.chains = 0 # keeps track of current chain
@@ -238,8 +241,6 @@ Error:
 
     def savestate(self, state, chain=-1):
 
-        import cPickle
-
         self._state_ = state
 
         # pickle state
@@ -252,8 +253,6 @@ Error:
             self.ncfile['Chain#%d' % chain]['state'][0] = state_pickle
 
     def getstate(self, chain=-1):
-
-        import cPickle
 
         chain = range(self.chains + 1)[chain]
 
