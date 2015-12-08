@@ -254,7 +254,10 @@ Error:
 
     def getstate(self, chain=-1):
 
-        chain = range(self.chains + 1)[chain]
+        if self.chains == 0:
+            chain = 0
+        else:
+            chain = range(self.chains)[chain]
 
         if len(self._chains) == 0:
             return {}
