@@ -7,6 +7,7 @@ import os
 import sys
 import warnings
 import traceback
+import cPickle
 
 __all__ = ['Trace', 'Database']
 
@@ -96,6 +97,7 @@ class Database(base.Database):
         self.trace_names = []
         self._traces = {} # dictionary of trace objects
         self.__Trace__ = Trace
+        self._chains ={} # dictionary of states for each chain
 
         # check if database exists
         db_exists = os.path.exists(self.dbname)
@@ -107,6 +109,8 @@ class Database(base.Database):
 
         # open netCDF4 file
         self.ncfile = netcdf.Dataset(dbname, self.mode, version= 'NETCDF4')
+        if 'state' not in self.ncfile.dimensions:
+            self.ncfile.createDimension('state', 1)
 
         # Set global attributes
         setattr(self.ncfile, 'title', self.dbname)
@@ -114,11 +118,12 @@ class Database(base.Database):
         # Assign self.chain to last chain
         try:
             i = int(list(self.ncfile.groups)[-1].split('#')[-1])
-            self.chains = i + 1
-            self._chains = range(self.chains)
+            self.chains = i + 1 # keeps track of current chain
+            for i in self.ncfile.groups:
+                state = cPickle.loads(self.ncfile[i]['state'])
+                self._chains[i] = state
         except:
-            self.chains = 0
-            self._chains = range(self.chains + 1)
+            self.chains = 0 # keeps track of current chain
 
 
         # Load existing data
@@ -230,6 +235,35 @@ Error:
                 self.trace_names[chain].remove(name)
 
         self.tally_index += 1
+
+    def savestate(self, state, chain=-1):
+
+        import cPickle
+
+        self._state_ = state
+
+        # pickle state
+        chain = range(self.chains)[chain]
+        state_pickle = cPickle.dumps(state)
+
+        # save pickled state in ncvar in group for current chain
+        if 'state' not in self.ncfile['Chain#%d' % chain].variables:
+            self.ncfile['Chain#%d' % chain].createVariable('state', str, ('state',), zlib=True)
+            self.ncfile['Chain#%d' % chain]['state'][0] = state_pickle
+
+    def getstate(self, chain=-1):
+
+        import cPickle
+
+        chain = range(self.chains + 1)[chain]
+
+        if len(self._chains) == 0:
+            return {}
+        else:
+            return self._chains[chain]
+
+
+
 
     def close(self):
         self.ncfile.close()
