@@ -7,7 +7,7 @@ import os
 import sys
 import warnings
 import traceback
-import cPickle
+import Pickle
 
 __all__ = ['Trace', 'Database']
 
@@ -123,7 +123,7 @@ class Database(base.Database):
             i = int(list(self.ncfile.groups)[-1].split('#')[-1])
             self.chains = (i + 1) # keeps track of current chain
             for (i, group) in enumerate(self.ncfile.groups):
-                state = cPickle.loads(str(self.ncfile[group]['state'][0]))
+                state = Pickle.loads(str(self.ncfile[group]['state'][0]))
                 self._chains[i] = state
         except:
             self.chains = 0 # keeps track of current chain
@@ -245,7 +245,7 @@ Error:
 
         # pickle state
         chain = range(self.chains)[chain]
-        state_pickle = cPickle.dumps(state)
+        state_pickle = Pickle.dumps(state)
 
         # save pickled state in ncvar in group for current chain
         if 'state' not in self.ncfile['Chain#%d' % chain].variables:
