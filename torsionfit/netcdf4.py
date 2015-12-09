@@ -113,7 +113,7 @@ class Database(base.Database):
         # open netCDF4 file
         self.ncfile = netcdf.Dataset(dbname, self.mode, version= 'NETCDF4')
         if 'state' not in self.ncfile.dimensions:
-            self.ncfile.createDimension('state', N)
+            self.ncfile.createDimension('state', 1)
 
         # Set global attributes
         if self.mode == 'w':
