@@ -113,20 +113,19 @@ class Database(base.Database):
         # open netCDF4 file
         self.ncfile = netcdf.Dataset(dbname, self.mode, version= 'NETCDF4')
         if 'state' not in self.ncfile.dimensions:
-            self.ncfile.createDimension('state', 1)
+            self.ncfile.createDimension('state', N)
 
         # Set global attributes
-        setattr(self.ncfile, 'title', self.dbname)
+        if self.mode == 'w':
+            setattr(self.ncfile, 'title', self.dbname)
 
         # Assign self.chain to last chain
-        try:
-            i = int(list(self.ncfile.groups)[-1].split('#')[-1])
-            self.chains = (i + 1) # keeps track of current chain
-            for (i, group) in enumerate(self.ncfile.groups):
-                state = pickle.loads(str(self.ncfile[group]['state'][0]))
-                self._chains[i] = state
-        except:
-            self.chains = 0 # keeps track of current chain
+        self.chains = len(self.ncfile.groups)
+        print(self.ncfile.groups)
+        for (i, group) in enumerate(self.ncfile.groups):
+            #serialized_state = bytes(self.ncfile[group]['state'][0], encoding='utf-8')
+            #state = pickle.loads(serialized_state.decode('utf-8'))
+            self._chains[i] = self.ncfile[group]['state'][0]
 
 
         # Load existing data
@@ -249,8 +248,8 @@ Error:
 
         # save pickled state in ncvar in group for current chain
         if 'state' not in self.ncfile['Chain#%d' % chain].variables:
-            self.ncfile['Chain#%d' % chain].createVariable('state', str, ('state',), zlib=True)
-            self.ncfile['Chain#%d' % chain]['state'][0] = state_pickle
+            self.ncfile['Chain#%d' % chain].createVariable('state', 'S', ('state',))
+            self.ncfile['Chain#%d' % chain]['state'][0] = state
 
     def getstate(self, chain=-1):
 
