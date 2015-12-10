@@ -8,6 +8,7 @@ import sys
 import warnings
 import traceback
 import pickle
+import codecs
 
 __all__ = ['Trace', 'Database']
 
@@ -125,7 +126,8 @@ class Database(base.Database):
         for (i, group) in enumerate(self.ncfile.groups):
             #serialized_state = bytes(self.ncfile[group]['state'][0], encoding='utf-8')
             #state = pickle.loads(serialized_state.decode('utf-8'))
-            self._chains[i] = self.ncfile[group]['state'][0]
+            self._chains[i] = pickle.loads(codecs.decode(self.ncfile[group]['state'][0].encode(), "base64"))
+            #self._chains[i] = pickle.loads(self.ncfile[group]['state'][0])
 
 
         # Load existing data
@@ -244,12 +246,13 @@ Error:
 
         # pickle state
         chain = range(self.chains)[chain]
-        state_pickle = pickle.dumps(state)
+        state_pickle = codecs.encode(pickle.dumps(state), "base64").decode()
+        #state_pickle = pickle.dumps(state, 0).decode()
 
         # save pickled state in ncvar in group for current chain
         if 'state' not in self.ncfile['Chain#%d' % chain].variables:
-            self.ncfile['Chain#%d' % chain].createVariable('state', 'S', ('state',))
-            self.ncfile['Chain#%d' % chain]['state'][0] = state
+            self.ncfile['Chain#%d' % chain].createVariable('state', str, ('state',))
+            self.ncfile['Chain#%d' % chain]['state'][0] = state_pickle
 
     def getstate(self, chain=-1):
 
