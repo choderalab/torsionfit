@@ -15,6 +15,7 @@ requirements:
     - parmed
     - setuptools
     - mdtraj
+    - netcdf4
 
   run:
     - python
@@ -24,6 +25,7 @@ requirements:
     - parmed
     - pandas
     - mdtraj
+    - netcdf4
 
 test:
   requires:

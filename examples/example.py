@@ -10,6 +10,7 @@ import torsionfit.TorsionScanSet as TorsionScanSet
 import torsionfit.TorsionFitModel as TorsionFitModel
 import glob
 from pymc import MCMC
+import torsionfit.netcdf4 as db
 #from memory_profiler import profile
 
 param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm')
@@ -23,12 +24,12 @@ pyrrol_2_opt = pyrrol_2_scan.extract_geom_opt()
 frags = [pyrrol_opt, pyrrol_2_opt]
 #create pymc model
 platform = mm.Platform.getPlatformByName('Reference')
-model = TorsionFitModel.TorsionFitModel(param, stream, frags, platform=platform)
+model = TorsionFitModel.TorsionFitModel(param, stream, frag, platform=platform)
 #update param with missing parameters
 model.add_missing(param)
-sampler = MCMC(model.pymc_parameters, db='hdf5', dbcomplevle=0, dbname='fragments.db.hdf5', verbose=5)
+sampler = MCMC(model.pymc_parameters, db=db, dbname='/Users/sternc1/src/ChayaSt/Torsions/examples/test.nc', verbose=5)
 
-sampler.sample(iter=10000)
+sampler.sample(iter=10)
 
 #cProfile.run('sampler.sample(iter=50)', 'statfile')
 #sampler.db.close()
