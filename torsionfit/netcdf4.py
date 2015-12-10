@@ -122,13 +122,8 @@ class Database(base.Database):
 
         # Assign self.chain to last chain
         self.chains = len(self.ncfile.groups)
-        print(self.ncfile.groups)
         for (i, group) in enumerate(self.ncfile.groups):
-            #serialized_state = bytes(self.ncfile[group]['state'][0], encoding='utf-8')
-            #state = pickle.loads(serialized_state.decode('utf-8'))
             self._chains[i] = pickle.loads(codecs.decode(self.ncfile[group]['state'][0].encode(), "base64"))
-            #self._chains[i] = pickle.loads(self.ncfile[group]['state'][0])
-
 
         # Load existing data
         existing_chains = self.ncfile.groups
@@ -154,7 +149,7 @@ class Database(base.Database):
 
         # set dimensions
         if 'nsamples' not in self.ncfile['Chain#%d' %i].dimensions:
-            self.ncfile['Chain#%d' % i].createDimension('nsamples', 0) # unlimited number of iterations
+            self.ncfile['Chain#%d' % i].createDimension('nsamples', 0)  # unlimited number of iterations
 
         # sanity check that nsamples is unlimited
         if self.ncfile['Chain#%d' % i].dimensions['nsamples'].isunlimited():
@@ -188,8 +183,7 @@ class Database(base.Database):
           An instance holding the pymc objects defining a statistical
           model (stochastics, deterministics, data, ...)
         """
-        # Changed this to allow non-Model models. -AP
-        # We could also remove it altogether. -DH
+
         if isinstance(model, pymc.Model):
             self.model = model
         else:
@@ -205,9 +199,8 @@ class Database(base.Database):
                 if name in self._traces:
                     self._traces[name]._getfunc = fun
                     names.discard(name)
-            # if len(names) > 0:
-            # print_("Some objects from the database have not been assigned a
-            # getfunc", names)
+            if len(names) > 0:
+                print("Some objects from the database have not been assigned a getfunc", names)
 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
@@ -247,7 +240,6 @@ Error:
         # pickle state
         chain = range(self.chains)[chain]
         state_pickle = codecs.encode(pickle.dumps(state), "base64").decode()
-        #state_pickle = pickle.dumps(state, 0).decode()
 
         # save pickled state in ncvar in group for current chain
         if 'state' not in self.ncfile['Chain#%d' % chain].variables:
@@ -265,9 +257,6 @@ Error:
             return {}
         else:
             return self._chains[chain]
-
-
-
 
     def close(self):
         self.ncfile.close()
