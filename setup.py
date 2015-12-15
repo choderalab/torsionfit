@@ -68,6 +68,7 @@ setup(
         'cclib',
         'openmm>=6.3',
         'parmed',
+        'netcdf4'
         ],
     )
 

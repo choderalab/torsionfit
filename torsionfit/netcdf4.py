@@ -4,6 +4,11 @@ from pymc import six
 import pymc
 import numpy as np
 import os
+import sys
+import warnings
+import traceback
+import pickle
+import codecs
 
 __all__ = ['Trace', 'Database']
 
@@ -12,7 +17,7 @@ class Trace(base.Trace):
 
     """netCDF4 Trace class"""
 
-    def _initialize(self, chain, length):
+    def _initialize(self):
 
         if self._getfunc is None:
             self._getfunc = self.db.model._funs_to_tally[self.name]
@@ -40,18 +45,21 @@ class Trace(base.Trace):
           A slice overriding burn and thin assignement.
         """
 
-        try:
-            chain = self.db._chains[chain]
+        if chain is not None:
+            if chain == 0:
+                chain = 0
+            elif chain == -1:
+                chain = range(self.db.chains)[chain]
             arr = self.db.ncfile['Chain#%d' % chain][self.name][:]
-        except TypeError:
+        elif chain is None:
             arr = self.db.ncfile['Chain#0'][self.name][:]
-            for i in self.db._chains[1:]:
+            for i in range(self.db.chains)[1:]:
                 arr = np.append(arr, self.db.ncfile['Chain#%d' % i][self.name][:])
 
         if slicing is None:
             slicing = slice(burn, None, thin)
 
-        return arr[slicing]
+        return arr[slicing].squeeze()
 
     __call__ = gettrace
 
@@ -63,6 +71,15 @@ class Trace(base.Trace):
             return self.gettrace(slicing=i, chain=self._chain)
         else:
             return self.gettrace(slicing=slice(i, i + 1), chain=self._chain)
+
+    def length(self, chain=-1):
+        """
+        :param chain: int or None
+            The chain index. If None return all chains. default is last chain
+        :return: int length of chain
+        """
+
+        return len(self.gettrace(chain=chain))
 
 
 class Database(base.Database):
@@ -84,6 +101,7 @@ class Database(base.Database):
         self.trace_names = []
         self._traces = {} # dictionary of trace objects
         self.__Trace__ = Trace
+        self._chains ={} # dictionary of states for each chain
 
         # check if database exists
         db_exists = os.path.exists(self.dbname)
@@ -95,30 +113,43 @@ class Database(base.Database):
 
         # open netCDF4 file
         self.ncfile = netcdf.Dataset(dbname, self.mode, version= 'NETCDF4')
+        if 'state' not in self.ncfile.dimensions:
+            self.ncfile.createDimension('state', 1)
 
         # Set global attributes
-        setattr(self.ncfile, 'title', self.dbname)
+        if self.mode == 'w':
+            setattr(self.ncfile, 'title', self.dbname)
 
-        # Assign to self.chain to last chain
-        try:
-            self.chains = int(list(self.ncfile.groups)[-1].split('#')[-1])
-            self._chains = range(self.chains)
-        except:
-            self.chains = 0
+        # Assign self.chain to last chain
+        self.chains = len(self.ncfile.groups)
+        for (i, group) in enumerate(self.ncfile.groups):
+            self._chains[i] = pickle.loads(codecs.decode(self.ncfile[group]['state'][0].encode(), "base64"))
+
+        # Load existing data
+        existing_chains = self.ncfile.groups
+        for chain in existing_chains:
+            names = []
+            for var in self.ncfile[chain].variables:
+                if var not in self._traces:
+                    self._traces[var] = Trace(name=var, db=self)
+
+                names.append(var)
+            self.trace_names.append(names)
 
     def _initialize(self, funs_to_tally, length=None):
 
         for name, fun in six.iteritems(funs_to_tally):
             if name not in self._traces:
                 self._traces[name] = self.__Trace__(name=name, getfunc=fun, db=self)
-                self._traces[name]._initialize(self.chains, length)
+            # if db is loaded from disk, it might not have its tallied step method
+            self._traces[name]._initialize()
 
         i = self.chains
         self.ncfile.createGroup("Chain#%d" % i)
 
         # set dimensions
         if 'nsamples' not in self.ncfile['Chain#%d' %i].dimensions:
-            self.ncfile['Chain#%d' % i].createDimension('nsamples', 0) # unlimited number of iterations
+            self.ncfile['Chain#%d' % i].createDimension('nsamples', 0)  # unlimited number of iterations
 
         # sanity check that nsamples is unlimited
         if self.ncfile['Chain#%d' % i].dimensions['nsamples'].isunlimited():
@@ -132,14 +163,13 @@ class Database(base.Database):
             elif name not in self.ncfile['Chain#%d' % i].variables:
                 self.ncfile['Chain#%d' % i].createVariable(name, np.asarray(fun()).dtype.str, ('nsamples',))
 
-        self.chains += 1
-        self._chains = range(self.chains)
-        for chain in self._chains:
+        if len(self.trace_names) < len(self.ncfile.groups):
             try:
-                self.trace_names.append(list(self.ncfile['Chain#%d' % chain].variables))
+                self.trace_names.append(list(self.ncfile['Chain#%d' % self.chains].variables))
             except IndexError:
                 self.trace_names.append(list(funs_to_tally.keys()))
-        self.tally_index = len(self.ncfile['Chain#%d' % i].dimensions['nsamples'])
+        self.tally_index = len(self.ncfile['Chain#%d' % self.chains].dimensions['nsamples'])
+        self.chains += 1
 
     def connect_model(self, model):
         """Link the Database to the Model instance.
@@ -153,8 +183,7 @@ class Database(base.Database):
           An instance holding the pymc objects defining a statistical
           model (stochastics, deterministics, data, ...)
         """
-        # Changed this to allow non-Model models. -AP
-        # We could also remove it altogether. -DH
+
         if isinstance(model, pymc.Model):
             self.model = model
         else:
@@ -170,9 +199,8 @@ class Database(base.Database):
                 if name in self._traces:
                     self._traces[name]._getfunc = fun
                     names.discard(name)
-            # if len(names) > 0:
-            # print_("Some objects from the database have not been assigned a
-            # getfunc", names)
+            if len(names) > 0:
+                print("Some objects from the database have not been assigned a getfunc", names)
 
         # Create a fresh new state.
         # We will be able to remove this when we deprecate traces on objects.
@@ -197,7 +225,7 @@ class Database(base.Database):
                 cls, inst, tb = sys.exc_info()
                 warnings.warn("""
 Error tallying %s, will not try to tally it again this chain.
-Did you make all the samevariables and step methods tallyable
+Did you make all the same variables and step methods tallyable
 as were tallyable last time you used the database file?
 Error:
 %s""" % (name, ''.join(traceback.format_exception(cls, inst, tb))))
@@ -205,8 +233,36 @@ Error:
 
         self.tally_index += 1
 
+    def savestate(self, state, chain=-1):
 
-def load(self, dbname, dbmode='a'):
+        self._state_ = state
+
+        # pickle state
+        chain = range(self.chains)[chain]
+        state_pickle = codecs.encode(pickle.dumps(state), "base64").decode()
+
+        # save pickled state in ncvar in group for current chain
+        if 'state' not in self.ncfile['Chain#%d' % chain].variables:
+            self.ncfile['Chain#%d' % chain].createVariable('state', str, ('state',))
+            self.ncfile['Chain#%d' % chain]['state'][0] = state_pickle
+
+    def getstate(self, chain=-1):
+
+        if self.chains == 0:
+            chain = 0
+        else:
+            chain = range(self.chains)[chain]
+
+        if len(self._chains) == 0:
+            return {}
+        else:
+            return self._chains[chain]
+
+    def close(self):
+        self.ncfile.close()
+
+
+def load(dbname, dbmode='a'):
     """ Load an existing netcdf database
 
     :param dbname: name of netcdf file to open
