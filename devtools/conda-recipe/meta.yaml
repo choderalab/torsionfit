@@ -14,6 +14,7 @@ requirements:
     - openmm >=6.3
     - parmed
     - setuptools
+    - mdtraj
 
   run:
     - python
@@ -22,6 +23,7 @@ requirements:
     - openmm >=6.3
     - parmed
     - pandas
+    - mdtraj
 
 test:
   requires:

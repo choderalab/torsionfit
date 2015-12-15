@@ -10,6 +10,7 @@ import torsionfit.TorsionScanSet as TorsionScanSet
 import torsionfit.TorsionFitModel as TorsionFitModel
 import glob
 from pymc import MCMC
+import torsionfit.netcdf4 as db
 #from memory_profiler import profile
 
 param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm')
@@ -18,17 +19,17 @@ structure = ['pyrrole/pyrrol.psf', 'pyrrole-2/methyl-pyrrol.psf']
 scan = glob.glob('pyrrole/torsion-scan/*.log')
 pyrrol_scan = TorsionScanSet.read_scan_logfile(scan, structure[0])
 pyrrol_opt = pyrrol_scan.extract_geom_opt()
-#pyrrol_2_scan = TorsionScanSet.read_scan_logfile(glob.glob('pyrrole-2/torsion-scan/*.log'), structure[1])
-#pyrrol_2_opt = pyrrol_2_scan.extract_geom_opt()
+pyrrol_2_scan = TorsionScanSet.read_scan_logfile(glob.glob('pyrrole-2/torsion-scan/*.log'), structure[1])
+pyrrol_2_opt = pyrrol_2_scan.extract_geom_opt()
 frags = [pyrrol_opt]
 #create pymc model
 platform = mm.Platform.getPlatformByName('Reference')
-model = TorsionFitModel.TorsionFitModel(param, stream[0], frags[0], platform=platform)
+model = TorsionFitModel.TorsionFitModel(param, stream, frag, platform=platform)
 #update param with missing parameters
 model.add_missing(param)
-sampler = MCMC(model.pymc_parameters, db='txt', dbname='phase.test.db.txt', verbose=5)
+sampler = MCMC(model.pymc_parameters, db=db, dbname='test.nc', verbose=5)
 
-sampler.sample(iter=10000)
+sampler.sample(iter=10)
 
 #cProfile.run('sampler.sample(iter=50)', 'statfile')
 #sampler.db.close()
