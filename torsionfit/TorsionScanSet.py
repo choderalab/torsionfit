@@ -121,7 +121,7 @@ class TorsionScanSet(Trajectory):
 
     Examples
     --------
-    >>> torsion_set = read_scan_logfile('../examples/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/pyrrole/pyrrol.psf')
+    >>> torsion_set = read_scan_logfile('../examples/data/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/data/pyrrole/pyrrol.psf')
     >>> print(torsion_set)
     <torsions.TorsionScanSet with 40 frames, 22 atoms, 1 residues, without MM Energy>
 
