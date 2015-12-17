@@ -64,7 +64,7 @@ def read_scan_logfile(logfiles, structure):
     if type(logfiles) != list:
         logfiles = [logfiles]
 
-    for file in logfiles:
+    for file in sorted(logfiles):
         #print("loading %s" % file)
         direction = np.ndarray(1)
         torsion = np.ndarray((1,4), dtype=int)
