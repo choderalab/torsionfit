@@ -32,6 +32,7 @@ env:
     - PACKAGENAME="torsionfit"
     - ORGNAME="omnia"
     # encrypted BINSTAR_TOKEN for push of dev package to binstar
+    - secure: "XeYowlJPu0iBHK81hfurJhDV+sw1WRHYxpv5Bqx8FI9kSk7PBN/IVBq0xM394qslV35r/kuSxvBl07PemdOhF/Zn/1I2es0ySYvuPsHQyUqbq406KPl/fIUXeKVqWcqkd9iJKQqaVY91okfsY8HcLO+rJ3zv3W+2ZHZWfq8qCFo="
 
 after_success:
   - echo "after_success"
