@@ -1,6 +1,6 @@
 """ Test TorsionScanSet """
 
-from torsionfit.testing import get_fun
+from torsionfit.tests.utils import get_fun
 import torsionfit.TorsionScanSet as torsionset
 from cclib.parser import Gaussian
 from cclib.parser.utils import convertor
