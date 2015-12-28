@@ -3,7 +3,8 @@
 from torsionfit.testing.testing import get_fun
 import torsionfit.TorsionScanSet as torsionset
 from cclib.parser import Gaussian
-from numpy.testing import assert_almost_equal
+from cclib.parser.utils import convertor
+from numpy.testing import assert_almost_equal, assert_array_equal
 
 try:
     from simtk.openmm import app
@@ -22,4 +23,17 @@ def test_read_logfile():
     data2 = scan2.parse()
     assert_almost_equal(scan.xyz[:40]*10, data1.atomcoords, decimal=6)
     assert_almost_equal(scan.xyz[40:]*10, data2.atomcoords, decimal=6)
+
+def test_converged_structures():
+    structure = get_fun('MPR.psf')
+    scan = torsionset.read_scan_logfile(get_fun('MPR.scan1.pos.log'), structure)
+    log = Gaussian(get_fun('MPR.scan1.pos.log'))
+    data = log.parse()
+    assert_array_equal(data.atomcoords.shape, scan.xyz.shape)
+    converted = convertor(data.scfenergies, "eV", "kJmol-1") - \
+                min(convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1"))
+    assert_array_equal(converted[:47], scan.qm_energy)
+
+
+
 
