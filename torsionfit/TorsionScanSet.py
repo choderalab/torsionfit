@@ -65,10 +65,10 @@ def read_scan_logfile(logfiles, structure):
         logfiles = [logfiles]
 
     for file in sorted(logfiles):
-        print("loading %s" % file)
+        #print("loading %s" % file)
         direction = np.ndarray(1)
-        torsion = np.ndarray((1,4), dtype=int)
-        step = np.ndarray((0,3), dtype=int)
+        torsion = np.ndarray((1, 4), dtype=int)
+        step = np.ndarray((0, 3), dtype=int)
         index = (2, 12, -1)
         # f = file.split('/')[-1].split('.')
         # if f[2] == 'pos':
@@ -87,7 +87,6 @@ def read_scan_logfile(logfiles, structure):
 
         fi = open(file, 'r')
         for line in fi:
-
             if re.search('   Scan   ', line):
                 t = line.split()[2].split(',')
                 t[0] = t[0][-1]
@@ -107,14 +106,14 @@ def read_scan_logfile(logfiles, structure):
                     step = np.append(step, point, axis=0)
                 except:
                     pass
+        del log
+        del data
         fi.close()
         # only add scan points from converged structures
-        steps = np.append(steps, step[:len(data.atomcoords)], axis=0)
-        for i in range(len(data.atomcoords)):
+        steps = np.append(steps, step[:len(positions)], axis=0)
+        for i in range(len(positions)):
             torsions = np.append(torsions, torsion, axis=0)
             directions = np.append(directions, direction, axis=0)
-
-
     return TorsionScanSet(positions, topology, structure, torsions, directions, steps, qm_energies)
 
 
