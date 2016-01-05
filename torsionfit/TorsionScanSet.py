@@ -64,17 +64,17 @@ def read_scan_logfile(logfiles, structure):
     if type(logfiles) != list:
         logfiles = [logfiles]
 
-    for file in logfiles:
+    for file in sorted(logfiles):
         #print("loading %s" % file)
         direction = np.ndarray(1)
-        torsion = np.ndarray((1,4), dtype=int)
-        step = np.ndarray((0,3), dtype=int)
+        torsion = np.ndarray((1, 4), dtype=int)
+        step = np.ndarray((0, 3), dtype=int)
         index = (2, 12, -1)
-        f = file.split('/')[-1].split('.')
-        if f[2] == 'pos':
-            direction[0] = 1
-        else:
-            direction[0] = 0
+        # f = file.split('/')[-1].split('.')
+        # if f[2] == 'pos':
+        #     direction[0] = 1
+        # else:
+        #     direction[0] = 0
 
 
         log = Gaussian(file)
@@ -85,16 +85,20 @@ def read_scan_logfile(logfiles, structure):
         qm_energies = np.append(qm_energies, (convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1") -
                                               min(convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1"))), axis=0)
 
-
         fi = open(file, 'r')
         for line in fi:
-
             if re.search('   Scan   ', line):
                 t = line.split()[2].split(',')
                 t[0] = t[0][-1]
                 t[-1] = t[-1][0]
                 for i in range(len(t)):
                     torsion[0][i] = (int(t[i]) - 1)
+            if re.search('^ D ', line):
+                d = line.split()[-1]
+                if d[0] == '-':
+                    direction[0] = 0
+                elif d[0] == '1':
+                    direction[0] = 1
             if re.search('Step', line):
                 try:
                     point = np.array(([int(line.rsplit()[j]) for j in index]))
@@ -102,14 +106,14 @@ def read_scan_logfile(logfiles, structure):
                     step = np.append(step, point, axis=0)
                 except:
                     pass
+        del log
+        del data
         fi.close()
         # only add scan points from converged structures
-        steps = np.append(steps, step[:len(data.atomcoords)], axis=0)
-        for i in range(len(data.atomcoords)):
+        steps = np.append(steps, step[:len(positions)], axis=0)
+        for i in range(len(positions)):
             torsions = np.append(torsions, torsion, axis=0)
             directions = np.append(directions, direction, axis=0)
-
-
     return TorsionScanSet(positions, topology, structure, torsions, directions, steps, qm_energies)
 
 
@@ -121,7 +125,7 @@ class TorsionScanSet(Trajectory):
 
     Examples
     --------
-    >>> torsion_set = read_scan_logfile('../examples/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/pyrrole/pyrrol.psf')
+    >>> torsion_set = read_scan_logfile('../examples/data/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/data/pyrrole/pyrrol.psf')
     >>> print(torsion_set)
     <torsions.TorsionScanSet with 40 frames, 22 atoms, 1 residues, without MM Energy>
 
