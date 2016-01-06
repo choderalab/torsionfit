@@ -153,6 +153,7 @@ class TorsionScanSet(Trajectory):
         self.torsion_index = torsions
         self.direction = directions
         self.steps = steps
+        self.positions = positions
 
 
     # def create_omm_system(self, param):
@@ -219,7 +220,7 @@ class TorsionScanSet(Trajectory):
         # Compute potential energies for all snapshots.
         self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
         for i in range(self.n_frames):
-            context.setPositions(self.openmm_positions(i))
+            context.setPositions(self.positions[i])
             state = context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
 
