@@ -106,14 +106,15 @@ def read_scan_logfile(logfiles, structure):
                     step = np.append(step, point, axis=0)
                 except:
                     pass
-        del log
-        del data
+
         fi.close()
         # only add scan points from converged structures
-        steps = np.append(steps, step[:len(positions)], axis=0)
-        for i in range(len(positions)):
+        steps = np.append(steps, step[:len(data.atomcoords)], axis=0)
+        for i in range(len(data.atomcoords)):
             torsions = np.append(torsions, torsion, axis=0)
             directions = np.append(directions, direction, axis=0)
+        del log
+        del data
     return TorsionScanSet(positions, topology, structure, torsions, directions, steps, qm_energies)
 
 
@@ -153,6 +154,18 @@ class TorsionScanSet(Trajectory):
         self.direction = directions
         self.steps = steps
 
+
+    # def create_omm_system(self, param):
+    #     """ Creates an OpenMM system for a given param set
+    #     :param param: parmed.charmm.CharmmParameterSet
+    #     :return: TorsionScanSet with omm system for each configuration
+    #     """
+    #
+    #     # Create system
+    #     system = self.structure.createSystem(param)
+    #     self.system = system
+
+
     def to_dataframe(self):
         """ convert TorsionScanSet to pandas dataframe """
 
@@ -187,7 +200,7 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    def compute_energy(self, param, offset, platform=None,):
+    def compute_energy(self, offset, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
