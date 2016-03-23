@@ -24,6 +24,7 @@ def test_read_logfile():
     assert_almost_equal(scan.xyz[:40]*10, data1.atomcoords, decimal=6)
     assert_almost_equal(scan.xyz[40:]*10, data2.atomcoords, decimal=6)
 
+
 def test_converged_structures():
     structure = get_fun('MPR.psf')
     scan = torsionset.read_scan_logfile(get_fun('MPR.scan1.pos.log'), structure)
@@ -35,5 +36,9 @@ def test_converged_structures():
     assert_array_equal(converted[:47], scan.qm_energy)
 
 
+def test_extract_geom_opt():
+    structure = get_fun('MPR.psf')
+    scan = torsionset.read_scan_logfile([get_fun('MPR.scan1.pos.log'), get_fun('MPR.scan1.neg.log')], structure)
+    scan.extract_geom_opt()
 
 
