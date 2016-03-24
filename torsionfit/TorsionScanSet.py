@@ -154,17 +154,18 @@ class TorsionScanSet(Trajectory):
         self.direction = directions
         self.steps = steps
         self.positions = positions
+        self.to_optimize = []
+        self.context = None
+        self.system = None
+        self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
 
-
-    # def create_omm_system(self, param):
-    #     """ Creates an OpenMM system for a given param set
-    #     :param param: parmed.charmm.CharmmParameterSet
-    #     :return: TorsionScanSet with omm system for each configuration
-    #     """
-    #
-    #     # Create system
-    #     system = self.structure.createSystem(param)
-    #     self.system = system
+    def create_context(self, param, stream, platform=None):
+        self.to_optimize = to_optimize(param, stream)
+        self.system = self.structure.createSystem(param)
+        if platform != None:
+            self.context = mm.Context(self.system, self.integrator, platform)
+        else:
+            self.context = mm.Context(self.system, self.integrator)
 
 
     def to_dataframe(self):
@@ -209,19 +210,22 @@ class TorsionScanSet(Trajectory):
         param: chemistry.charmm.CharmmParameterSet
         platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
         """
-        # Create Context.
-        integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-        system = self.structure.createSystem(param)
-        if platform != None:
-            context = mm.Context(system, integrator, platform)
-        else:
-            context = mm.Context(system, integrator)
+        # Update torsion parameters.
+        #integrator = mm.VerletIntegrator(0.004*u.picoseconds)
+        self.structure.load_parameters(param)
+        torsion_force = self.structure.omm_dihedral_force()
+        torsion_force.updateParametersInContext(self.context)
+        # self.system = self.structure.createSystem(param)
+        # if platform != None:
+        #     context = mm.Context(self.system, integrator, platform)
+        # else:
+        #     context = mm.Context(self.system, integrator)
 
         # Compute potential energies for all snapshots.
         self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
         for i in range(self.n_frames):
-            context.setPositions(self.positions[i])
-            state = context.getState(getEnergy=True)
+            self.context.setPositions(self.positions[i])
+            state = self.context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
 
         # Subtract off minimum of mm_energy
@@ -232,9 +236,9 @@ class TorsionScanSet(Trajectory):
         #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
 
         # Clean up.
-        del context
-        del system
-        del integrator
+        # del context
+        # #self.system
+        # del integrator
         # print('Heap at end of compute_energy'), hp.heeap()
 
     @property
