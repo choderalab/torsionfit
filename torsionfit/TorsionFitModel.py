@@ -2,7 +2,7 @@ import pymc
 from parmed.topologyobjects import DihedralType
 import numpy as np
 from simtk.unit import kilojoules_per_mole
-import torsionfit.TorsionScanSet
+import torsionfit.TorsionScanSet as TorsionScan
 
 
 class TorsionFitModel(object):
@@ -39,7 +39,7 @@ class TorsionFitModel(object):
         self.pymc_parameters = dict()
         self.frags = frags
         self.platform = platform
-        #self.parameters_to_optimize = []
+        self.parameters_to_optimize = TorsionScan.to_optimize(param, stream)
 
         multiplicities = [1, 2, 3, 4, 6]
         multiplicity_bitstrings = dict()
@@ -49,73 +49,37 @@ class TorsionFitModel(object):
             name = '%s_offset' % frag.topology._residues[0]
             offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
-            for p in frag.to_optimize:
-                torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
-                if torsion_name not in multiplicity_bitstrings.keys():
-                    multiplicity_bitstrings[torsion_name] = 0
+        for p in self.parameters_to_optimize:
+            torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
-                for m in multiplicities:
-                    name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
-                    k = pymc.Uniform(name, lower=0, upper=20, value=0)
-                    for i in range(len(param.dihedral_types[p])):
-                        if param.dihedral_types[p][i].per == m:
-                            multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
-                            k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
+            if torsion_name not in multiplicity_bitstrings.keys():
+                multiplicity_bitstrings[torsion_name] = 0
+
+            for m in multiplicities:
+                name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
+                k = pymc.Uniform(name, lower=0, upper=20, value=0)
+                for i in range(len(param.dihedral_types[p])):
+                    if param.dihedral_types[p][i].per == m:
+                        multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
+                        k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
+                        break
+
+                self.pymc_parameters[name] = k
+
+                name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_Phase'
+                phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
+                for i in range(len(param.dihedral_types[p])):
+                    if param.dihedral_types[p][i].per == m:
+                        if param.dihedral_types[p][i].phase == 0:
+                            phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
                             break
 
+                        if param.dihedral_types[p][i].phase == 180.0:
+                            phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
+                            break
 
-                    self.pymc_parameters[name] = k
-
-                    name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_Phase'
-                    phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
-                    for i in range(len(param.dihedral_types[p])):
-                        if param.dihedral_types[p][i].per == m:
-                            if param.dihedral_types[p][i].phase == 0:
-                                phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
-                                break
-
-                            if param.dihedral_types[p][i].phase == 180.0:
-                                phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
-                                break
-
-                    self.pymc_parameters[name] = phase
-
-        #     self.parameters_to_optimize.append(frag.to_optimize)
-        # print self.parameters_to_optimize
-        # for p in self.parameters_to_optimize:
-        #     print p
-        #     torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
-        #     print torsion_name
-        #
-        #     if torsion_name not in multiplicity_bitstrings.keys():
-        #         multiplicity_bitstrings[torsion_name] = 0
-        #
-        #     for m in multiplicities:
-        #         name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
-        #         k = pymc.Uniform(name, lower=0, upper=20, value=0)
-        #         for i in range(len(param.dihedral_types[p])):
-        #             if param.dihedral_types[p][i].per == m:
-        #                 multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
-        #                 k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
-        #                 break
-        #
-        #
-        #         self.pymc_parameters[name] = k
-        #
-        #         name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_Phase'
-        #         phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
-        #         for i in range(len(param.dihedral_types[p])):
-        #             if param.dihedral_types[p][i].per == m:
-        #                 if param.dihedral_types[p][i].phase == 0:
-        #                     phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
-        #                     break
-        #
-        #                 if param.dihedral_types[p][i].phase == 180.0:
-        #                     phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
-        #                     break
-        #
-        #         self.pymc_parameters[name] = phase
+                self.pymc_parameters[name] = phase
 
         for torsion_name in multiplicity_bitstrings.keys():
             name = torsion_name + '_multiplicity_bitstring'
@@ -129,17 +93,20 @@ class TorsionFitModel(object):
         self.pymc_parameters['precision'] = pymc.Lambda('precision',
                                                         lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                             -2 * log_sigma))
+        # add missing multiplicity terms to parameterset so that the system has the same number of parameters
+        self.add_missing(param)
+
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             self.update_param(param)
-            mm_energy = np.ndarray(0)
-            for frag in self.frags:
-                frag.compute_energy(param, offset=self.pymc_parameters['%s_offset' % frag.topology._residues[0]],
+            mm = np.ndarray(0)
+            for mol in self.frags:
+                mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
                                     platform=self.platform)
-                mm_energy = np.append(mm_energy, frag.mm_energy / kilojoules_per_mole)
-            return mm_energy
+                mm = np.append(mm, mol.mm_energy / kilojoules_per_mole)
+            return mm
 
-        size = sum([len(i.delta_energy) for i in self.frags])
+        size = sum([len(i.qm_energy) for i in self.frags])
         qm_energy = np.ndarray(0)
         for i in range(len(frags)):
             qm_energy = np.append(qm_energy, frags[i].qm_energy)
