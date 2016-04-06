@@ -168,8 +168,22 @@ class TorsionScanSet(Trajectory):
         else:
             self.context = mm.Context(self.system, self.integrator)
 
-    #def copy_torsions(self, param):
+    def copy_torsions(self, param):
+        forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
+                  for i in range(self.system.getNumForces())}
+        torsion_force = forces['PeriodicTorsionForce']
 
+        # reparameterize structure with updated param
+        self.structure.load_parameters(param)
+        # create new force
+        new_torsion_force = self.structure.omm_dihedral_force()
+        # copy parameters
+        for i in range(new_torsion_force.getNumTorsions()):
+            torsion = new_torsion_force.getTorsionParameters(i)
+            torsion_force.setTorsionParameters(i, *torsion)
+
+        # update parameters in context
+        torsion_force.updateParametersInContext(self.context)
 
     def to_dataframe(self):
         """ convert TorsionScanSet to pandas dataframe """
@@ -217,19 +231,9 @@ class TorsionScanSet(Trajectory):
         # Check if context exists.
         if not self.context:
             self.create_context(param, platform)
-        # else:
-        #     # copy new torsion parameters
-        #     self.copy_torsions(param)
-        #integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-        #self.structure.load_parameters(param)
-        #torsion_force = self.structure.omm_dihedral_force()
-
-        #torsion_force.updateParametersInContext(self.context)
-        # self.system = self.structure.createSystem(param)
-        # if platform != None:
-        #     context = mm.Context(self.system, integrator, platform)
-        # else:
-        #     context = mm.Context(self.system, integrator)
+        else:
+            # copy new torsion parameters
+            self.copy_torsions(param)
 
         # Compute potential energies for all snapshots.
         self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
