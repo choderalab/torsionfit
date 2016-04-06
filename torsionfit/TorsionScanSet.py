@@ -16,6 +16,7 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile
+from parmed.openmm import energy_decomposition_system
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -133,7 +134,7 @@ class TorsionScanSet(Trajectory):
 
     Attributes
     ----------
-    structure: chemistry.Structure
+    structure: ParmEd.Structure
     qm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
     mm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
     delta_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
@@ -158,14 +159,16 @@ class TorsionScanSet(Trajectory):
         self.context = None
         self.system = None
         self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
+        self.energy = np.array
 
-    def create_context(self, param, stream, platform=None):
-        self.to_optimize = to_optimize(param, stream)
+    def create_context(self, param, platform=None):
         self.system = self.structure.createSystem(param)
         if platform != None:
             self.context = mm.Context(self.system, self.integrator, platform)
         else:
             self.context = mm.Context(self.system, self.integrator)
+
+    #def copy_torsions(self, param):
 
 
     def to_dataframe(self):
@@ -202,19 +205,26 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    def compute_energy(self,param, offset, platform=None,):
+    def compute_energy(self, param, offset, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
         ----------
-        param: chemistry.charmm.CharmmParameterSet
+        param: parmed.charmm.CharmmParameterSet
         platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
         """
-        # Update torsion parameters.
+
+        # Check if context exists.
+        if not self.context:
+            self.create_context(param, platform)
+        # else:
+        #     # copy new torsion parameters
+        #     self.copy_torsions(param)
         #integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-        self.structure.load_parameters(param)
-        torsion_force = self.structure.omm_dihedral_force()
-        torsion_force.updateParametersInContext(self.context)
+        #self.structure.load_parameters(param)
+        #torsion_force = self.structure.omm_dihedral_force()
+
+        #torsion_force.updateParametersInContext(self.context)
         # self.system = self.structure.createSystem(param)
         # if platform != None:
         #     context = mm.Context(self.system, integrator, platform)
