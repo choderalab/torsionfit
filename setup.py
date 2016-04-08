@@ -59,8 +59,7 @@ setup(
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
     classifiers=CLASSIFIERS.splitlines(),
     packages=['torsionfit', 'torsionfit.tests'],
-    package_data={'torsionfit': find_package_data('examples', 'torsionfit'),
-        'torsionfit.tests': ['reference/*']},
+    package_data={ 'torsionfit.tests': ['reference/*']},
     zip_safe=False,
     install_requires=[
         'numpy',
