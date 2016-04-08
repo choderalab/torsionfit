@@ -164,7 +164,6 @@ class TorsionScanSet(Trajectory):
     def get_structure_param(self, param):
         # get subset of parameters used in this fragment
         self.structure.load_parameters(param)
-        print(self.structure.urey_bradleys)
         self.parameters = CharmmParameterSet.from_structure(self.structure)
 
     def get_params(self, optimize_list, param):
