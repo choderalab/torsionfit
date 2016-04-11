@@ -15,7 +15,7 @@ from cclib.parser import Gaussian
 from cclib.parser.utils import convertor 
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
-from parmed.charmm import CharmmPsfFile
+from parmed.charmm import CharmmPsfFile, CharmmParameterSet
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -64,17 +64,17 @@ def read_scan_logfile(logfiles, structure):
     if type(logfiles) != list:
         logfiles = [logfiles]
 
-    for file in logfiles:
+    for file in sorted(logfiles):
         #print("loading %s" % file)
         direction = np.ndarray(1)
-        torsion = np.ndarray((1,4), dtype=int)
-        step = np.ndarray((0,3), dtype=int)
+        torsion = np.ndarray((1, 4), dtype=int)
+        step = np.ndarray((0, 3), dtype=int)
         index = (2, 12, -1)
-        f = file.split('/')[-1].split('.')
-        if f[2] == 'pos':
-            direction[0] = 1
-        else:
-            direction[0] = 0
+        # f = file.split('/')[-1].split('.')
+        # if f[2] == 'pos':
+        #     direction[0] = 1
+        # else:
+        #     direction[0] = 0
 
 
         log = Gaussian(file)
@@ -85,16 +85,20 @@ def read_scan_logfile(logfiles, structure):
         qm_energies = np.append(qm_energies, (convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1") -
                                               min(convertor(data.scfenergies[:len(data.atomcoords)], "eV", "kJmol-1"))), axis=0)
 
-
         fi = open(file, 'r')
         for line in fi:
-
             if re.search('   Scan   ', line):
                 t = line.split()[2].split(',')
                 t[0] = t[0][-1]
                 t[-1] = t[-1][0]
                 for i in range(len(t)):
                     torsion[0][i] = (int(t[i]) - 1)
+            if re.search('^ D ', line):
+                d = line.split()[-1]
+                if d[0] == '-':
+                    direction[0] = 0
+                elif d[0] == '1':
+                    direction[0] = 1
             if re.search('Step', line):
                 try:
                     point = np.array(([int(line.rsplit()[j]) for j in index]))
@@ -102,14 +106,15 @@ def read_scan_logfile(logfiles, structure):
                     step = np.append(step, point, axis=0)
                 except:
                     pass
+
         fi.close()
         # only add scan points from converged structures
         steps = np.append(steps, step[:len(data.atomcoords)], axis=0)
         for i in range(len(data.atomcoords)):
             torsions = np.append(torsions, torsion, axis=0)
             directions = np.append(directions, direction, axis=0)
-
-
+        del log
+        del data
     return TorsionScanSet(positions, topology, structure, torsions, directions, steps, qm_energies)
 
 
@@ -121,14 +126,14 @@ class TorsionScanSet(Trajectory):
 
     Examples
     --------
-    >>> torsion_set = read_scan_logfile('../examples/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/pyrrole/pyrrol.psf')
+    >>> torsion_set = read_scan_logfile('../examples/data/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/data/pyrrole/pyrrol.psf')
     >>> print(torsion_set)
     <torsions.TorsionScanSet with 40 frames, 22 atoms, 1 residues, without MM Energy>
 
 
     Attributes
     ----------
-    structure: chemistry.Structure
+    structure: ParmEd.Structure
     qm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
     mm_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
     delta_energy: simtk.unit.Quantity((n_frames), unit=kilojoule/mole)
@@ -148,6 +153,46 @@ class TorsionScanSet(Trajectory):
         self.torsion_index = torsions
         self.direction = directions
         self.steps = steps
+        self.positions = positions
+        self.to_optimize = []
+        self.context = None
+        self.system = None
+        self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
+        self.parameters = None
+        self.energy = np.array
+
+    def get_structure_param(self, param):
+        # get subset of parameters used in this fragment
+        self.structure.load_parameters(param)
+        self.parameters = CharmmParameterSet.from_structure(self.structure)
+
+    def get_params(self, optimize_list, param):
+        # get list of parameters that need to be optimized for this fragment
+        self.get_structure_param(param)
+        self.to_optimize = list(set(optimize_list) & set(self.parameters.dihedral_types.keys()))
+
+    def create_context(self, platform=None):
+        self.system = self.structure.createSystem(self.parameters)
+        if platform != None:
+            self.context = mm.Context(self.system, self.integrator, platform)
+        else:
+            self.context = mm.Context(self.system, self.integrator)
+
+    def copy_torsions(self):
+        forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
+                  for i in range(self.system.getNumForces())}
+        torsion_force = forces['PeriodicTorsionForce']
+
+        # reparameterize structure with updated param
+        self.structure.load_parameters(self.parameters)
+        # create new force
+        new_torsion_force = self.structure.omm_dihedral_force()
+        # copy parameters
+        for i in range(new_torsion_force.getNumTorsions()):
+            torsion = new_torsion_force.getTorsionParameters(i)
+            torsion_force.setTorsionParameters(i, *torsion)
+        # update parameters in context
+        torsion_force.updateParametersInContext(self.context)
 
     def to_dataframe(self):
         """ convert TorsionScanSet to pandas dataframe """
@@ -183,27 +228,27 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    def compute_energy(self, param, offset, platform=None,):
+    def compute_energy(self, offset, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
         ----------
-        param: chemistry.charmm.CharmmParameterSet
+        param: parmed.charmm.CharmmParameterSet
         platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
         """
-        # Create Context.
-        integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-        system = self.structure.createSystem(param)
-        if platform != None:
-            context = mm.Context(system, integrator, platform)
+
+        # Check if context exists.
+        if not self.context:
+            self.create_context(platform)
         else:
-            context = mm.Context(system, integrator)
+            # copy new torsion parameters
+            self.copy_torsions()
 
         # Compute potential energies for all snapshots.
         self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
         for i in range(self.n_frames):
-            context.setPositions(self.openmm_positions(i))
-            state = context.getState(getEnergy=True)
+            self.context.setPositions(self.positions[i])
+            state = self.context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
 
         # Subtract off minimum of mm_energy
@@ -213,11 +258,6 @@ class TorsionScanSet(Trajectory):
         # Compute deviation between MM and QM energies with offset
         #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
 
-        # Clean up.
-        del context
-        del system
-        del integrator
-        # print('Heap at end of compute_energy'), hp.heeap()
 
     @property
     def _have_mm_energy(self):
