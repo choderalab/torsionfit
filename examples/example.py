@@ -16,9 +16,9 @@ import time
 
 # Load all parameter, structure and QM log files
 param = CharmmParameterSet('data/charmm_ff/top_all36_cgenff.rtf', 'data/charmm_ff/par_all36_cgenff.prm')
-streams = ['data/pyrrole/pyrrol.str'] #, 'data/pyrrole-2/methyl-pyrrol.str']
-structure = ['data/pyrrole/pyrrol.psf'] #, 'data/pyrrole-2/methyl-pyrrol.psf']
-scans = [glob.glob('data/pyrrole/torsion-scan/*.log')]#, glob.glob('data/pyrrole-2/torsion-scan/*.log')]
+streams = ['data/pyrrole/pyrrol.str', 'data/pyrrole-2/methyl-pyrrol.str']
+structure = ['data/pyrrole/pyrrol.psf', 'data/pyrrole-2/methyl-pyrrol.psf']
+scans = [glob.glob('data/pyrrole/torsion-scan/*.log'), glob.glob('data/pyrrole-2/torsion-scan/*.log')]
 
 # create TorsionScanSet for each fragment
 torsion_scans = {}
@@ -31,12 +31,12 @@ for mol, scan in zip(structure, scans):
 platform = mm.Platform.getPlatformByName('Reference')
 model = TorsionFitModel.TorsionFitModel(param, streams, torsion_scans.values(), platform=platform)
 
-sampler = MCMC(model.pymc_parameters, db=db, dbname='/Users/sternc1/src/ChayaSt/Torsions/examples/test.nc')
+sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='test')#'/Users/sternc1/src/ChayaSt/Torsions/examples/test.nc')
 
-start = time.time()
-sampler.sample(iter=1)
-end = time.time()
-print(end-start)
+#start = time.time()
+sampler.sample(iter=1000)
+#end = time.time()
+#print(end-start)
 
 #cProfile.run('sampler.sample(iter=50)', 'statfile')
 #sampler.db.close()
