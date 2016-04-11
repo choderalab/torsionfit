@@ -88,6 +88,9 @@ class Database(base.Database):
 
     def __init__(self, dbname, dbmode='w'):
         """ Open or create netCDF4 database
+        creates a group for every chain. Creates ncvar for every parameter with unlimited dimensions (and dimension of
+        pymc parameter) to allow for unlimited iterations. The state of the chain is saved as a pickled string in ncvar
+        state for each chain group.
 
         :param dbname: string
             name of database file
@@ -158,9 +161,11 @@ class Database(base.Database):
         # create variables for pymc variables
         for name, fun in six.iteritems(funs_to_tally):
             if not np.asarray(fun()).shape == () and name not in self.ncfile['Chain#%d' % i].variables:
+                # create ncvar with dimensions of pymc parameter array and nsamples
                 self.ncfile['Chain#%d' % i].createDimension(name, np.asarray(fun()).shape[0])
                 self.ncfile['Chain#%d' % i].createVariable(name, np.asarray(fun()).dtype.str, ('nsamples', name))
             elif name not in self.ncfile['Chain#%d' % i].variables:
+                # all other ncvar than only need nsamples dimension
                 self.ncfile['Chain#%d' % i].createVariable(name, np.asarray(fun()).dtype.str, ('nsamples',))
 
         if len(self.trace_names) < len(self.ncfile.groups):
