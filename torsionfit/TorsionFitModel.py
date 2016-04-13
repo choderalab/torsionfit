@@ -143,10 +143,11 @@ class TorsionFitModel(object):
 
         :return: updated torsionfit.TorsionScanSet parameters based on current TorsionFitModel parameters
         """
+
         for p in mol.to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
             multiplicity_bitstring = self.pymc_parameters[torsion_name + '_multiplicity_bitstring'].value
-
+            reverse_p = tuple(reversed(p))
             for i in range(len(mol.parameters.dihedral_types[p])):
                 m = int(mol.parameters.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
@@ -157,17 +158,21 @@ class TorsionFitModel(object):
                     phase = torsion_name + '_' + str(m) + '_Phase'
                     pymc_variable = self.pymc_parameters[k]
                     mol.parameters.dihedral_types[p][i].phi_k = pymc_variable.value
+                    mol.parameters.dihedral_types[reverse_p][i].phi_k = pymc_variable.value
                     pymc_variable = self.pymc_parameters[phase]
                     if pymc_variable == 1:
                         mol.parameters.dihedral_types[p][i].phase = 180
+                        mol.parameters.dihedral_types[reverse_p][i].phase = 180
                         break
 
                     if pymc_variable == 0:
                         mol.parameters.dihedral_types[p][i].phase = 0
+                        mol.parameters.dihedral_types[reverse_p][i].phase = 0
                         break
                 else:
                     # This torsion periodicity is disabled.
                     mol.parameters.dihedral_types[p][i].phi_k = 0
+                    mol.parameters.dihedral_types[reverse_p][i].phi_k = 0
 
 
 

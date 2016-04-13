@@ -16,6 +16,7 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
+from memory_profiler import profile
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -36,8 +37,14 @@ def to_optimize(param, stream, penalty = 10):
     keys = [i for i in param.dihedral_types.keys()]
     for j in stream:
         param.read_stream_file(j)
-    return [k for k in param.dihedral_types.keys()
+    params_to_optimize =  [k for k in param.dihedral_types.keys()
             if k not in keys and param.dihedral_types[k].penalty >= penalty]
+    # compress type list
+    written = set()
+    for t in params_to_optimize:
+            if t in written or tuple(reversed(t)) in written: continue
+            written.add(t)
+    return list(written)
 
 
 def read_scan_logfile(logfiles, structure):
@@ -64,7 +71,7 @@ def read_scan_logfile(logfiles, structure):
     if type(logfiles) != list:
         logfiles = [logfiles]
 
-    for file in sorted(logfiles):
+    for file in (logfiles):
         #print("loading %s" % file)
         direction = np.ndarray(1)
         torsion = np.ndarray((1, 4), dtype=int)
@@ -184,7 +191,8 @@ class TorsionScanSet(Trajectory):
         torsion_force = forces['PeriodicTorsionForce']
 
         # reparameterize structure with updated param
-        self.structure.load_parameters(self.parameters)
+        #self.structure.load_parameters(self.parameters) Not needed if load_parameter in Parmed doesn't do a deepcopy of
+        # parameterSet
         # create new force
         new_torsion_force = self.structure.omm_dihedral_force()
         # copy parameters
@@ -193,6 +201,9 @@ class TorsionScanSet(Trajectory):
             torsion_force.setTorsionParameters(i, *torsion)
         # update parameters in context
         torsion_force.updateParametersInContext(self.context)
+
+        #clean up
+        del new_torsion_force
 
     def to_dataframe(self):
         """ convert TorsionScanSet to pandas dataframe """
