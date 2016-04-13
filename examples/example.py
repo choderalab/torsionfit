@@ -12,7 +12,7 @@ import glob
 from pymc import MCMC
 import torsionfit.netcdf4 as db
 import time
-#from memory_profiler import profile
+from memory_profiler import profile
 
 # Load all parameter, structure and QM log files
 param = CharmmParameterSet('data/charmm_ff/top_all36_cgenff.rtf', 'data/charmm_ff/par_all36_cgenff.prm')
@@ -31,10 +31,10 @@ for mol, scan in zip(structure, scans):
 platform = mm.Platform.getPlatformByName('Reference')
 model = TorsionFitModel.TorsionFitModel(param, streams, torsion_scans.values(), platform=platform)
 
-sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='test')#'/Users/sternc1/src/ChayaSt/Torsions/examples/test.nc')
+sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='test')
 
 #start = time.time()
-sampler.sample(iter=1000)
+sampler.sample(iter=1)
 #end = time.time()
 #print(end-start)
 
