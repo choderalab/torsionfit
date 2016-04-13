@@ -16,7 +16,7 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
-from memory_profiler import profile
+#from memory_profiler import profile
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -191,7 +191,7 @@ class TorsionScanSet(Trajectory):
         torsion_force = forces['PeriodicTorsionForce']
 
         # reparameterize structure with updated param
-        #self.structure.load_parameters(self.parameters) Not needed if load_parameter in Parmed doesn't do a deepcopy of
+        #self.structure.load_parameters(self.parameters) #Not needed if load_parameter in Parmed doesn't do a deepcopy of
         # parameterSet
         # create new force
         new_torsion_force = self.structure.omm_dihedral_force()
