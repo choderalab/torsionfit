@@ -170,7 +170,9 @@ class TorsionScanSet(Trajectory):
 
     def get_structure_param(self, param):
         # get subset of parameters used in this fragment
-        self.structure.load_parameters(param)
+        self.structure.load_parameters(param, copy=False) # When copy is set to False, ParmEd doesn't create a deep copy
+                                                          # of param so types in structure type_listchange by reference
+                                                          # when params are updated.
         self.parameters = CharmmParameterSet.from_structure(self.structure)
 
     def get_params(self, optimize_list, param):
@@ -190,9 +192,6 @@ class TorsionScanSet(Trajectory):
                   for i in range(self.system.getNumForces())}
         torsion_force = forces['PeriodicTorsionForce']
 
-        # reparameterize structure with updated param
-        #self.structure.load_parameters(self.parameters) #Not needed if load_parameter in Parmed doesn't do a deepcopy of
-        # parameterSet
         # create new force
         new_torsion_force = self.structure.omm_dihedral_force()
         # copy parameters
