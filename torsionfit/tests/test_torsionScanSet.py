@@ -5,7 +5,7 @@ import torsionfit.TorsionScanSet as torsionset
 from cclib.parser import Gaussian
 from cclib.parser.utils import convertor
 from numpy.testing import assert_almost_equal, assert_array_equal
-from parmed.charmm import CharmmParameterSet, CharmmPsfFile
+from parmed.charmm import CharmmParameterSet
 import unittest
 
 try:
@@ -53,21 +53,8 @@ class TestScanSet(unittest.TestCase):
     def test_to_optimize(self):
         """Tests generate to_optimize list"""
         param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-        structure = (get_fun('PRL.psf'))
         stream = (get_fun('PRL.str'))
-        model_param_to_optimize = torsionset.to_optimize(param, stream)
-        scan_set = torsionset.read_scan_logfile([get_fun('PRL.scan2.neg.log'), get_fun('PRL.scan2.pos.log')], structure)
-        scan_set.get_params(model_param_to_optimize, param)
-        self.assertItemsEqual(model_param_to_optimize, scan_set.to_optimize)
-
-    def test_multiple_to_optimize(self):
-        """ Tests to optimize lists for multiple fragments"""
-        param1 = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-        param2 = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-        structs = [get_fun('PRL.psf'), get_fun('MPR.psf')]
-        stream = [get_fun('PRL.str'), get_fun('MPR.str')]
-        model_param_to_optimize = torsionset.to_optimize(param1, stream)
-        mpr_scan = torsionset.read_scan_logfile(get_fun('MPR.scan1.pos.log'), structs[1])
-        mpr_scan.get_params(model_param_to_optimize, param1)
-        mpr_to_optimize = torsionset.to_optimize(param2, stream[-1])
-        self.assertItemsEqual(mpr_to_optimize, mpr_scan.to_optimize)
+        to_optimize = torsionset.to_optimize(param, stream)
+        self.assert_(len(to_optimize) == 19)
+        reverse = tuple(reversed(to_optimize[0]))
+        self.assert_(reverse not in to_optimize)
