@@ -8,8 +8,8 @@ source:
 requirements:
   build:
     - python
-    - numpy >=1.11
-    - pymc ==2.3.4 
+    - numpy >=1.10
+    - pymc ==2.3.6
     - cclib
     - pandas
     - openmm >=6.3
@@ -20,8 +20,8 @@ requirements:
 
   run:
     - python
-    - numpy >=1.11
-    - pymc ==2.3.4
+    - numpy >=1.10
+    - pymc ==2.3.6
     - cclib
     - openmm >=6.3
     - parmed-dev
