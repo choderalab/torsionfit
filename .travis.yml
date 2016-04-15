@@ -19,14 +19,9 @@ install:
   - export CC=gcc
   - export CXX=g++
 
-before_script:
-  - wget https://github.com/ParmEd/ParmEd/archive/master.zip
-  - tar -xzvf master.zip
-  - cd Parmed-master
-  - python setup.py install
-  
 script:
   - conda config --add channels ${ORGNAME}
+  - conda install parmed-dev
   - conda build devtools/conda-recipe
   - source activate _test
   - conda install --yes --quiet nose nose-timer
