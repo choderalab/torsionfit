@@ -11,6 +11,7 @@ requirements:
     - pymc ==2.3.4 
     - cclib
     - pandas
+    - numpy >= 1.11.0
     - openmm >=6.3
     - parmed-dev
     - setuptools
