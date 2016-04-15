@@ -16,7 +16,7 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
-#from memory_profiler import profile
+
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -161,25 +161,14 @@ class TorsionScanSet(Trajectory):
         self.direction = directions
         self.steps = steps
         self.positions = positions
-        self.to_optimize = []
         self.context = None
         self.system = None
         self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-        self.parameters = None
         self.energy = np.array
 
-    def get_structure_param(self, param):
-        # get subset of parameters used in this fragment
-        self.structure.load_parameters(param)
-        self.parameters = CharmmParameterSet.from_structure(self.structure)
-
-    def get_params(self, optimize_list, param):
-        # get list of parameters that need to be optimized for this fragment
-        self.get_structure_param(param)
-        self.to_optimize = list(set(optimize_list) & set(self.parameters.dihedral_types.keys()))
-
-    def create_context(self, platform=None):
-        self.system = self.structure.createSystem(self.parameters)
+    def create_context(self, param, platform=None):
+        self.structure.load_parameters(param, copy_parameters=False)
+        self.system = self.structure.createSystem()
         if platform != None:
             self.context = mm.Context(self.system, self.integrator, platform)
         else:
@@ -190,9 +179,6 @@ class TorsionScanSet(Trajectory):
                   for i in range(self.system.getNumForces())}
         torsion_force = forces['PeriodicTorsionForce']
 
-        # reparameterize structure with updated param
-        #self.structure.load_parameters(self.parameters) #Not needed if load_parameter in Parmed doesn't do a deepcopy of
-        # parameterSet
         # create new force
         new_torsion_force = self.structure.omm_dihedral_force()
         # copy parameters
@@ -239,7 +225,7 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
-    def compute_energy(self, offset, platform=None,):
+    def compute_energy(self, param, offset, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
@@ -250,7 +236,7 @@ class TorsionScanSet(Trajectory):
 
         # Check if context exists.
         if not self.context:
-            self.create_context(platform)
+            self.create_context(param, platform)
         else:
             # copy new torsion parameters
             self.copy_torsions()

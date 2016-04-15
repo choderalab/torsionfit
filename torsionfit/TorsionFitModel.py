@@ -93,18 +93,16 @@ class TorsionFitModel(object):
         self.pymc_parameters['precision'] = pymc.Lambda('precision',
                                                         lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                             -2 * log_sigma))
+
         # add missing multiplicity terms to parameterset so that the system has the same number of parameters
         self.add_missing(param)
 
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             mm = np.ndarray(0)
+            self.update_param(param)
             for mol in self.frags:
-                if not mol.parameters:
-                    # generate to_optimize list and ParametersSet for this fragment
-                    mol.get_params(self.parameters_to_optimize, param)
-                self.update_param(mol)
-                mol.compute_energy(offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
+                mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
                                    platform=self.platform)
                 mm = np.append(mm, mol.mm_energy / kilojoules_per_mole)
             return mm
@@ -135,7 +133,7 @@ class TorsionFitModel(object):
                 if j not in per:
                     param.dihedral_types[p].append(DihedralType(0, j, 0))
 
-    def update_param(self, mol):
+    def update_param(self, param):
         """
         Update param set based on current pymc model parameters.
 
@@ -144,12 +142,12 @@ class TorsionFitModel(object):
         :return: updated torsionfit.TorsionScanSet parameters based on current TorsionFitModel parameters
         """
 
-        for p in mol.to_optimize:
+        for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
             multiplicity_bitstring = self.pymc_parameters[torsion_name + '_multiplicity_bitstring'].value
             reverse_p = tuple(reversed(p))
-            for i in range(len(mol.parameters.dihedral_types[p])):
-                m = int(mol.parameters.dihedral_types[p][i].per)
+            for i in range(len(param.dihedral_types[p])):
+                m = int(param.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
                 if multiplicity_bitstring & multiplicity_bitmask:
                     if m == 5:
@@ -157,22 +155,22 @@ class TorsionFitModel(object):
                     k = torsion_name + '_' + str(m) + '_K'
                     phase = torsion_name + '_' + str(m) + '_Phase'
                     pymc_variable = self.pymc_parameters[k]
-                    mol.parameters.dihedral_types[p][i].phi_k = pymc_variable.value
-                    mol.parameters.dihedral_types[reverse_p][i].phi_k = pymc_variable.value
+                    param.dihedral_types[p][i].phi_k = pymc_variable.value
+                    param.dihedral_types[reverse_p][i].phi_k = pymc_variable.value
                     pymc_variable = self.pymc_parameters[phase]
                     if pymc_variable == 1:
-                        mol.parameters.dihedral_types[p][i].phase = 180
-                        mol.parameters.dihedral_types[reverse_p][i].phase = 180
+                        param.dihedral_types[p][i].phase = 180
+                        param.dihedral_types[reverse_p][i].phase = 180
                         break
 
                     if pymc_variable == 0:
-                        mol.parameters.dihedral_types[p][i].phase = 0
-                        mol.parameters.dihedral_types[reverse_p][i].phase = 0
+                        param.dihedral_types[p][i].phase = 0
+                        param.dihedral_types[reverse_p][i].phase = 0
                         break
                 else:
                     # This torsion periodicity is disabled.
-                    mol.parameters.dihedral_types[p][i].phi_k = 0
-                    mol.parameters.dihedral_types[reverse_p][i].phi_k = 0
+                    param.dihedral_types[p][i].phi_k = 0
+                    param.dihedral_types[reverse_p][i].phi_k = 0
 
 
 
