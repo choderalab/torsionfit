@@ -40,6 +40,8 @@ class TorsionFitModel(object):
         self.frags = frags
         self.platform = platform
         self.parameters_to_optimize = TorsionScan.to_optimize(param, stream)
+        # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
+        self.add_missing(param)
 
         multiplicities = [1, 2, 3, 4, 6]
         multiplicity_bitstrings = dict()
@@ -94,8 +96,6 @@ class TorsionFitModel(object):
                                                         lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                             -2 * log_sigma))
 
-        # add missing multiplicity terms to parameterset so that the system has the same number of parameters
-        self.add_missing(param)
 
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
@@ -126,12 +126,15 @@ class TorsionFitModel(object):
         """
         multiplicities = [1, 2, 3, 4, 6]
         for p in self.parameters_to_optimize:
+            reverse = tuple(reversed(p))
             per = []
             for i in range(len(param.dihedral_types[p])):
                 per.append(param.dihedral_types[p][i].per)
+                per.append(param.dihedral_types[reverse][i].per)
             for j in multiplicities:
                 if j not in per:
                     param.dihedral_types[p].append(DihedralType(0, j, 0))
+                    param.dihedral_types[reverse].append(DihedralType(0, j, 0))
 
     def update_param(self, param):
         """
