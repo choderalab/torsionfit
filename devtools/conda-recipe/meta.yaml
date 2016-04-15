@@ -12,7 +12,7 @@ requirements:
     - cclib
     - pandas
     - openmm >=6.3
-    - parmed
+    - parmed-dev
     - setuptools
     - mdtraj
     - netcdf4
@@ -22,7 +22,7 @@ requirements:
     - pymc ==2.3.4
     - cclib
     - openmm >=6.3
-    - parmed
+    - parmed-dev
     - pandas
     - mdtraj
     - netcdf4
