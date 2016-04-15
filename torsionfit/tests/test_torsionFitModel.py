@@ -55,5 +55,17 @@ class TestFitModel(unittest.TestCase):
         self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
                                                                torsion.atom3.type, torsion.atom4.type)])
 
+    def test_add_missing(self):
+        """ Tests that add_missing adds missing terms to parameters_to_optimize """
+
+        model.add_missing(param)
+        for i in model.frags[0].structure.dihedrals:
+            key = (i.atom1.type, i.atom2.type, i.atom3.type, i.atom4.type)
+            key_reverse = tuple(reversed(key))
+            if key in model.parameters_to_optimize or key_reverse in model.parameters_to_optimize:
+                self.assert_(len(i.type) == 5)
+
+
+
 
 
