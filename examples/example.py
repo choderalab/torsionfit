@@ -11,25 +11,32 @@ import torsionfit.TorsionFitModel as TorsionFitModel
 import glob
 from pymc import MCMC
 import torsionfit.netcdf4 as db
-#from memory_profiler import profile
+import time
+from memory_profiler import profile
 
+# Load all parameter, structure and QM log files
 param = CharmmParameterSet('data/charmm_ff/top_all36_cgenff.rtf', 'data/charmm_ff/par_all36_cgenff.prm')
-stream = ['data/pyrrole/pyrrol.str', 'data/pyrrole-2/methyl-pyrrol.str']
+streams = ['data/pyrrole/pyrrol.str', 'data/pyrrole-2/methyl-pyrrol.str']
 structure = ['data/pyrrole/pyrrol.psf', 'data/pyrrole-2/methyl-pyrrol.psf']
-scan = glob.glob('data/pyrrole/torsion-scan/*.log')
-pyrrol_scan = TorsionScanSet.read_scan_logfile(scan, structure[0])
-pyrrol_opt = pyrrol_scan.extract_geom_opt()
-pyrrol_2_scan = TorsionScanSet.read_scan_logfile(glob.glob('data/pyrrole-2/torsion-scan/*.log'), structure[1])
-pyrrol_2_opt = pyrrol_2_scan.extract_geom_opt()
-frags = [pyrrol_opt, pyrrol_2_opt]
+scans = [glob.glob('data/pyrrole/torsion-scan/*.log'), glob.glob('data/pyrrole-2/torsion-scan/*.log')]
+
+# create TorsionScanSet for each fragment
+torsion_scans = {}
+for mol, scan in zip(structure, scans):
+    torsion_scan = TorsionScanSet.read_scan_logfile(scan, mol)
+    torsion_scans[mol] = torsion_scan.extract_geom_opt()
+
+
 #create pymc model
 platform = mm.Platform.getPlatformByName('Reference')
-model = TorsionFitModel.TorsionFitModel(param, stream, frags, platform=platform)
-#update param with missing parameters
-model.add_missing(param)
-sampler = MCMC(model.pymc_parameters, db=db, dbname='/Users/sternc1/src/ChayaSt/Torsions/examples/test.nc', verbose=5)
+model = TorsionFitModel.TorsionFitModel(param, streams, torsion_scans.values(), platform=platform)
 
+sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='test')
+
+#start = time.time()
 sampler.sample(iter=1)
+#end = time.time()
+#print(end-start)
 
 #cProfile.run('sampler.sample(iter=50)', 'statfile')
 #sampler.db.close()
