@@ -180,6 +180,7 @@ class Database(base.Database):
         self.trace_names = []
         # A list of sequences of names of the objects to tally.
         self._traces = {}  # A dictionary of the Trace objects.
+        self._chains = {}  # dictionary of states for each chain
 
         if os.path.exists(dbname) and dbmode == 'w':
             os.remove(dbname)
@@ -195,14 +196,12 @@ class Database(base.Database):
                 existing_tables[0])
             self.chains = self.cur.fetchall()[0][0] + 1
             self.trace_names = self.chains * [existing_tables, ]
+            # Get state for each chain
+            rows = self.cur.execute("SELECT * FROM state")
+            for row in rows:
+                self._chains[row[0]] = cPickle.loads(str(row[1]))
         else:
             self.chains = 0
-
-        # Get state for each chain
-        rows = self.cur.execute("SELECT * FROM state")
-        for row in rows:
-            self._chains[row[0]] = cPickle.loads(str(row[1]))
-
 
     def commit(self):
         """Commit updates to database"""
@@ -274,6 +273,8 @@ def load(dbname):
     # Create a Trace instance for each object
     chains = 0
     for name in tables:
+        if name == 'state':
+            continue
         db._traces[name] = Trace(name=name, db=db)
         db._traces[name]._shape = get_shape(db.cur, name)
         setattr(db, name, db._traces[name])
