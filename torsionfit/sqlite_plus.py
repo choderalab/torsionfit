@@ -39,6 +39,7 @@ from pymc.database import base, pickle, ram
 import pdb
 import os
 import warnings
+import cPickle
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -197,6 +198,12 @@ class Database(base.Database):
         else:
             self.chains = 0
 
+        # Get state for each chain
+        rows = self.cur.execute("SELECT * FROM state")
+        for row in rows:
+            self._chains[row[0]] = cPickle.loads(str(row[1]))
+
+
     def commit(self):
         """Commit updates to database"""
         self.DB.commit()
@@ -219,15 +226,39 @@ class Database(base.Database):
 # a dictionary to and from a sqlite database. Unfortunately, I'm not familiar with
 # SQL enough to do that without having to read too much SQL documentation
 # for my taste.
-    def savestate(self, state):
+    def savestate(self, state, chain=-1):
         """Store a dictionnary containing the state of the Sampler and its
-        StepMethods."""
-        pass
+        StepMethods. Stores pickled dictionary in a sqlite table. Each row row is the state for the chain with that
+        index"""
 
-    def getstate(self):
-        """Return a dictionary containing the state of the Sampler and its
-        StepMethods."""
-        return {}
+        self._state = state
+
+        # create table for state
+        var = 'state'
+        query = """CREATE TABLE IF NOT EXISTS [%s]
+                     (chain INT, state BLOB)""" % var
+
+        self.cur.execute(query)
+
+        # pickle state
+        chain = range(self.chains)[chain]
+        state_pickle = cPickle.dumps(state)
+        binary = sqlite3.Binary(state_pickle)
+
+        # insert into SQL table
+        self.cur.execute("INSERT INTO state VALUES(?, ?)", (chain, binary,))
+
+    def getstate(self, chain=-1):
+
+        if self.chains == 0:
+            chain = 0
+        else:
+            chain = range(self.chains)[chain]
+
+        if len(self._chains) == 0:
+            return {}
+        else:
+            return self._chains[chain]
 
 
 def load(dbname):
