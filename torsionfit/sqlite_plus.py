@@ -227,7 +227,7 @@ class Database(base.Database):
 # for my taste.
     def savestate(self, state, chain=-1):
         """Store a dictionnary containing the state of the Sampler and its
-        StepMethods. Stores pickled dictionary in a sqlite table. Each row row is the state for the chain with that
+        StepMethods. Stores pickled dictionary in a sqlite table. Each row is the state for the chain with that
         index"""
 
         self._state = state
