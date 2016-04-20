@@ -12,7 +12,7 @@ import mdtraj as md
 from copy import copy, deepcopy
 import re
 from cclib.parser import Gaussian
-from cclib.parser.utils import convertor 
+from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
@@ -248,8 +248,10 @@ class TorsionScanSet(Trajectory):
             state = self.context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
 
-        # Subtract off minimum of mm_energy
-        self.mm_energy -= self.mm_energy.min() + Quantity(value=float(offset.value), unit=kilojoules_per_mole)
+        # Subtract off minimum of mm_energy and add offset
+        min_energy = self.mm_energy.min()
+        self.mm_energy -= min_energy
+        self.mm_energy += offset
         self.delta_energy = (self.qm_energy - self.mm_energy)
 
         # Compute deviation between MM and QM energies with offset
@@ -327,7 +329,3 @@ class TorsionScanSet(Trajectory):
             newtraj._rmsd_traces = np.array(self._rmsd_traces[key],
                                             ndmin=1, copy=True)
         return newtraj
-
-
-
-
