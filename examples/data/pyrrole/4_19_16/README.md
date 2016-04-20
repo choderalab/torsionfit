@@ -1,5 +1,5 @@
 ### analysis of torsionfit output for pyrrole
-This db was generated using pymc sqlite backend (on 4/19/16) (so state was not saved - can't restart). 
+This db was generated using pymc sqlite backend (on 4/13/16, analysis was started on 4/19/16) (so state was not saved - can't restart). 
 Redundant dihedral bug was fixed but it seems like even less multiplicities got locked in this time.
 
 ###Manifest
