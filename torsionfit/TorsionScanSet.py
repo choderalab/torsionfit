@@ -166,6 +166,14 @@ class TorsionScanSet(Trajectory):
         self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
         self.energy = np.array
 
+        # Don't allow an empty TorsionScanSet to be created
+        if self.n_frames == 0:
+            msg = 'TorsionScanSet has no frames!\n'
+            msg += '\n'
+            msg += 'positions provided were:\n'
+            msg += str(positions)
+            raise Exception(msg)
+
     def create_context(self, param, platform=None):
         self.structure.load_parameters(param, copy_parameters=False)
         self.system = self.structure.createSystem()
@@ -233,6 +241,9 @@ class TorsionScanSet(Trajectory):
         param: parmed.charmm.CharmmParameterSet
         platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
         """
+
+        if self.n_frames == 0:
+            raise Exception("self.n_frames = 0! There are no frames to compute energy for.")
 
         # Check if context exists.
         if not self.context:
