@@ -260,9 +260,10 @@ class TorsionScanSet(Trajectory):
             self.mm_energy[i] = state.getPotentialEnergy()
 
         # Subtract off minimum of mm_energy and add offset
+        energy_unit = kilojoules_per_mole
         min_energy = self.mm_energy.min()
         self.mm_energy -= min_energy
-        self.mm_energy += offset
+        self.mm_energy += Quantity(value=offset.value, unit=energy_unit)
         self.delta_energy = (self.qm_energy - self.mm_energy)
 
         # Compute deviation between MM and QM energies with offset
