@@ -16,7 +16,7 @@ class TorsionFitModel(object):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, stream, frags, platform=None):
+    def __init__(self, param, stream, frags, platform=None, param_to_opt=None):
         """Create a PyMC model for fitting torsions.
 
         Parameters
@@ -39,7 +39,10 @@ class TorsionFitModel(object):
         self.pymc_parameters = dict()
         self.frags = frags
         self.platform = platform
-        self.parameters_to_optimize = TorsionScan.to_optimize(param, stream)
+        if param_to_opt:
+            self.parameters_to_optimize = param_to_opt
+        else:
+            self.parameters_to_optimize = TorsionScan.to_optimize(param, stream)
         # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
         self.add_missing(param)
 
