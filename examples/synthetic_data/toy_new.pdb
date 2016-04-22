@@ -1,0 +1,6 @@
+REMARK original generated coordinate pdb file
+ATOM      1  C1  TOY     1       0.000  -1.437  -0.526  1.00  0.00      BUTA  
+ATOM      2  C2  TOY     1       0.000   0.000   0.000  1.00  0.00      BUTA  
+ATOM      3  C3  TOY     1       0.000   0.000   1.530  1.00  0.00      BUTA  
+ATOM      4  C4  TOY     1       0.344   1.395   2.056  1.00  0.00      BUTA  
+END
