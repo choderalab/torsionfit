@@ -39,7 +39,11 @@ from pymc.database import base, pickle, ram
 import pdb
 import os
 import warnings
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 
 __all__ = ['Trace', 'Database', 'load']
 
@@ -199,7 +203,7 @@ class Database(base.Database):
             # Get state for each chain
             rows = self.cur.execute("SELECT * FROM state")
             for row in rows:
-                self._chains[row[0]] = cPickle.loads(str(row[1]))
+                self._chains[row[0]] = pickle.loads(str(row[1]))
         else:
             self.chains = 0
 
@@ -241,7 +245,7 @@ class Database(base.Database):
 
         # pickle state
         chain = range(self.chains)[chain]
-        state_pickle = cPickle.dumps(state)
+        state_pickle = pickle.dumps(state)
         binary = sqlite3.Binary(state_pickle)
 
         # insert into SQL table
