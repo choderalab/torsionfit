@@ -1,6 +1,6 @@
 """Test TorsionFitModel"""
 
-from torsionfit.tests.utils import get_fun, get_files
+from torsionfit.tests.utils import get_fun
 import torsionfit.TorsionScanSet as torsionset
 from torsionfit.TorsionFitModel import TorsionFitModel
 from pymc import MCMC
