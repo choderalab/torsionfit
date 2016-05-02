@@ -1,4 +1,4 @@
-This dataset was generated with initial values based on cgenff guess. 
+This dataset was generated with initial values based on cgenff guess.
 
 ###Manifest
 * `analysis_4_22_16.ipynb` - ipython notebook where the figures were generated
