@@ -36,7 +36,7 @@ def get_files(fnames):
     """
     fnl = []
     for name in fnames:
-        fn = resource_filename('torsionfit', os.path.join('tests', name))
+        fn = resource_filename('torsionfit', os.path.join('tests', 'reference', name))
         if not os.path.exists(fn):
             raise ValueError('%s does not exist. If you just added it you will have to re install' % fn)
         fnl.append(fn)
