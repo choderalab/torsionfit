@@ -43,8 +43,6 @@ class TorsionFitModel(object):
             self.parameters_to_optimize = param_to_opt
         else:
             self.parameters_to_optimize = TorsionScan.to_optimize(param, stream)
-        # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
-        self.add_missing(param)
 
         multiplicities = [1, 2, 3, 4, 6]
         multiplicity_bitstrings = dict()
@@ -99,6 +97,8 @@ class TorsionFitModel(object):
                                                         lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                             -2 * log_sigma))
 
+        # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
+        self.add_missing(param)
 
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
