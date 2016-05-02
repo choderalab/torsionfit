@@ -25,7 +25,7 @@ platform = mm.Platform.getPlatformByName('Reference')
 param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
 stream = get_fun('PRL.str')
 structure = get_fun('PRL.psf')
-logfiles = get_files(glob.glob('PRL.scan*'))
+logfiles = [get_fun('PRL.scan2.pos.log'), get_fun('PRL.scan2.neg.log')]
 frag = torsionset.read_scan_logfile(logfiles, structure)
 frag = frag.extract_geom_opt()
 model = TorsionFitModel(param, stream, frag, platform=platform)
