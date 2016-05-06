@@ -3,14 +3,14 @@ os:
   - osx
 
 language: c
-sudo: false
+sudo: required
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
 
 before_install:
-  - apt-get install libopenblas-base
+  - sudo apt-get install libopenblas-base
   - export LD_LIBRARY_PATH=/usr/lib/openblas-base/
 
 install:
