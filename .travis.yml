@@ -18,6 +18,7 @@ install:
   - export PYTHONUNBUFFERED=true
   - export CC=gcc
   - export CXX=g++
+  - export LD_LIBRARY_PATH=/opt/OpenBLAS/lib/
 
 script:
   - conda config --add channels ${ORGNAME}
