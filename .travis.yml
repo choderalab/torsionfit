@@ -10,7 +10,7 @@ addons:
     - ubuntu-toolchain-r-test
 
 before_install:
-  - if [["$TRAVIS_OS_NAME" == "linux"]]; then sudo apt-get install libopenblas-base
+  - if [["$TRAVIS_OS_NAME" == "linux"]]; then sudo apt-get install libopenblas-base; fi
   - export LD_LIBRARY_PATH=/usr/lib/openblas-base/
 
 install:
