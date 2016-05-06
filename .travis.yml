@@ -8,6 +8,7 @@ addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
+    - libopenblas-base
 
 install:
   - source devtools/travis-ci/install.sh
@@ -18,7 +19,7 @@ install:
   - export PYTHONUNBUFFERED=true
   - export CC=gcc
   - export CXX=g++
-  - export LD_LIBRARY_PATH=/opt/OpenBLAS/lib/
+  - export LD_LIBRARY_PATH=/usr/lib/openblas-base/
 
 script:
   - conda config --add channels ${ORGNAME}
