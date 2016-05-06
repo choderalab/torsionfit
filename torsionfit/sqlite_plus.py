@@ -203,7 +203,7 @@ class Database(base.Database):
             # Get state for each chain
             rows = self.cur.execute("SELECT * FROM state")
             for row in rows:
-                self._chains[row[0]] = pickle.loads(str(row[1]))
+                self._chains[row[0]] = pickle.loads(bytes(row[1]))
         else:
             self.chains = 0
 
