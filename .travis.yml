@@ -3,15 +3,11 @@ os:
   - osx
 
 language: c
-sudo: required
+sudo: false 
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
-
-before_install:
-  - if [["$TRAVIS_OS_NAME" == "linux"]]; then sudo apt-get install libopenblas-base; fi
-  - export LD_LIBRARY_PATH=/usr/lib/openblas-base/
 
 install:
   - source devtools/travis-ci/install.sh
@@ -22,7 +18,6 @@ install:
   - export PYTHONUNBUFFERED=true
   - export CC=gcc
   - export CXX=g++
-  - export LD_LIBRARY_PATH=/usr/lib/openblas-base/
 
 script:
   - conda config --add channels ${ORGNAME}
