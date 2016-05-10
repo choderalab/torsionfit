@@ -63,7 +63,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'numpy',
-        'pymc==2.3.4',
+        'pymc',
         'pandas',
         'cclib',
         'openmm>=6.3',

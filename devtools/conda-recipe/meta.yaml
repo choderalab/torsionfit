@@ -10,7 +10,7 @@ requirements:
     - python
     - setuptools
     - numpy ==1.10
-    - pymc ==2.3.4
+    - pymc
     - cclib
     - openmm-dev
     - parmed-dev
@@ -21,7 +21,7 @@ requirements:
   run:
     - python
     - numpy ==1.10
-    - pymc ==2.3.4
+    - pymc
     - cclib
     - openmm-dev
     - parmed-dev
