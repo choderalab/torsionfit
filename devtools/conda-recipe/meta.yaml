@@ -28,7 +28,7 @@ requirements:
     - pandas
     - mdtraj
     - netcdf4
-    - libgfortran ==1.0.0 openblas [linux]
+    - libgfortran ==1.0.0 [linux]
 
 test:
   requires:
