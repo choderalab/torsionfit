@@ -13,7 +13,6 @@ wget http://repo.continuum.io/miniconda/$MINICONDA
 bash $MINICONDA -b -p miniconda
 
 export PATH=$HOME/miniconda/bin:$PATH
-conda install --yes libgfortran==1.0 openblas
 conda install --yes conda-build jinja2 anaconda-client pip
 conda config --add channels omnia
 
