@@ -9,7 +9,7 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy
+    - numpy ==1.11
     - pymc ==2.3.4
     - cclib
     - openmm-dev
@@ -20,7 +20,7 @@ requirements:
 
   run:
     - python
-    - numpy
+    - numpy ==1.11
     - pymc ==2.3.4
     - cclib
     - openmm-dev
