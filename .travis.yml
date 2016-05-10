@@ -21,7 +21,6 @@ install:
 
 script:
   - conda config --add channels ${ORGNAME}
-  - conda install --yes libgfortran==1.0 openblas
   - conda build devtools/conda-recipe
   - source activate _test
   - conda install --yes --quiet nose nose-timer
