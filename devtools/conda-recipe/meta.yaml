@@ -1,6 +1,6 @@
 package:
   name: torsionfit-dev
-  version: !!str 0.0.0
+  version: 0.0.0
 
 source:
   path: ../../
@@ -17,7 +17,6 @@ requirements:
     - pandas
     - mdtraj
     - netcdf4
-    - libgfortran ==1.0 openblas [linux]
 
   run:
     - python
