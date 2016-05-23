@@ -3,14 +3,14 @@ package:
   version: 0.0.0
 
 source:
-  path: ../..
+  path: ../../
 
 requirements:
   build:
     - python
     - setuptools
-    - numpy
-    - pymc ==2.3.4
+    - numpy ==1.10
+    - pymc
     - cclib
     - openmm-dev
     - parmed-dev
@@ -20,8 +20,8 @@ requirements:
 
   run:
     - python
-    - numpy
-    - pymc ==2.3.4
+    - numpy ==1.10
+    - pymc
     - cclib
     - openmm-dev
     - parmed-dev
