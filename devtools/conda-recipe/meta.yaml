@@ -1,6 +1,6 @@
 package:
   name: torsionfit-dev
-  version: !!str 0.1.0.dev0
+  version: 0.0.0
 
 source:
   path: ../../
@@ -8,26 +8,30 @@ source:
 requirements:
   build:
     - python
-    - numpy 
-    - pymc ==2.3.4
-    - cclib
-    - pandas
-    - openmm >=6.3
-    - parmed-dev
     - setuptools
+    - numpy ==1.10
+    - pymc
+    - cclib
+    - openmm-dev
+    - parmed-dev
+    - pandas
     - mdtraj
     - netcdf4
+    - matplotlib
 
   run:
     - python
-    - numpy 
-    - pymc ==2.3.4
+    - setuptools
+    - numpy ==1.10
+    - pymc
     - cclib
-    - openmm >=6.3
+    - openmm-dev
     - parmed-dev
     - pandas
     - mdtraj
     - netcdf4
+    - matplotlib
+    - libgfortran ==1.0.0 [linux]
 
 test:
   requires:
