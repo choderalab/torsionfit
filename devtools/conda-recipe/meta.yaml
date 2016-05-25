@@ -18,6 +18,7 @@ requirements:
     - mdtraj
     - netcdf4
     - matplotlib
+    - pymbar
 
   run:
     - python
@@ -30,6 +31,7 @@ requirements:
     - mdtraj
     - netcdf4
     - matplotlib
+    - pymbar
     - libgfortran ==1.0.0 [linux]
 
 test:
