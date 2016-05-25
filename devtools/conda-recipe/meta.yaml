@@ -21,7 +21,6 @@ requirements:
 
   run:
     - python
-    - setuptools
     - numpy ==1.10
     - pymc
     - cclib
@@ -36,10 +35,11 @@ requirements:
 test:
   requires:
     - nose
+    - nose-timer
   imports:
     - torsionfit
   commands:
-    - nosetests torsionfit -v
+    - nosetests -vv --nocapture --with-timer torsionfit
 
 about:
   home: http://github.com/choderalab/torsionfit

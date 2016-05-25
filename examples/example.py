@@ -31,10 +31,10 @@ for mol, scan in zip(structure, scans):
 platform = mm.Platform.getPlatformByName('Reference')
 model = TorsionFitModel.TorsionFitModel(param, streams, torsion_scans.values(), platform=platform)
 
-sampler = MCMC(model.pymc_parameters, db=db, dbname='test')
+sampler = MCMC(model.pymc_parameters, db=db, dbname='mcmc_output/add_missing_fix_4_22_16.sqlite')
 
 #start = time.time()
-sampler.sample(iter=10)
+sampler.sample(iter=10000)
 #end = time.time()
 #print(end-start)
 

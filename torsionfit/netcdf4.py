@@ -7,7 +7,10 @@ import os
 import sys
 import warnings
 import traceback
-import pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import codecs
 
 __all__ = ['Trace', 'Database']

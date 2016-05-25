@@ -12,7 +12,7 @@ import mdtraj as md
 from copy import copy, deepcopy
 import re
 from cclib.parser import Gaussian
-from cclib.parser.utils import convertor 
+from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
@@ -166,6 +166,14 @@ class TorsionScanSet(Trajectory):
         self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
         self.energy = np.array
 
+        # Don't allow an empty TorsionScanSet to be created
+        if self.n_frames == 0:
+            msg = 'TorsionScanSet has no frames!\n'
+            msg += '\n'
+            msg += 'positions provided were:\n'
+            msg += str(positions)
+            raise Exception(msg)
+
     def create_context(self, param, platform=None):
         self.structure.load_parameters(param, copy_parameters=False)
         self.system = self.structure.createSystem()
@@ -234,6 +242,9 @@ class TorsionScanSet(Trajectory):
         platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
         """
 
+        if self.n_frames == 0:
+            raise Exception("self.n_frames = 0! There are no frames to compute energy for.")
+
         # Check if context exists.
         if not self.context:
             self.create_context(param, platform)
@@ -248,8 +259,12 @@ class TorsionScanSet(Trajectory):
             state = self.context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
 
-        # Subtract off minimum of mm_energy
-        self.mm_energy -= self.mm_energy.min() + Quantity(value=float(offset.value), unit=kilojoules_per_mole)
+        # Subtract off minimum of mm_energy and add offset
+        energy_unit = kilojoules_per_mole
+        offset = Quantity(value=offset.value, unit=energy_unit)
+        min_energy = self.mm_energy.min()
+        self.mm_energy -= min_energy
+        self.mm_energy += offset
         self.delta_energy = (self.qm_energy - self.mm_energy)
 
         # Compute deviation between MM and QM energies with offset
@@ -327,7 +342,3 @@ class TorsionScanSet(Trajectory):
             newtraj._rmsd_traces = np.array(self._rmsd_traces[key],
                                             ndmin=1, copy=True)
         return newtraj
-
-
-
-
