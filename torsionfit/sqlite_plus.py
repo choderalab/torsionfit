@@ -229,8 +229,9 @@ class Database(base.Database):
 # a dictionary to and from a sqlite database. Unfortunately, I'm not familiar with
 # SQL enough to do that without having to read too much SQL documentation
 # for my taste.
+# A quick and dirty savestate was added by Chaya D. Stern April 2016
     def savestate(self, state, chain=-1):
-        """Store a dictionnary containing the state of the Sampler and its
+        """Store a dictionary containing the state of the Sampler and its
         StepMethods. Stores pickled dictionary in a sqlite table. Each row is the state for the chain with that
         index"""
 
