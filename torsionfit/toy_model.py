@@ -13,6 +13,7 @@ import numpy as np
 import torsionfit.TorsionScanSet as ScanSet
 import torsionfit.TorsionFitModel as Model
 from torsionfit.tests.utils import get_fun
+import copy
 
 
 class ToyModel(object):
@@ -64,16 +65,15 @@ class ToyModel(object):
 
         # initialize parameter
         if initial_value == 'random':
-            self._randomize_dih_param()
-            self.initial_value = self._param.dihedral_types[self._dih_type]
+            self.initial_value = self._randomize_dih_param(return_dih=True)
         else:
             # return original dihedral to param
             self._param.dihedral_types[self._dih_type] = original_torsion
-            self.initial_value = self._param.dihedral_types[self._dih_type]
+            self.initial_value = copy.deepcopy(original_torsion)
 
         # create torsionfit.TorsionScanSet
         torsions = np.zeros((len(self._positions), 4))
-        torsions[:] = [1,2,3,4]
+        torsions[:] = [1, 2, 3, 4]
         direction = None
         steps = None
         self.scan_set = ScanSet.TorsionScanSet(self._positions.value_in_unit(units.nanometers), self._topology, self._struct,
@@ -140,7 +140,7 @@ class ToyModel(object):
             state = context.getState(getEnergy=True)
             self.synthetic_energy[i] = state.getPotentialEnergy()
 
-    def _randomize_dih_param(self):
+    def _randomize_dih_param(self, return_dih=False):
         """
         generates random dihedral parameters
 
@@ -157,3 +157,6 @@ class ToyModel(object):
                 phase = 180
             dih_tlist.append(DihedralType(k, n, phase, 1.00, 1.00))
         self._param.dihedral_types[self._dih_type] = dih_tlist
+        if return_dih:
+            _dih_tlist = copy.deepcopy(dih_tlist)
+            return _dih_tlist
