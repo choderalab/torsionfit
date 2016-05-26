@@ -16,7 +16,7 @@ class TorsionFitModel(object):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, stream, frags, platform=None, param_to_opt=None):
+    def __init__(self, param, stream, frags, platform=None, param_to_opt=None, decouple_n=False):
         """Create a PyMC model for fitting torsions.
 
         Parameters
@@ -103,7 +103,7 @@ class TorsionFitModel(object):
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             mm = np.ndarray(0)
-            self.update_param(param)
+            self.update_param(param, decouple_n=decouple_n)
             for mol in self.frags:
                 mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
                                    platform=self.platform)
@@ -139,7 +139,7 @@ class TorsionFitModel(object):
                     param.dihedral_types[p].append(DihedralType(0, j, 0))
                     param.dihedral_types[reverse].append(DihedralType(0, j, 0))
 
-    def update_param(self, param):
+    def update_param(self, param, decouple_n):
         """
         Update param set based on current pymc model parameters.
 
@@ -155,7 +155,7 @@ class TorsionFitModel(object):
             for i in range(len(param.dihedral_types[p])):
                 m = int(param.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
-                if multiplicity_bitstring & multiplicity_bitmask:
+                if (multiplicity_bitstring & multiplicity_bitmask) or decouple_n:
                     if m == 5:
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
@@ -174,6 +174,7 @@ class TorsionFitModel(object):
                         param.dihedral_types[reverse_p][i].phase = 0
                         break
                 else:
+                    print('turning k off')
                     # This torsion periodicity is disabled.
                     param.dihedral_types[p][i].phi_k = 0
                     param.dihedral_types[reverse_p][i].phi_k = 0

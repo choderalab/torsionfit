@@ -33,7 +33,7 @@ class ToyModel(object):
 
     """
 
-    def __init__(self, true_value='random', initial_value='random', phase='symmetric', multiplicity='on',
+    def __init__(self, true_value='random', initial_value='random', phase='symmetric', decouple_n=False,
                  n_increments=13):
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
@@ -81,7 +81,7 @@ class ToyModel(object):
 
         # create torsionfit.TorsionFitModel
         self.model = Model.TorsionFitModel(self._param, self._struct, self.scan_set, platform=self._platform,
-                                           param_to_opt=[self._dih_type])
+                                           param_to_opt=[self._dih_type], decouple_n=decouple_n)
 
     def _spher2cart(self, r, theta, phi):
         """convert spherical to cartesian coordinates
