@@ -33,7 +33,7 @@ class ToyModel(object):
 
     """
 
-    def __init__(self, true_value='random', initial_value='random', phase='symmetric', decouple_n=False,
+    def __init__(self, true_value=False, initial_value=False, decouple_n=False,
                  n_increments=13):
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
@@ -46,14 +46,16 @@ class ToyModel(object):
         # Replace ('CG331', 'CG321', 'CG321', 'CG331') torsion with true_value
         self._dih_type = ('CG331', 'CG321', 'CG321', 'CG331')
         original_torsion = self._param.dihedral_types[self._dih_type]
-        if true_value == 'random':
-            self._randomize_dih_param()
+        if true_value:
+            dih_tlist = DihedralTypeList()
+            if type(true_value) != list:
+                true_value = [true_value]
+            for dih in true_value:
+                dih_tlist.append(dih)
+            self._param.dihedral_types[self._dih_type] = dih_tlist
             self.true_value = self._param.dihedral_types[self._dih_type]
         else:
-            dih_tlist = DihedralTypeList()
-            for dih in true_value:
-                dih_tlist.append(DihedralType(dih))
-            self._param.dihedral_types[self._dih_type] = dih_tlist
+            self._randomize_dih_param()
             self.true_value = self._param.dihedral_types[self._dih_type]
 
         # parametrize toy
@@ -64,9 +66,14 @@ class ToyModel(object):
         self._torsion_scan(n_increments=n_increments)
 
         # initialize parameter
-        if initial_value == 'random':
+        if not initial_value:
             self.initial_value = self._randomize_dih_param(return_dih=True)
-        else:
+        elif type(initial_value) == DihedralType:
+            dih_tlist = DihedralTypeList()
+            dih_tlist.append(initial_value)
+            self._param.dihedral_types[self._dih_type] = dih_tlist
+            self.initial_value = initial_value
+        elif initial_value == 'cgenff':
             # return original dihedral to param
             self._param.dihedral_types[self._dih_type] = original_torsion
             self.initial_value = copy.deepcopy(original_torsion)
@@ -138,7 +145,8 @@ class ToyModel(object):
         for i, conf in enumerate(self._positions):
             context.setPositions(conf)
             state = context.getState(getEnergy=True)
-            self.synthetic_energy[i] = state.getPotentialEnergy()
+            energy = state.getPotentialEnergy()
+            self.synthetic_energy[i] = energy + units.Quantity(value=np.random.normal(0, 0.1), unit=units.kilojoules_per_mole)
 
     def _randomize_dih_param(self, return_dih=False):
         """
