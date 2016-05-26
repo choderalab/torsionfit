@@ -16,10 +16,24 @@ from torsionfit.tests.utils import get_fun
 
 
 class ToyModel(object):
+    """
+    Toy model of 4 carbons to test torsionfit
+
+    Attributes
+    ----------
+    synthetic_energy: simtk.units.Quantity((n_increments), unit=kilojoule/mole)
+    true_value: parmed.topologyobjects.DihedralTypeList (the dihedral parameters used to calculate synthetic energy)
+    initital_value: parmed.topologyobjects.DihedralTypeList (dihedral parameters used to initialize pymc model)
+    torsion_scan: torsionfit.TorsionScanSet
+    model: torsionfit.TorsionFitModel
+
+    The default toy model has randomized true and initial dihedral parameters. This can be changed by passing a
+    parmed.topologyobjects.DihedralTypeList to true_value and/or initial_value when initializing a model instance.
+
+    """
 
     def __init__(self, true_value='random', initial_value='random', phase='symmetric', multiplicity='on',
                  n_increments=13):
-
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
         self._pdb = app.PDBFile(get_fun('toy.pdb'))
@@ -32,7 +46,7 @@ class ToyModel(object):
         self._dih_type = ('CG331', 'CG321', 'CG321', 'CG331')
         original_torsion = self._param.dihedral_types[self._dih_type]
         if true_value == 'random':
-            self.randomize_dih_param()
+            self._randomize_dih_param()
             self.true_value = self._param.dihedral_types[self._dih_type]
         else:
             dih_tlist = DihedralTypeList()
@@ -46,11 +60,11 @@ class ToyModel(object):
         self._struct.positions = self._pdb.positions
 
         # generate synthetic torsion scan
-        self.torsion_scan(n_increments=n_increments)
+        self._torsion_scan(n_increments=n_increments)
 
         # initialize parameter
         if initial_value == 'random':
-            self.randomize_dih_param()
+            self._randomize_dih_param()
             self.initial_value = self._param.dihedral_types[self._dih_type]
         else:
             # return original dihedral to param
@@ -69,7 +83,7 @@ class ToyModel(object):
         self.model = Model.TorsionFitModel(self._param, self._struct, self.scan_set, platform=self._platform,
                                            param_to_opt=[self._dih_type])
 
-    def spher2cart(self, r, theta, phi):
+    def _spher2cart(self, r, theta, phi):
         """convert spherical to cartesian coordinates
 
         Paramters:
@@ -85,7 +99,7 @@ class ToyModel(object):
         z = r * np.cos(theta)
         return [x, y, z]
 
-    def torsion_scan(self, n_increments):
+    def _torsion_scan(self, n_increments):
         """
         Generate positions and energy for torsion scan
         Parameters:
@@ -105,9 +119,9 @@ class ToyModel(object):
             if angle.atom1.type == angle.atom2.type:
                 theta = units.Quantity(value=angle.type.theteq * (np.pi/180.0), unit=units.radians)
 
-        atom1_coords = self.spher2cart(length.value_in_unit(units.nanometer), theta.value_in_unit(units.radian), phis[0])
+        atom1_coords = self._spher2cart(length.value_in_unit(units.nanometer), theta.value_in_unit(units.radian), phis[0])
         for i, phi in enumerate(phis):
-            atom3_coords = self.spher2cart(length.value_in_unit(units.nanometer), theta.value_in_unit(units.radian), phi)
+            atom3_coords = self._spher2cart(length.value_in_unit(units.nanometer), theta.value_in_unit(units.radian), phi)
             atom3_coords[-1] = abs(atom3_coords[-1]) + length._value
             positions[i] = [atom1_coords,
                 [0.000, 0.000, 0.000],
@@ -126,7 +140,7 @@ class ToyModel(object):
             state = context.getState(getEnergy=True)
             self.synthetic_energy[i] = state.getPotentialEnergy()
 
-    def randomize_dih_param(self):
+    def _randomize_dih_param(self):
         """
         generates random dihedral parameters
 
