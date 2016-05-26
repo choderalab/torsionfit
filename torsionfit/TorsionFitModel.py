@@ -16,7 +16,7 @@ class TorsionFitModel(object):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, stream, frags, platform=None, param_to_opt=None, decouple_n=False):
+    def __init__(self, param, stream, frags, platform=None, param_to_opt=None, decouple_n=False, only_phase=False):
         """Create a PyMC model for fitting torsions.
 
         Parameters
@@ -71,7 +71,6 @@ class TorsionFitModel(object):
                 self.pymc_parameters[name] = k
 
                 name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_Phase'
-                phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
                 for i in range(len(param.dihedral_types[p])):
                     if param.dihedral_types[p][i].per == m:
                         if param.dihedral_types[p][i].phase == 0:
@@ -81,6 +80,8 @@ class TorsionFitModel(object):
                         if param.dihedral_types[p][i].phase == 180.0:
                             phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
                             break
+                    else:
+                        phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
 
                 self.pymc_parameters[name] = phase
 
@@ -159,11 +160,11 @@ class TorsionFitModel(object):
                     if m == 5:
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
-                    phase = torsion_name + '_' + str(m) + '_Phase'
                     pymc_variable = self.pymc_parameters[k]
                     param.dihedral_types[p][i].phi_k = pymc_variable.value
                     param.dihedral_types[reverse_p][i].phi_k = pymc_variable.value
-                    pymc_variable = self.pymc_parameters[phase]
+                    phase = torsion_name + '_' + str(m) + '_Phase'
+                    pymc_variable = self.pymc_parameters[phase].value
                     if pymc_variable == 1:
                         param.dihedral_types[p][i].phase = 180
                         param.dihedral_types[reverse_p][i].phase = 180
@@ -174,7 +175,6 @@ class TorsionFitModel(object):
                         param.dihedral_types[reverse_p][i].phase = 0
                         break
                 else:
-                    print('turning k off')
                     # This torsion periodicity is disabled.
                     param.dihedral_types[p][i].phi_k = 0
                     param.dihedral_types[reverse_p][i].phi_k = 0
