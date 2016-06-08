@@ -156,6 +156,7 @@ class TorsionScanSet(Trajectory):
         self.structure = structure
         self.qm_energy = Quantity(value=qm_energies, unit=kilojoules_per_mole)
         self.mm_energy = Quantity()
+        self.initial_mm = Quantity()
         self.delta_energy = Quantity()
         self.torsion_index = torsions
         self.direction = directions
@@ -270,6 +271,10 @@ class TorsionScanSet(Trajectory):
         # Compute deviation between MM and QM energies with offset
         #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
 
+    def save_initial_mm(self, param):
+        if not self._have_mm_energy:
+            self.compute_energy(param=param, offset=0)
+            self.initial_mm = self.mm_energy
 
     @property
     def _have_mm_energy(self):
