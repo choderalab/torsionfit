@@ -253,6 +253,10 @@ class TorsionScanSet(Trajectory):
             # copy new torsion parameters
             self.copy_torsions()
 
+        # Save initial mm energy
+        save = False
+        if not self._have_mm_energy:
+            save = True
         # Compute potential energies for all snapshots.
         self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
         for i in range(self.n_frames):
@@ -265,16 +269,13 @@ class TorsionScanSet(Trajectory):
         offset = Quantity(value=offset.value, unit=energy_unit)
         min_energy = self.mm_energy.min()
         self.mm_energy -= min_energy
+        if save:
+            self.initial_mm = self.mm_energy
         self.mm_energy += offset
         self.delta_energy = (self.qm_energy - self.mm_energy)
 
         # Compute deviation between MM and QM energies with offset
         #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
-
-    def save_initial_mm(self, param):
-        if not self._have_mm_energy:
-            self.compute_energy(param=param, offset=0)
-            self.initial_mm = self.mm_energy
 
     @property
     def _have_mm_energy(self):
