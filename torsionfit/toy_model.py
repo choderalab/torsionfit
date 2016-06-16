@@ -33,7 +33,7 @@ class ToyModel(object):
 
     """
 
-    def __init__(self, true_value=False, initial_value=False, decouple_n=False,
+    def __init__(self, true_value=False, initial_value=False, decouple_n=False, continuous=False,
                  n_increments=13):
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
@@ -87,8 +87,13 @@ class ToyModel(object):
                                   torsions, direction, steps, self.synthetic_energy.value_in_unit(units.kilojoules_per_mole))
 
         # create torsionfit.TorsionFitModel
-        self.model = Model.TorsionFitModel(self._param, self._struct, self.scan_set, platform=self._platform,
-                                           param_to_opt=[self._dih_type], decouple_n=decouple_n)
+        if continuous:
+            self.model = Model.TorsionFitModelContinuousPhase(self._param, self._struct, self.scan_set,
+                                                              platform=self._platform, param_to_opt=[self._dih_type],
+                                                              decouple_n=decouple_n)
+        else:
+            self.model = Model.TorsionFitModel(self._param, self._struct, self.scan_set, platform=self._platform,
+                                               param_to_opt=[self._dih_type], decouple_n=decouple_n)
 
     def _spher2cart(self, r, theta, phi):
         """convert spherical to cartesian coordinates
@@ -114,7 +119,7 @@ class ToyModel(object):
         """
         n_increments = n_increments
         n_atoms = 4
-        phis = np.arange(-np.pi/2, +np.pi/2, (np.pi)/n_increments)
+        phis = np.arange(-np.pi/2, +np.pi/2, (np.pi/2)/n_increments)
         positions = np.zeros((len(phis), n_atoms, 3))
 
         # Get bond length in nm
