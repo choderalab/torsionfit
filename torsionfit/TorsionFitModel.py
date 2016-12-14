@@ -163,7 +163,7 @@ class TorsionFitModel(object):
                     pymc_variable = self.pymc_parameters[k]
                     param.dihedral_types[p][i].phi_k = pymc_variable.value
                     param.dihedral_types[reverse_p][i].phi_k = pymc_variable.value
-                    pymc_variable = self.pymc_parameters[phase]
+                    pymc_variable = self.pymc_parameters[phase].value
                     if pymc_variable == 1:
                         param.dihedral_types[p][i].phase = 180
                         param.dihedral_types[reverse_p][i].phase = 180
