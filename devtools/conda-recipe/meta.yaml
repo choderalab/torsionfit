@@ -12,8 +12,8 @@ requirements:
     - numpy ==1.10
     - pymc
     - cclib
-    - openmm-dev
-    - parmed-dev
+    - openmm
+    - parmed
     - pandas
     - mdtraj
     - netcdf4
