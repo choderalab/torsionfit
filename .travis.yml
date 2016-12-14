@@ -22,14 +22,10 @@ install:
 script:
   - conda config --add channels ${ORGNAME}
   - conda build devtools/conda-recipe
-  - source activate _test
-  - conda install --yes --quiet nose nose-timer
-  - cd devtools && nosetests $PACKAGENAME --nocapture --verbosity=2 --with-doctest --with-timer && cd ..
 
 env:
   matrix:
     - python=2.7  CONDA_PY=27
-    - python=3.4  CONDA_PY=34
     - python=3.5  CONDA_PY=35
 
   global:

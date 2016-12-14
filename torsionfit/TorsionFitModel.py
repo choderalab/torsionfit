@@ -159,10 +159,10 @@ class TorsionFitModel(object):
                     if m == 5:
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
+                    phase = torsion_name + '_' + str(m) + '_Phase'
                     pymc_variable = self.pymc_parameters[k]
                     param.dihedral_types[p][i].phi_k = pymc_variable.value
                     param.dihedral_types[reverse_p][i].phi_k = pymc_variable.value
-                    phase = torsion_name + '_' + str(m) + '_Phase'
                     pymc_variable = self.pymc_parameters[phase].value
                     if pymc_variable == 1:
                         param.dihedral_types[p][i].phase = 180
