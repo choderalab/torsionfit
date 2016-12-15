@@ -38,6 +38,7 @@ class TorsionFitModel(object):
         self.pymc_parameters = dict()
         self.frags = frags
         self.platform = platform
+        self.decouple_n = decouple_n
         if param_to_opt:
             self.parameters_to_optimize = param_to_opt
         else:
@@ -103,7 +104,7 @@ class TorsionFitModel(object):
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             mm = np.ndarray(0)
-            self.update_param(param, decouple_n=decouple_n)
+            self.update_param(param)
             for mol in self.frags:
                 mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
                                    platform=self.platform)
@@ -139,7 +140,7 @@ class TorsionFitModel(object):
                     param.dihedral_types[p].append(DihedralType(0, j, 0))
                     param.dihedral_types[reverse].append(DihedralType(0, j, 0))
 
-    def update_param(self, param, decouple_n):
+    def update_param(self, param):
         """
         Update param set based on current pymc model parameters.
 
@@ -155,7 +156,7 @@ class TorsionFitModel(object):
             for i in range(len(param.dihedral_types[p])):
                 m = int(param.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
-                if (multiplicity_bitstring & multiplicity_bitmask) or decouple_n:
+                if (multiplicity_bitstring & multiplicity_bitmask) or self.decouple_n:
                     if m == 5:
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
@@ -214,6 +215,7 @@ class TorsionFitModelContinuousPhase(TorsionFitModel):
         self.pymc_parameters = dict()
         self.frags = frags
         self.platform = platform
+        self.decouple_n = decouple_n
         if param_to_opt:
             self.parameters_to_optimize = param_to_opt
         else:
@@ -274,7 +276,7 @@ class TorsionFitModelContinuousPhase(TorsionFitModel):
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             mm = np.ndarray(0)
-            self.update_param(param, decouple_n=decouple_n)
+            self.update_param(param)
             for mol in self.frags:
                 mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
                                    platform=self.platform)
@@ -290,7 +292,7 @@ class TorsionFitModelContinuousPhase(TorsionFitModel):
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
                                                      value=qm_energy)
 
-    def update_param(self, param, decouple_n):
+    def update_param(self, param):
         """
         Update param set based on current pymc model parameters.
 
@@ -306,7 +308,7 @@ class TorsionFitModelContinuousPhase(TorsionFitModel):
             for i in range(len(param.dihedral_types[p])):
                 m = int(param.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
-                if (multiplicity_bitstring & multiplicity_bitmask) or decouple_n:
+                if (multiplicity_bitstring & multiplicity_bitmask) or self.decouple_n:
                     if m == 5:
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
