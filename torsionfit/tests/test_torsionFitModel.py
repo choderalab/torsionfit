@@ -2,7 +2,7 @@
 
 from torsionfit.tests.utils import get_fun
 import torsionfit.TorsionScanSet as torsionset
-from torsionfit.TorsionFitModel import TorsionFitModel
+from torsionfit.TorsionFitModel import TorsionFitModel, TorsionFitModelContinuousPhase
 from pymc import MCMC
 import glob
 import pymc
@@ -29,7 +29,11 @@ logfiles = [get_fun('PRL.scan2.pos.log'), get_fun('PRL.scan2.neg.log')]
 frag = torsionset.read_scan_logfile(logfiles, structure)
 frag = frag.extract_geom_opt()
 model = TorsionFitModel(param, stream, frag, platform=platform)
-sampler =MCMC(model.pymc_parameters)
+sampler = MCMC(model.pymc_parameters)
+continuous_model = TorsionFitModelContinuousPhase(param, stream, frag, param_to_opt=model.parameters_to_optimize,
+                                                  platform=platform)
+continuous_sampler = MCMC(continuous_model.pymc_parameters)
+
 
 class TestFitModel(unittest.TestCase):
     """ Tests pymc model"""
@@ -38,7 +42,17 @@ class TestFitModel(unittest.TestCase):
         """ Tests sampler """
         self.assert_(isinstance(model, TorsionFitModel))
         self.assert_(isinstance(sampler, pymc.MCMC))
+        self.assert_(isinstance(continuous_model, TorsionFitModelContinuousPhase))
+        self.assert_(isinstance(continuous_sampler, pymc.MCMC))
         sampler.sample(iter=1)
+
+    def test_update_param_continuous(self):
+        """ Tests that update parameter updates the reverse dihedral too in continuous  """
+
+        continuous_model.update_param(param)
+        torsion = continuous_model.parameters_to_optimize[0]
+        torsion_reverse = tuple(reversed(torsion))
+        self.assertEqual(param.dihedral_types[torsion], param.dihedral_types[torsion_reverse])
 
     def test_update_param(self):
         """ Tests that update parameter updates the reverse dihedral too """
@@ -56,6 +70,14 @@ class TestFitModel(unittest.TestCase):
         self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
                                                                torsion.atom3.type, torsion.atom4.type)])
 
+    def test_update_param_struct_cont(self):
+        """ Tests that update parameter updates assigned parameters in the structure """
+
+        continuous_model.update_param(param)
+        torsion = frag.structure.dihedrals[0]
+        self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
+                                                               torsion.atom3.type, torsion.atom4.type)])
+
     def test_add_missing(self):
         """ Tests that add_missing adds missing terms to parameters_to_optimize """
 
@@ -64,6 +86,16 @@ class TestFitModel(unittest.TestCase):
             key = (i.atom1.type, i.atom2.type, i.atom3.type, i.atom4.type)
             key_reverse = tuple(reversed(key))
             if key in model.parameters_to_optimize or key_reverse in model.parameters_to_optimize:
+                self.assert_(len(i.type) == 5)
+
+    def test_add_missing_cond(self):
+        """ Tests that add_missing adds missing terms to parameters_to_optimize """
+
+        continuous_model.add_missing(param)
+        for i in continuous_model.frags[0].structure.dihedrals:
+            key = (i.atom1.type, i.atom2.type, i.atom3.type, i.atom4.type)
+            key_reverse = tuple(reversed(key))
+            if key in continuous_model.parameters_to_optimize or key_reverse in continuous_model.parameters_to_optimize:
                 self.assert_(len(i.type) == 5)
 
 
