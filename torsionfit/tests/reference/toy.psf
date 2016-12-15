@@ -1,0 +1,38 @@
+PSF EXT
+
+       3 !NTITLE
+ REMARKS original generated structure x-plor psf file
+ REMARKS topology toy.str 
+ REMARKS segment BUTA { first NONE; last NONE; auto none  }
+
+       4 !NATOM
+         1 BUTA     1        TOY      C1       CG331    0.000000       12.0110           0
+         2 BUTA     1        TOY      C2       CG321    0.000000       12.0110           0
+         3 BUTA     1        TOY      C3       CG321    0.000000       12.0110           0
+         4 BUTA     1        TOY      C4       CG331    0.000000       12.0110           0
+
+       3 !NBOND: bonds
+         1         2         3         2         3         4
+
+       2 !NTHETA: angles
+         1         2         3         2         3         4
+
+       1 !NPHI: dihedrals
+         1         2         3         4
+
+       0 !NIMPHI: impropers
+
+
+       0 !NDON: donors
+
+
+       0 !NACC: acceptors
+
+
+       0 !NNB
+
+         0         0         0         0
+
+       1       0 !NGRP
+         0         0         0
+

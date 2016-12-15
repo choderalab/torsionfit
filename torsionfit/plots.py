@@ -117,7 +117,7 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 3)
     plt.plot(db.trace(name + '_' + str(1) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 1.1)
+    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
     plt.yticks([0, 1])
@@ -144,7 +144,7 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 9)
     plt.plot(db.trace(name + '_' + str(2) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 1.1)
+    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
     plt.yticks([0, 1])
@@ -171,7 +171,7 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 15)
     plt.plot(db.trace(name + '_' + str(3) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 1.1)
+    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
     plt.yticks([0, 1])
@@ -198,7 +198,7 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 4)
     plt.plot(db.trace(name + '_' + str(4) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 1.1)
+    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
     plt.yticks([])
@@ -224,7 +224,7 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 10)
     plt.plot(db.trace(name + '_' + str(6) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 1.1)
+    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
     plt.yticks([])
