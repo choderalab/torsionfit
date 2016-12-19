@@ -389,7 +389,7 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
 
             for m in multiplicities:
                 name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
-                k = pymc.Uniform(name, lower=0, upper=20, value=0)
+                k = pymc.Uniform(name, lower=-20, upper=20, value=0)
                 for i in range(len(param.dihedral_types[p])):
                     if param.dihedral_types[p][i].per == m:
                         multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
@@ -477,4 +477,4 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
                 if m == 5:
                     continue
                 param.dihedral_types[p][i].phase = 0
-                param.dihedral_types[reverse_p][i] = 0
+                param.dihedral_types[reverse_p][i].phase = 0
