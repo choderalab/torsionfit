@@ -398,7 +398,6 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
 
                 self.pymc_parameters[name] = k
 
-
         for torsion_name in multiplicity_bitstrings.keys():
             name = torsion_name + '_multiplicity_bitstring'
             bitstring = pymc.DiscreteUniform(name, lower=0, upper=63, value=multiplicity_bitstrings[torsion_name])
