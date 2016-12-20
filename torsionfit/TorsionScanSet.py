@@ -18,7 +18,6 @@ from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
 
 
-
 def to_optimize(param, stream, penalty = 10):
     """ returns a list of dihedrals to optimize and updates CharmmParameterSet
     with stream files
@@ -37,7 +36,7 @@ def to_optimize(param, stream, penalty = 10):
     keys = [i for i in param.dihedral_types.keys()]
     for j in stream:
         param.read_stream_file(j)
-    params_to_optimize =  [k for k in param.dihedral_types.keys()
+    params_to_optimize = [k for k in param.dihedral_types.keys()
             if k not in keys and param.dihedral_types[k].penalty >= penalty]
     # compress type list
     written = set()
