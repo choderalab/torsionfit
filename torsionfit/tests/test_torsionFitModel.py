@@ -2,7 +2,7 @@
 
 from torsionfit.tests.utils import get_fun
 import torsionfit.TorsionScanSet as torsionset
-from torsionfit.TorsionFitModel import TorsionFitModel, TorsionFitModelContinuousPhase
+from torsionfit.TorsionFitModel import TorsionFitModel, TorsionFitModelContinuousPhase, TorsionFitModelEliminatePhase
 from pymc import MCMC
 import glob
 import pymc
@@ -34,6 +34,10 @@ continuous_model = TorsionFitModelContinuousPhase(param, stream, frag, param_to_
                                                   platform=platform)
 continuous_sampler = MCMC(continuous_model.pymc_parameters)
 
+param_2 = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
+eliminate_phase = TorsionFitModelEliminatePhase(param_2, stream, frag, platform=platform)
+eliminate_phase_sampler = MCMC(eliminate_phase.pymc_parameters)
+
 
 class TestFitModel(unittest.TestCase):
     """ Tests pymc model"""
@@ -44,7 +48,12 @@ class TestFitModel(unittest.TestCase):
         self.assert_(isinstance(sampler, pymc.MCMC))
         self.assert_(isinstance(continuous_model, TorsionFitModelContinuousPhase))
         self.assert_(isinstance(continuous_sampler, pymc.MCMC))
+        self.assert_(isinstance(eliminate_phase, TorsionFitModelEliminatePhase))
+        self.assert_(isinstance(eliminate_phase_sampler, pymc.MCMC))
+
         sampler.sample(iter=1)
+        continuous_sampler.sample(iter=1)
+        eliminate_phase_sampler.sample(iter=1)
 
     def test_update_param_continuous(self):
         """ Tests that update parameter updates the reverse dihedral too in continuous  """
@@ -98,6 +107,14 @@ class TestFitModel(unittest.TestCase):
             if key in continuous_model.parameters_to_optimize or key_reverse in continuous_model.parameters_to_optimize:
                 self.assert_(len(i.type) == 5)
 
+    def test_set_phase_0(self):
+        """ Tests that all phases are set to 0"""
+
+        for p in eliminate_phase.parameters_to_optimize:
+            reverse_p = tuple(reversed(p))
+            for i in range(len(param_2.dihedral_types[p])):
+                self.assert_(param_2.dihedral_types[p][i].phase == 0)
+                self.assert_(param_2.dihedral_types[reverse_p][i].phase == 0)
 
 
 
