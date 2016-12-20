@@ -34,7 +34,7 @@ class ToyModel(object):
     """
 
     def __init__(self, true_value=False, initial_value=False, decouple_n=False, continuous=False,
-                 n_increments=13):
+                 n_increments=13, negative_K=False):
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
         self._pdb = app.PDBFile(get_fun('toy.pdb'))
@@ -67,12 +67,12 @@ class ToyModel(object):
 
         # initialize parameter
         if not initial_value:
-            self.initial_value = self._randomize_dih_param(return_dih=True)
+            self.initial_value = copy.deepcopy(self._randomize_dih_param(return_dih=True))
         elif type(initial_value) == DihedralType:
             dih_tlist = DihedralTypeList()
             dih_tlist.append(initial_value)
             self._param.dihedral_types[self._dih_type] = dih_tlist
-            self.initial_value = initial_value
+            self.initial_value = copy.deepcopy(initial_value)
         elif initial_value == 'cgenff':
             # return original dihedral to param
             self._param.dihedral_types[self._dih_type] = original_torsion
@@ -91,6 +91,10 @@ class ToyModel(object):
             self.model = Model.TorsionFitModelContinuousPhase(self._param, self._struct, self.scan_set,
                                                               platform=self._platform, param_to_opt=[self._dih_type],
                                                               decouple_n=decouple_n)
+        elif negative_K:
+            self.model = Model.TorsionFitModelEliminatePhase(self._param, self._struct, self.scan_set,
+                                                             platform=self._platform, param_to_opt=[self._dih_type],
+                                                             decouple_n=decouple_n)
         else:
             self.model = Model.TorsionFitModel(self._param, self._struct, self.scan_set, platform=self._platform,
                                                param_to_opt=[self._dih_type], decouple_n=decouple_n)
@@ -151,7 +155,7 @@ class ToyModel(object):
             context.setPositions(conf)
             state = context.getState(getEnergy=True)
             energy = state.getPotentialEnergy()
-            self.synthetic_energy[i] = energy + units.Quantity(value=np.random.normal(0, 0.1), unit=units.kilojoules_per_mole)
+            self.synthetic_energy[i] = energy + units.Quantity(value=np.random.normal(0, 1.0), unit=units.kilojoules_per_mole)
 
     def _randomize_dih_param(self, return_dih=False):
         """
