@@ -25,7 +25,7 @@ molecule c4h10 {
 
 steps = 36
 start_angle = -180
-step_size = 10
+step_size = 10.001
 
 table = Table(rows=["D"], cols=["E(SCF)"])
 
