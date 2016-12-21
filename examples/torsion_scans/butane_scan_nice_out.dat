@@ -54,6 +54,7 @@ for counter in range(0, steps):
     print('|   Optimized geometry for dihedral %.2f  |' % dihedral)
     print('-------------------------------------------')
     geom_py = mat2arr(geom)
+    print(geom_py)
 
     for atom in range(c4h10.natom()):
         print("""{:4} {:4} {:12} {:8.4f} {:12.6f} {:12.6f} {:12.6f}   {:12.6f}""".format(
@@ -65,9 +66,7 @@ for counter in range(0, steps):
                                   c4h10.y(atom),       # y-coordinate
                                   c4h10.z(atom),       # z-coordinate
                                   c4h10.mass(atom),    # mass
-              )
-
-    print(geom_py)
+              ))
 
     energy('scf') # HF single point energy
     escf = get_variable('SCF TOTAL ENERGY')
