@@ -24,7 +24,7 @@ molecule c4h10 {
 # Now generate torsion scan (half scan in positive direction)
 
 steps = 36
-start_angle = 0.00001
+start_angle = 0.001
 step_size = 10
 
 table = Table(rows=["D"], cols=["E(SCF)"])
@@ -38,7 +38,7 @@ for counter in range(0, steps):
     }
 
     dihedral = 1.0 * counter * step_size + start_angle
-    dihedral_string = "4 7 10 14 %.1f" % dihedral
+    dihedral_string = "4 7 10 14 %.5f" % dihedral
 
     set optking{
         frozen_dihedral = ""
