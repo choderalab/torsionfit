@@ -74,7 +74,7 @@ for counter in range(0, steps):
     table[dihedral] = [escf]
     print('---------------------')
     print('Energy: %.10f' % escf)
-    print('---------------------'
+    print('---------------------')
 
 print('------------------------')
 print('    Table of Energies   ')
