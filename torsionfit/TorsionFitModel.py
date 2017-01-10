@@ -339,7 +339,7 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, stream, frags, platform=None, param_to_opt=None, decouple_n=False):
+    def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, decouple_n=False):
 
         """Create a PyMC model for fitting torsions.
 

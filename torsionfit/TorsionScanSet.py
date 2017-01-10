@@ -259,7 +259,6 @@ class TorsionScanSet(Trajectory):
             del self.context
             del self.integrator
             self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-            print('creating new context')
             self.create_context(param, platform)
             forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
                       for i in range(self.system.getNumForces())}
@@ -339,7 +338,6 @@ class TorsionScanSet(Trajectory):
 
         # Check if context exists.
         if not self.context:
-            print('creating context')
             self.create_context(param, platform)
         else:
             # copy new torsion parameters
