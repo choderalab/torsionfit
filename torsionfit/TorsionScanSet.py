@@ -244,13 +244,27 @@ class TorsionScanSet(Trajectory):
         else:
             self.context = mm.Context(self.system, self.integrator)
 
-    def copy_torsions(self):
+    def copy_torsions(self, param=None, platform=None):
         forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
                   for i in range(self.system.getNumForces())}
         torsion_force = forces['PeriodicTorsionForce']
 
         # create new force
         new_torsion_force = self.structure.omm_dihedral_force()
+
+        # sanity check
+        if torsion_force.getNumTorsions() != new_torsion_force.getNumTorsions():
+            # create new context and new integrator. First delete old context and integrator
+            del self.system
+            del self.context
+            del self.integrator
+            self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
+            print('creating new context')
+            self.create_context(param, platform)
+            forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
+                      for i in range(self.system.getNumForces())}
+            torsion_force = forces['PeriodicTorsionForce']
+
         # copy parameters
         for i in range(new_torsion_force.getNumTorsions()):
             torsion = new_torsion_force.getTorsionParameters(i)
@@ -325,10 +339,11 @@ class TorsionScanSet(Trajectory):
 
         # Check if context exists.
         if not self.context:
+            print('creating context')
             self.create_context(param, platform)
         else:
             # copy new torsion parameters
-            self.copy_torsions()
+            self.copy_torsions(param, platform)
 
         # Save initial mm energy
         save = False
