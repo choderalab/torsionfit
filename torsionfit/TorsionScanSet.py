@@ -68,12 +68,22 @@ def parse_psi4(logfiles, structure):
         logfiles = [logfiles]
 
     for file in logfiles:
+        qm = np.ndarray(0)
         fi = open(file, 'r')
+        # check if log file is complete
+        complete = False  # complete flag
+        for line in fi:
+            if line.startswith('Relative'):
+                complete = True
+        fi.seek(0)
         section = None
         torsion = np.ndarray((1, 4), dtype=int)
         angle = np.ndarray(0, dtype=float)
         for line in fi:
+            # Flag if structure is optimized
+            optimized = False
             if line.startswith('Optimizer'):
+                optimized = True
                 # Store Dihedral and position of optimized structures
                 fi.next()
                 l = filter(None, fi.next().strip().split(' '))
@@ -92,6 +102,15 @@ def parse_psi4(logfiles, structure):
                 pos = np.asarray(pos).reshape((-1, 3))
                 # convert angstroms to nanometers
                 positions = np.append(positions, pos[np.newaxis]*0.1, axis=0)
+            if not complete and optimized:
+                # Find line that starts with energy
+                for line in fi:
+                    if line.startswith('Energy'):
+                        energy = filter(None, line.strip().split(' '))[-1]
+                        # Convert to KJ/mol
+                        energy = float(energy)*2625.5
+                        qm = np.append(qm, energy)
+                        break
             if line.startswith('Relative'):
                 section = 'Energy'
                 fi.next()
@@ -103,10 +122,13 @@ def parse_psi4(logfiles, structure):
                     if dih in angle:
                         # Only save energies of optimized structures
                         qm_energies = np.append(qm_energies, float(line[-1]))
+        if qm.size is not 0:
+            qm = qm - min(qm)
+            qm_energies = np.append(qm_energies, qm)
 
         fi.close()
         angles = np.append(angles, angle, axis=0)
-        return TorsionScanSet(positions, topology, structure, torsions, directions, angles, qm_energies)
+    return TorsionScanSet(positions, topology, structure, torsions, directions, angles, qm_energies)
 
 
 def parse_gauss(logfiles, structure):
