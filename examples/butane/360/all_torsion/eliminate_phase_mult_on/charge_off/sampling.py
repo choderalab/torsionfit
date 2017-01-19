@@ -7,7 +7,7 @@ from parmed.charmm import CharmmParameterSet
 
 param = CharmmParameterSet('../../../../param/top_all36_cgenff.rtf',
                            '../../../../../data/charmm_ff/par_all36_cgenff.prm')
-structure = '../../../../structure/butane.psf'
+structure = '../../../../structure/butane_charge_off.psf'
 scan = '../../../../torsion_scans/DFT_b3lyp/butane_scan_b3lyp_360.log'
 butane_scan = ScanSet.parse_psi4(scan, structure)
 
