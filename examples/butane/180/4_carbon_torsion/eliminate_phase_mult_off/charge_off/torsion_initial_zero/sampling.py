@@ -18,16 +18,6 @@ param.dihedral_types[('HGA3', 'CG331', 'CG321', 'CG321')][0].phi_k=0
 param.dihedral_types[('CG321', 'CG321', 'CG331', 'HGA3')][0].phi_k=0
 param.dihedral_types[('HGA2', 'CG321', 'CG321', 'HGA2')][0].phi_k=0
 param.dihedral_types[('CG331', 'CG321', 'CG321', 'HGA2')][0].phi_k=0
-param.bond_types[('CG331', 'CG321')].k=0
-param.bond_types[('CG321', 'CG321')].k=0
-param.bond_types[('CG331', 'HGA3')].k=0
-param.bond_types[('CG321', 'HGA2')].k=0
-param.angle_types[('CG331', 'CG321', 'CG321')].k=0
-param.angle_types[('HGA3', 'CG331', 'CG321')].k=0
-param.angle_types[('HGA2', 'CG321', 'HGA2')].k=0
-param.angle_types[('CG331', 'CG321', 'HGA2')].k=0
-param.angle_types[('HGA3', 'CG331', 'HGA3')].k=0
-param.angle_types[('HGA2', 'CG321', 'CG321')].k=0
 
 butane_scan = ScanSet.parse_psi4(scan, structure)
 
@@ -36,5 +26,5 @@ platform = mm.Platform.getPlatformByName('Reference')
 model = Model.TorsionFitModelEliminatePhase(param, butane_scan, platform=platform, decouple_n=True,
                                             param_to_opt=[('CG331', 'CG321', 'CG321', 'CG331')])
 
-sampler = MCMC(model.pymc_parameters, db=sqlite_plus, dbname='butane_180_mut_off_charge_angle_off.db', verbose=5)
+sampler = MCMC(model.pymc_parameters, db=sqlite_plus, dbname='butane_180_mult_off_charge_off_init_zero.db', verbose=5)
 sampler.sample(1000000)
