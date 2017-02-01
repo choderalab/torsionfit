@@ -33,12 +33,12 @@ butane_scan = ScanSet.parse_psi4(scan, structure)
 
 platform = mm.Platform.getPlatformByName('Reference')
 
-model = Model.TorsionFitModelEliminatePhase(param, butane_scan, platform=platform, decouple_n=True
+model = Model.TorsionFitModelEliminatePhase(param, butane_scan, platform=platform, decouple_n=True,
                                             param_to_opt=[('CG331', 'CG321', 'CG321', 'CG331'),
                                                           ('HGA3', 'CG331', 'CG321', 'HGA2'),
                                                           ('HGA3', 'CG331', 'CG321', 'CG321'),
                                                           ('HGA2', 'CG321', 'CG321', 'HGA2'),
                                                           ('CG331', 'CG321', 'CG321', 'HGA2')])
 
-sampler = MCMC(model.pymc_parameters, db=sqlite_plus, dbname='butane_360_all_mut_on_charge_angle_off.db', verbose=5)
+sampler = MCMC(model.pymc_parameters, db=sqlite_plus, dbname='butane_360_all_mut_off_charge_angle_off.db', verbose=5)
 sampler.sample(100000)
