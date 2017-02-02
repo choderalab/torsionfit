@@ -386,7 +386,7 @@ class TorsionScanSet(Trajectory):
         if offset:
             offset = Quantity(value=offset.value, unit=energy_unit)
             self.mm_energy += offset
-        self.delta_energy = (self.qm_energy - self.mm_energy)
+        self.delta_energy = (self.mm_energy - self.qm_energy)
 
         # Compute deviation between MM and QM energies with offset
         #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
