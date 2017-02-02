@@ -426,13 +426,16 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
             return mm
 
         size = sum([len(i.qm_energy) for i in self.frags])
-        qm_energy = np.ndarray(0)
+        # qm_energy = np.ndarray(0)
+        # for i in range(len(frags)):
+        #     qm_energy = np.append(qm_energy, frags[i].qm_energy)
+        diff_energy = np.ndarray(0)
         for i in range(len(frags)):
-            qm_energy = np.append(qm_energy, frags[i].qm_energy)
+            diff_energy = np.append(diff_energy, frags[i].delta_energy)
         self.pymc_parameters['mm_energy'] = mm_energy
         self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
-                                                     value=qm_energy)
+                                                     value=diff_energy)
 
     def update_param(self, param):
         """
