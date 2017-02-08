@@ -16,6 +16,7 @@ from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
+import torsionfit.utils as utils
 
 
 def to_optimize(param, stream, penalty = 10):
@@ -386,10 +387,35 @@ class TorsionScanSet(Trajectory):
         if offset:
             offset = Quantity(value=offset.value, unit=energy_unit)
             self.mm_energy += offset
-        self.delta_energy = (self.mm_energy - self.qm_energy)
+        self.delta_energy = (self.qm_energy - self.mm_energy)
+        self.delta_energy = self.delta_energy - self.delta_energy.min()
 
         # Compute deviation between MM and QM energies with offset
         #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
+
+    def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False):
+
+        """
+        This function computes mm_energy for scan using sampled torsions
+        Args:
+            param:
+            db:
+            start:
+            end:
+            decouple_n:
+            phase:
+
+        Returns:
+
+        """
+        N = len(db.sigma[start:end])
+        mm_energy = np.zeros((N, self.n_frames))
+        for i in range(N):
+            utils.param_from_db(param, db,  i, decouple_n, phase)
+            self.compute_energy(param)
+            mm_energy[i] = self.mm_energy._value
+
+        return mm_energy
 
     @property
     def _have_mm_energy(self):
