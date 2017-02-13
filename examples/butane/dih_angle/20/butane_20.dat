@@ -21,8 +21,6 @@ molecule butane {
   unit angstroms
 }
 
-set optking{
-    fixed_dihedral = ("4  7  10  14 20")
-}
+set optking fixed_dihedral = "4  7  10  14 20"
 
 optimize('MP2/6-31G(d)')
