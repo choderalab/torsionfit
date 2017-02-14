@@ -18,9 +18,10 @@ molecule butane {
   H      2.976   -0.586   -10.279
   H      2.273   -0.950   -8.723
   C      3.180   -0.941   -9.291
-  unit angstroms
+  units Angstrom
 }
 
-set optking fixed_dihedral = "4 7 10 14 10"
+dih_string = "4 7 10 14 10"
+set optking fixed_dihedral = $dih_string
 
 optimize('MP2/6-31G(d)')

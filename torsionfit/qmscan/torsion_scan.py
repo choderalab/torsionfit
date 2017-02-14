@@ -54,13 +54,13 @@ def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symm
         xyz = mol.xyz[0]*10
         input_string += "  {}      {:05.3f}   {:05.3f}   {:05.3f}\n".format(element, xyz[i][0], xyz[i][1], xyz[i][2])
 
-    input_string += "  unit angstroms\n"
+    input_string += "  units Angstrom\n"
     input_string += "}\n"
 
     if fixed_dih is not None:
-        input_string += "\nset optking{\n"
-        input_string += '    fixed_dihedral = ("{}")\n'.format(fixed_dih)
-        input_string += "}\n"
+        input_string += '\ndih_string = "{}"'.format(fixed_dih)
+        # ToDo add string because that's the only thing that seems to work
+        input_string += '\nset optking fixed_dihedral = $dih_string\n'
 
     if geom_opt:
         input_string += "\noptimize('{}/{}')\n".format(method[0], basis_set[0])
@@ -112,6 +112,10 @@ def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, c
 
     for f in input_files:
         fixed_dih_angle = f.split('/')[-2]
+        if fixed_dih_angle == '0':
+            fixed_dih_angle = '0.001'
+        if fixed_dih_angle == '180':
+            fixed_dih_angle = '180.001'
         dihedral_string = dihedral + ' ' + fixed_dih_angle
         output = pdb_to_psi4(pdb=f, mol_name=mol_name, method=method, basis_set=basis_set, charge=charge,
                              multiplicity=multiplicity, symmetry=symmetry, geom_opt=geom_opt, sp_energy=sp_energy,
