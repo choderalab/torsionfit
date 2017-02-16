@@ -1,3 +1,5 @@
+__author__ = 'Chaya D. Stern'
+
 import mdtraj as md
 import os
 from fnmatch import fnmatch

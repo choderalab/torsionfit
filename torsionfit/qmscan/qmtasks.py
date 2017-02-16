@@ -24,7 +24,7 @@ def start_psi4_calculation(path, input_file):
     input_file = os.path.join(path, input_file)
     output_file = os.path.join(path, output_file)
     psi4_binary = which('psi4', mode=os.X_OK)
-    cmd = psi4_binary + ' ' + input_file + ' -o ' + output_file + '2>&1 &'
+    cmd = psi4_binary + ' ' + input_file + ' -o ' + output_file + '2>&1'
     return os.system(cmd)
 
 
@@ -36,5 +36,5 @@ def run_psi4_distributed(directory):
             if fnmatch(name, pattern):
                 path = os.path.join(os.getcwd(), path)
                 to_submit.append((path, name))
-    exits = group(start_psi4_calculation.s(path, input_file) for path, input_file in to_submit)()
+    exits = group(start_psi4_calculation.apply_async(args=[path, input_file]) for path, input_file in to_submit)()
     return exits
