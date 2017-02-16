@@ -118,6 +118,8 @@ def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, c
             fixed_dih_angle = '0.001'
         if fixed_dih_angle == '180':
             fixed_dih_angle = '180.001'
+        if fixed_dih_angle == '360':
+            fixed_dih_angle = '360.001'
         dihedral_string = dihedral + ' ' + fixed_dih_angle
         output = pdb_to_psi4(pdb=f, mol_name=mol_name, method=method, basis_set=basis_set, charge=charge,
                              multiplicity=multiplicity, symmetry=symmetry, geom_opt=geom_opt, sp_energy=sp_energy,
