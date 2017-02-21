@@ -10,16 +10,18 @@ import simtk.openmm as mm
 import simtk.unit as u
 import mdtraj as md
 from copy import copy, deepcopy
-import re
-from cclib.parser import Gaussian
+from cclib.parser import Gaussian, Psi
 from cclib.parser.utils import convertor
 from mdtraj import Trajectory
 from simtk.unit import Quantity, nanometers, kilojoules_per_mole
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
 import torsionfit.utils as utils
+from fnmatch import fnmatch
+import os
+import re
 
 
-def to_optimize(param, stream, penalty = 10):
+def to_optimize(param, stream, penalty=10):
     """ returns a list of dihedrals to optimize and updates CharmmParameterSet
     with stream files
 
@@ -47,7 +49,7 @@ def to_optimize(param, stream, penalty = 10):
     return list(written)
 
 
-def parse_psi4(logfiles, structure):
+def parse_psi4_log(logfiles, structure):
     """
     Parses output of psi4 torsion scan script
     :param logfiles: list of str
@@ -132,6 +134,75 @@ def parse_psi4(logfiles, structure):
     return TorsionScanSet(positions, topology, structure, torsions, directions, angles, qm_energies)
 
 
+def parse_psi4_out(oufiles_dir, structure):
+    """
+    Parse psi4 out files from distributed torsion scan (there are many output files, one for each structure)
+    :param oufiles_dir: str
+        path to directory where the psi4 output files are
+    :param structure: str
+        path to psf file of structure
+    :return: TorsionScanSet
+
+    """
+    topology = md.load_psf(structure)
+    structure = CharmmPsfFile(structure)
+    positions = np.ndarray((0, topology.n_atoms, 3))
+    qm_energies = np.ndarray(0)
+    directions = np.ndarray(0, dtype=int)
+    torsions = np.ndarray((0, 4), dtype=int)
+    angles = np.ndarray(0, dtype=float)
+    optimized = np.ndarray(0, dtype=bool)
+
+    out_files = []
+    dih_angle = []
+    pattern = "*.out2"
+    for path, subdir, files in os.walk(oufiles_dir):
+        for name in files:
+            if fnmatch(name, pattern):
+                if name.startswith('timer'):
+                    continue
+                dih_angle.append(int(name.split('_')[-1].split('.')[0]))
+                path = os.path.join(os.getcwd(), path, name)
+                out_files.append(path)
+    # Sort files in increasing angles order
+    out_files = [out_file for (angle, out_file) in sorted(zip(dih_angle, out_files))]
+    dih_angle.sort()
+
+    # Parse files
+    for f in out_files:
+        torsion = np.ndarray((1, 4), dtype=int)
+        fi = open(f, 'r')
+        for line in fi:
+            if line.startswith('dih_string'):
+                t = line.strip().split('"')[1].split(' ')[:4]
+                for i in range(len(t)):
+                    torsion[0][i] = int(t[i]) - 1
+                torsions = np.append(torsions, torsion, axis=0)
+        fi.close()
+        optimizer = True
+        log = Psi(f)
+        data = log.parse()
+        try:
+            data.optdone
+        except AttributeError:
+            optimizer = False
+            print("Warning: Optimizer failed for {}".format(f))
+        optimized = np.append(optimized, optimizer)
+
+        positions = np.append(positions, data.atomcoords[-1][np.newaxis]*0.1, axis=0)
+        # Try MP2 energies. Otherwise take SCFenergies
+        try:
+            qm_energy = convertor(data.mpenergies[-1], "eV", "kJmol-1")
+        except AttributeError:
+            qm_energy = convertor(data.scfenergies[-1], "eV", "kJmol-1")
+        qm_energies = np.append(qm_energies, qm_energy, axis=0)
+
+    # Subtract lowest energy to find relative energies
+    qm_energies = qm_energies - min(qm_energies)
+    angles = np.asarray(dih_angle)
+    return TorsionScanSet(positions, topology, structure, torsions, directions, angles, qm_energies, optimized)
+
+
 def parse_gauss(logfiles, structure):
     """ parses Guassian09 torsion-scan log file
 
@@ -166,7 +237,6 @@ def parse_gauss(logfiles, structure):
         #     direction[0] = 1
         # else:
         #     direction[0] = 0
-
 
         log = Gaussian(file)
         data = log.parse()
@@ -233,7 +303,7 @@ class TorsionScanSet(Trajectory):
     direction: {np.ndarray, shape(n_frame)}. 0 = negative, 1 = positive
     """
 
-    def __init__(self, positions, topology, structure, torsions, directions, steps, qm_energies):
+    def __init__(self, positions, topology, structure, torsions, directions, steps, qm_energies, optimized=None):
         """Create new TorsionScanSet object"""
         assert isinstance(topology, object)
         super(TorsionScanSet, self).__init__(positions, topology)
@@ -250,6 +320,7 @@ class TorsionScanSet(Trajectory):
         self.system = None
         self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
         self.energy = np.array
+        self.optimized = optimized
 
         # Don't allow an empty TorsionScanSet to be created
         if self.n_frames == 0:
@@ -305,15 +376,15 @@ class TorsionScanSet(Trajectory):
             for i in range(self.n_frames):
                 if len(self.mm_energy) == self.n_frames and len(self.delta_energy) == self.n_frames:
                     try:
-                        data.append((self.torsion_index[i], self.steps[i], self.qm_energy[i], self.mm_energy[i], self.delta_energy[i]))
+                        data.append((self.torsion_index[i], self.steps[i], self.qm_energy[i], self.mm_energy[i], self.delta_energy[i], self.optimized[i]))
 
                     except IndexError:
-                        data.append((float('nan'), self.steps[i], self.qm_energy[i], self.mm_energy[i], self.delta_energy[i]))
+                        data.append((float('nan'), self.steps[i], self.qm_energy[i], self.mm_energy[i], self.delta_energy[i], float('nan')))
 
                 else:
-                    data.append((self.torsion_index[i], self.steps[i], self.qm_energy[i], float('nan'), float('nan')))
+                    data.append((self.torsion_index[i], self.steps[i], self.qm_energy[i], float('nan'), float('nan'), self.optimized[i]))
             torsion_set = pd.DataFrame(data, columns=["Torsion", "Torsion angle", "QM energy KJ/mol", "MM energy KJ/mole",
-                                                          "delat KJ/mol"])
+                                                          "delat KJ/mol", "Optimized"])
 
         else:
             for i in range(self.n_frames):
