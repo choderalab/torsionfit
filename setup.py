@@ -58,7 +58,7 @@ setup(
     url='https://github.com/choderalab/torsions',
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
     classifiers=CLASSIFIERS.splitlines(),
-    packages=['torsionfit', 'torsionfit.tests'],
+    packages=['torsionfit', 'torsionfit.tests', 'torsionfit.qmscan'],
     package_data={ 'torsionfit.tests': ['reference/*']},
     zip_safe=False,
     install_requires=[
