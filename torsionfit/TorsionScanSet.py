@@ -167,6 +167,8 @@ def parse_psi4_out(oufiles_dir, structure):
     # Sort files in increasing angles order
     out_files = [out_file for (angle, out_file) in sorted(zip(dih_angle, out_files))]
     dih_angle.sort()
+    if not out_files:
+        raise Exception("There are no psi4 output files. Did you choose the right directory?")
 
     # Parse files
     for f in out_files:
