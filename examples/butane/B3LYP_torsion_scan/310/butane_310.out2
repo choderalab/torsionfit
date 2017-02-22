@@ -6301,3 +6301,18 @@ gradient() will perform analytic gradient computation.
 
   SCF Guess: Superposition of Atomic Densities via on-the-fly atomic UHF.
 
+  ==> Iterations <==
+
+                           Total Energy        Delta E     RMS |[F,P]|
+
+   @DF-RKS iter   0:  -158.85035115703636   -1.58850e+02   3.19327e-02 
+   @DF-RKS iter   1:  -158.27502896917670    5.75322e-01   5.31015e-03 
+   @DF-RKS iter   2:  -158.18125897540517    9.37700e-02   6.61752e-03 DIIS
+   @DF-RKS iter   3:  -158.45571579645522   -2.74457e-01   3.90109e-04 DIIS
+   @DF-RKS iter   4:  -158.45660080170745   -8.85005e-04   1.22097e-04 DIIS
+   @DF-RKS iter   5:  -158.45667605726516   -7.52556e-05   4.85888e-05 DIIS
+   @DF-RKS iter   6:  -158.45668889006200   -1.28328e-05   7.77455e-06 DIIS
+   @DF-RKS iter   7:  -158.45668926332891   -3.73267e-07   1.09408e-06 DIIS
+   @DF-RKS iter   8:  -158.45668927124439   -7.91547e-09   2.31632e-07 DIIS
+   @DF-RKS iter   9:  -158.45668927148532   -2.40931e-10   1.21729e-07 DIIS
+   @DF-RKS iter  10:  -158.45668927156947   -8.41567e-11   1.20878e-08 DIIS

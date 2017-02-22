@@ -5642,3 +5642,222 @@ gradient() will perform analytic gradient computation.
    @DF-RKS iter   1:  -158.27025973708155    5.71486e-01   5.36597e-03 
    @DF-RKS iter   2:  -158.17371780577818    9.65419e-02   6.69223e-03 DIIS
    @DF-RKS iter   3:  -158.45441184909799   -2.80694e-01   3.92576e-04 DIIS
+   @DF-RKS iter   4:  -158.45530738457984   -8.95535e-04   1.23244e-04 DIIS
+   @DF-RKS iter   5:  -158.45538443363694   -7.70491e-05   4.85032e-05 DIIS
+   @DF-RKS iter   6:  -158.45539721487688   -1.27812e-05   7.90250e-06 DIIS
+   @DF-RKS iter   7:  -158.45539760084350   -3.85967e-07   1.08521e-06 DIIS
+   @DF-RKS iter   8:  -158.45539760856286   -7.71936e-09   2.39550e-07 DIIS
+   @DF-RKS iter   9:  -158.45539760882119   -2.58325e-10   1.23114e-07 DIIS
+   @DF-RKS iter  10:  -158.45539760890782   -8.66294e-11   1.17837e-08 DIIS
+   @DF-RKS iter  11:  -158.45539760890878   -9.66338e-13   2.53835e-09 DIIS
+
+  ==> Post-Iterations <==
+
+    Orbital Energies (a.u.)
+    -----------------------
+
+    Doubly Occupied:                                                      
+
+       1A    -10.180535     2A    -10.180376     3A    -10.175384  
+       4A    -10.175368     5A     -0.789156     6A     -0.715844  
+       7A     -0.639923     8A     -0.558553     9A     -0.456174  
+      10A     -0.447653    11A     -0.409345    12A     -0.385859  
+      13A     -0.375567    14A     -0.356311    15A     -0.325672  
+      16A     -0.321839    17A     -0.312183  
+
+    Virtual:                                                              
+
+      18A      0.055542    19A      0.092313    20A      0.097862  
+      21A      0.103423    22A      0.130214    23A      0.134706  
+      24A      0.150627    25A      0.152355    26A      0.157366  
+      27A      0.177451    28A      0.209990    29A      0.232210  
+      30A      0.276773    31A      0.398900    32A      0.401111  
+      33A      0.435446    34A      0.443371    35A      0.452122  
+      36A      0.506012    37A      0.509995    38A      0.586658  
+      39A      0.600679    40A      0.607336    41A      0.630270  
+      42A      0.638391    43A      0.650481    44A      0.652530  
+      45A      0.664372    46A      0.667841    47A      0.679717  
+      48A      0.688248    49A      0.700860    50A      0.709033  
+      51A      0.747064    52A      0.812860    53A      0.893272  
+      54A      0.894727    55A      0.966448    56A      1.080879  
+      57A      1.141090    58A      1.193351    59A      1.211254  
+      60A      1.245828    61A      1.290551    62A      1.361359  
+      63A      1.402502    64A      1.428206    65A      1.429432  
+      66A      1.533508    67A      1.555783    68A      1.583937  
+      69A      1.593813    70A      1.616665    71A      1.631742  
+      72A      1.638125    73A      1.672215    74A      1.673574  
+      75A      1.684734    76A      1.689363    77A      1.689997  
+      78A      1.721219    79A      1.742825    80A      1.755341  
+      81A      1.762723    82A      1.792698    83A      1.830437  
+      84A      1.879638    85A      1.943301    86A      1.983631  
+      87A      2.037702    88A      2.067507    89A      2.090694  
+      90A      2.103761    91A      2.183267    92A      2.214201  
+      93A      2.229728    94A      2.254792    95A      2.277930  
+      96A      2.289196    97A      2.404419    98A      2.409889  
+      99A      2.466732   100A      2.471246   101A      2.510724  
+     102A      2.516890   103A      2.613056   104A      2.621487  
+     105A      2.689304   106A      2.707701  
+
+    Final Occupation by Irrep:
+              A 
+    DOCC [    17 ]
+
+  Energy converged.
+
+  @DF-RKS Final Energy:  -158.45539760890878
+
+   => Energetics <=
+
+    Nuclear Repulsion Energy =            131.9626210192724329
+    One-Electron Energy =                -472.4265571695270864
+    Two-Electron Energy =                 202.5920397791998937
+    DFT Exchange-Correlation Energy =     -20.5835012378540156
+    Empirical Dispersion Energy =           0.0000000000000000
+    PCM Polarization Energy =               0.0000000000000000
+    EFP Energy =                            0.0000000000000000
+    Total Energy =                       -158.4553976089087826
+
+
+  Saving occupied orbitals to File 180.
+
+*** tstop() called on lski1497 at Tue Feb 21 19:06:37 2017
+Module time:
+	user time   =     130.22 seconds =       2.17 minutes
+	system time =       1.74 seconds =       0.03 minutes
+	total time  =        154 seconds =       2.57 minutes
+Total time:
+	user time   =    1432.79 seconds =      23.88 minutes
+	system time =      19.93 seconds =       0.33 minutes
+	total time  =       1682 seconds =      28.03 minutes
+
+
+Properties will be evaluated at   0.000000,   0.000000,   0.000000 Bohr
+
+Properties computed using the SCF density matrix
+
+  Nuclear Dipole Moment: (a.u.)
+     X:    -0.8757      Y:    -0.3568      Z:     0.0838
+
+  Electronic Dipole Moment: (a.u.)
+     X:     0.8939      Y:     0.3642      Z:    -0.0855
+
+  Dipole Moment: (a.u.)
+     X:     0.0181      Y:     0.0074      Z:    -0.0017     Total:     0.0197
+
+  Dipole Moment: (Debye)
+     X:     0.0461      Y:     0.0188      Z:    -0.0044     Total:     0.0500
+
+
+*** tstart() called on lski1497
+*** at Tue Feb 21 19:06:37 2017
+
+
+         ------------------------------------------------------------
+                                   SCF GRAD                          
+                          Rob Parrish, Justin Turney,                
+                       Andy Simmonett, and Alex Sokolov              
+         ------------------------------------------------------------
+
+  ==> Geometry <==
+
+    Molecular point group: c1
+    Full point group: C1
+
+    Geometry (in Angstrom), charge = 0, multiplicity = 1:
+
+       Center              X                  Y                   Z               Mass       
+    ------------   -----------------  -----------------  -----------------  -----------------
+           H         -1.797972745330     0.559129360926     0.315838755253     1.007825032070
+           H         -1.475670737578     2.132269123476    -0.442385095741     1.007825032070
+           H         -1.372029416353     0.643784134401    -1.409156917462     1.007825032070
+           C         -1.158134327731     1.077056803939    -0.415947961043    12.000000000000
+           H          0.924798541759     1.595847193204    -0.736917453739     1.007825032070
+           H          0.466118820850     1.400978404058     0.952692937381     1.007825032070
+           C          0.326780828666     0.966088594748    -0.055368389441    12.000000000000
+           H          1.143420113467    -0.745265283290    -1.106702877101     1.007825032070
+           H          1.875666807977    -0.454981848090     0.468951775712     1.007825032070
+           C          0.908244814260    -0.462954838203    -0.062802779708    12.000000000000
+           H          0.514617562676    -2.523788345467     0.534367967971     1.007825032070
+           H         -0.925837857512    -1.668801272983    -0.055229804553     1.007825032070
+           H         -0.287273763720    -1.319740376539     1.567913903004     1.007825032070
+           C          0.001564728691    -1.548228320965     0.526613085292    12.000000000000
+
+  Nuclear repulsion =  131.962621019272433
+
+  ==> Basis Set <==
+
+  Basis Set: CC-PVDZ
+    Number of shells: 54
+    Number of basis function: 106
+    Number of Cartesian functions: 110
+    Spherical Harmonics?: true
+    Max angular momentum: 2
+
+  ==> DFJKGrad: Density-Fitted SCF Gradients <==
+
+    Gradient:                    1
+    J tasked:                  Yes
+    K tasked:                  Yes
+    wK tasked:                  No
+    OpenMP threads:              1
+    Integrals threads:           1
+    Memory (MB):               715
+    Schwarz Cutoff:          0E+00
+    Fitting Condition:       1E-12
+
+   => Auxiliary Basis Set <=
+
+  Basis Set: 
+    Number of shells: 186
+    Number of basis function: 510
+    Number of Cartesian functions: 574
+    Spherical Harmonics?: true
+    Max angular momentum: 3
+
+  ==> DFT Potential <==
+
+   => B3LYP Composite Functional <= 
+
+    B3LYP Hybrid-GGA Exchange-Correlation Functional (VWN1-RPA)
+
+    P.J. Stephens et. al., J. Phys. Chem., 98, 11623-11627, 1994
+
+    Points   =           5000
+    Deriv    =              1
+    GGA      =           TRUE
+    Meta     =          FALSE
+
+    X_LRC        =          FALSE
+    X_Hybrid     =           TRUE
+    X_Alpha      =   2.000000E-01
+    X_Omega      =   0.000000E+00
+    C_LRC        =          FALSE
+    C_Hybrid     =          FALSE
+    C_Alpha      =   0.000000E+00
+    C_Omega      =   0.000000E+00
+
+   => Exchange Functionals <=
+
+    0.8000    B3_X
+    0.2000      HF 
+
+   => Correlation Functionals <=
+
+    0.1900 VWN3RPA_C
+    0.8100   LYP_C
+
+   => Molecular Quadrature <=
+
+    Radial Scheme    =       TREUTLER
+    Pruning Scheme   =           FLAT
+    Nuclear Scheme   =       TREUTLER
+
+    BS radius alpha  =              1
+    Pruning alpha    =              1
+    Radial Points    =             75
+    Spherical Points =            302
+    Total Points     =         312782
+    Total Blocks     =            265
+    Max Points       =           4998
+    Max Functions    =            106
+

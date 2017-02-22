@@ -913,3 +913,178 @@ gradient() will perform analytic gradient computation.
                            Total Energy        Delta E     RMS |[F,P]|
 
    @DF-RKS iter   0:  -158.97721643997710   -1.58977e+02   3.30745e-02 
+   @DF-RKS iter   1:  -158.29012290043389    6.87094e-01   4.96078e-03 
+   @DF-RKS iter   2:  -158.22721720927413    6.29057e-02   5.98618e-03 DIIS
+   @DF-RKS iter   3:  -158.44823806507370   -2.21021e-01   3.81351e-04 DIIS
+   @DF-RKS iter   4:  -158.44906776516569   -8.29700e-04   1.04911e-04 DIIS
+   @DF-RKS iter   5:  -158.44912094949544   -5.31843e-05   4.46713e-05 DIIS
+   @DF-RKS iter   6:  -158.44913173186850   -1.07824e-05   6.96798e-06 DIIS
+   @DF-RKS iter   7:  -158.44913203203311   -3.00165e-07   9.61812e-07 DIIS
+   @DF-RKS iter   8:  -158.44913203836546   -6.33236e-09   1.26237e-07 DIIS
+   @DF-RKS iter   9:  -158.44913203844973   -8.42704e-11   6.44083e-08 DIIS
+   @DF-RKS iter  10:  -158.44913203847113   -2.14015e-11   1.50326e-08 DIIS
+   @DF-RKS iter  11:  -158.44913203847304   -1.90425e-12   1.60564e-09 DIIS
+
+  ==> Post-Iterations <==
+
+    Orbital Energies (a.u.)
+    -----------------------
+
+    Doubly Occupied:                                                      
+
+       1A    -10.174090     2A    -10.173900     3A    -10.167442  
+       4A    -10.167391     5A     -0.792433     6A     -0.714899  
+       7A     -0.643875     8A     -0.561588     9A     -0.464554  
+      10A     -0.452764    11A     -0.413515    12A     -0.384310  
+      13A     -0.375634    14A     -0.360121    15A     -0.323577  
+      16A     -0.319474    17A     -0.318325  
+
+    Virtual:                                                              
+
+      18A      0.060035    19A      0.097381    20A      0.101365  
+      21A      0.107861    22A      0.133998    23A      0.137342  
+      24A      0.161218    25A      0.162672    26A      0.166309  
+      27A      0.178580    28A      0.205207    29A      0.231287  
+      30A      0.264310    31A      0.411402    32A      0.421006  
+      33A      0.436600    34A      0.448365    35A      0.451632  
+      36A      0.489134    37A      0.501664    38A      0.587092  
+      39A      0.599599    40A      0.622282    41A      0.625458  
+      42A      0.646102    43A      0.662333    44A      0.668455  
+      45A      0.677652    46A      0.680689    47A      0.687267  
+      48A      0.702895    49A      0.721655    50A      0.725891  
+      51A      0.767491    52A      0.821987    53A      0.887758  
+      54A      0.904954    55A      0.970185    56A      1.085290  
+      57A      1.155735    58A      1.197048    59A      1.213979  
+      60A      1.284991    61A      1.297523    62A      1.369261  
+      63A      1.412546    64A      1.423948    65A      1.467834  
+      66A      1.555015    67A      1.566758    68A      1.585308  
+      69A      1.590091    70A      1.632933    71A      1.646232  
+      72A      1.650025    73A      1.679550    74A      1.682150  
+      75A      1.692967    76A      1.698683    77A      1.703094  
+      78A      1.753184    79A      1.768999    80A      1.770556  
+      81A      1.801711    82A      1.809995    83A      1.870838  
+      84A      1.899836    85A      1.967526    86A      1.971725  
+      87A      2.020916    88A      2.084208    89A      2.117003  
+      90A      2.130627    91A      2.213226    92A      2.258595  
+      93A      2.265610    94A      2.294628    95A      2.332642  
+      96A      2.344101    97A      2.471448    98A      2.475815  
+      99A      2.501883   100A      2.518376   101A      2.530271  
+     102A      2.555878   103A      2.630575   104A      2.655789  
+     105A      2.711614   106A      2.742710  
+
+    Final Occupation by Irrep:
+              A 
+    DOCC [    17 ]
+
+  Energy converged.
+
+  @DF-RKS Final Energy:  -158.44913203847304
+
+   => Energetics <=
+
+    Nuclear Repulsion Energy =            133.8460306252405871
+    One-Electron Energy =                -476.1332439804189107
+    Two-Electron Energy =                 204.4839989384994396
+    DFT Exchange-Correlation Energy =     -20.6459176217941653
+    Empirical Dispersion Energy =           0.0000000000000000
+    PCM Polarization Energy =               0.0000000000000000
+    EFP Energy =                            0.0000000000000000
+    Total Energy =                       -158.4491320384730386
+
+
+  Saving occupied orbitals to File 180.
+
+*** tstop() called on lski1497 at Tue Feb 21 19:07:14 2017
+Module time:
+	user time   =     132.21 seconds =       2.20 minutes
+	system time =       1.77 seconds =       0.03 minutes
+	total time  =        160 seconds =       2.67 minutes
+Total time:
+	user time   =     293.45 seconds =       4.89 minutes
+	system time =       4.04 seconds =       0.07 minutes
+	total time  =        345 seconds =       5.75 minutes
+
+
+Properties will be evaluated at   0.000000,   0.000000,   0.000000 Bohr
+
+Properties computed using the SCF density matrix
+
+  Nuclear Dipole Moment: (a.u.)
+     X:    -0.7667      Y:    -0.2747      Z:    -0.6111
+
+  Electronic Dipole Moment: (a.u.)
+     X:     0.7814      Y:     0.2798      Z:     0.6226
+
+  Dipole Moment: (a.u.)
+     X:     0.0147      Y:     0.0051      Z:     0.0114     Total:     0.0193
+
+  Dipole Moment: (Debye)
+     X:     0.0373      Y:     0.0129      Z:     0.0291     Total:     0.0491
+
+
+*** tstart() called on lski1497
+*** at Tue Feb 21 19:07:14 2017
+
+
+         ------------------------------------------------------------
+                                   SCF GRAD                          
+                          Rob Parrish, Justin Turney,                
+                       Andy Simmonett, and Alex Sokolov              
+         ------------------------------------------------------------
+
+  ==> Geometry <==
+
+    Molecular point group: c1
+    Full point group: C1
+
+    Geometry (in Angstrom), charge = 0, multiplicity = 1:
+
+       Center              X                  Y                   Z               Mass       
+    ------------   -----------------  -----------------  -----------------  -----------------
+           H         -1.825504426982     0.300325340671     0.753691761132     1.007825032070
+           H         -1.638403061818     1.951433539600     0.163190027569     1.007825032070
+           H         -1.398731059619     0.592467965816    -0.928901580261     1.007825032070
+           C         -1.266345165067     0.938557214575     0.084092102161    12.000000000000
+           H          0.775553418379     1.549997959057    -0.212320425632     1.007825032070
+           H          0.342314804036     1.261114388886     1.476743827380     1.007825032070
+           C          0.230687612059     0.904190676695     0.462578056858    12.000000000000
+           H          1.894168184090    -0.457980828436     0.298234428820     1.007825032070
+           H          0.547658501965    -1.075946975465     1.261696654264     1.007825032070
+           C          0.818052188261    -0.527880139344     0.370160522737    12.000000000000
+           H          0.720320932717    -2.280459864817    -0.892776976277     1.007825032070
+           H          0.552982707419    -0.756895464265    -1.763569209176     1.007825032070
+           H         -0.788232201191    -1.377089486210    -0.807884580091     1.007825032070
+           C          0.286294704515    -1.290257216832    -0.862080916760    12.000000000000
+
+  Nuclear repulsion =  133.846030625240587
+
+  ==> Basis Set <==
+
+  Basis Set: CC-PVDZ
+    Number of shells: 54
+    Number of basis function: 106
+    Number of Cartesian functions: 110
+    Spherical Harmonics?: true
+    Max angular momentum: 2
+
+  ==> DFJKGrad: Density-Fitted SCF Gradients <==
+
+    Gradient:                    1
+    J tasked:                  Yes
+    K tasked:                  Yes
+    wK tasked:                  No
+    OpenMP threads:              1
+    Integrals threads:           1
+    Memory (MB):               715
+    Schwarz Cutoff:          0E+00
+    Fitting Condition:       1E-12
+
+   => Auxiliary Basis Set <=
+
+  Basis Set: 
+    Number of shells: 186
+    Number of basis function: 510
+    Number of Cartesian functions: 574
+    Spherical Harmonics?: true
+    Max angular momentum: 3
+
