@@ -19,6 +19,7 @@ import torsionfit.utils as utils
 from fnmatch import fnmatch
 import os
 import re
+import warnings
 
 
 def to_optimize(param, stream, penalty=10):
@@ -196,7 +197,11 @@ def parse_psi4_out(oufiles_dir, structure):
         try:
             qm_energy = convertor(data.mpenergies[-1], "eV", "kJmol-1")
         except AttributeError:
-            qm_energy = convertor(data.scfenergies[-1], "eV", "kJmol-1")
+            try:
+                qm_energy = convertor(np.array([data.scfenergies[-1]]), "eV", "kJmol-1")
+            except AttributeError:
+                warnings.warn("Warning: Check if the file terminated before completing SCF")
+                qm_energy = np.array([np.nan])
         qm_energies = np.append(qm_energies, qm_energy, axis=0)
 
     # Subtract lowest energy to find relative energies
@@ -420,6 +425,20 @@ class TorsionScanSet(Trajectory):
         new_torsionScanSet = self.slice(key)
         return new_torsionScanSet
 
+    def remove_nonoptimized(self):
+        """
+        Remove configurations that optimizer fialed
+        Returns:
+
+        """
+        key = []
+        for i, optimized in enumerate(self.optimized):
+            if optimized:
+                key.append(i)
+        new_torsionscanset = self.slice(key)
+        return new_torsionscanset
+
+
     def compute_energy(self, param, offset=None, platform=None,):
         """ Computes energy for a given structure with a given parameter set
 
@@ -461,7 +480,7 @@ class TorsionScanSet(Trajectory):
             offset = Quantity(value=offset.value, unit=energy_unit)
             self.mm_energy += offset
         self.delta_energy = (self.qm_energy - self.mm_energy)
-        self.delta_energy = self.delta_energy - self.delta_energy.min()
+        #self.delta_energy = self.delta_energy - self.delta_energy.min()
 
         # Compute deviation between MM and QM energies with offset
         #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
@@ -530,7 +549,10 @@ class TorsionScanSet(Trajectory):
         xyz = self.xyz[key]
         time = self.time[key]
         torsions = self.torsion_index[key]
-        direction = self.direction[key]
+        if self.direction:
+            direction = self.direction[key]
+        if self.optimized is not None:
+            optimized = self.optimized[key]
         steps = self.steps[key]
         qm_energy = self.qm_energy[key]
         unitcell_lengths, unitcell_angles = None, None
@@ -545,7 +567,14 @@ class TorsionScanSet(Trajectory):
             topology = deepcopy(self._topology)
             structure = deepcopy(self.structure)
             torsions = torsions.copy()
-            direction = direction.copy()
+            try:
+                direction = direction.copy()
+            except:
+                direction = self.direction.copy()
+            try:
+                optimized = optimized.copy()
+            except:
+                optimized = self.optimized.copy()
             steps = steps.copy()
             qm_energy = qm_energy.copy()
 
@@ -555,7 +584,7 @@ class TorsionScanSet(Trajectory):
                 unitcell_lengths = unitcell_lengths.copy()
 
         newtraj = self.__class__(
-            xyz, topology, structure, torsions, direction, steps, qm_energy)
+            xyz, topology, structure, torsions, direction, steps, qm_energy, optimized=optimized)
 
         if self._rmsd_traces is not None:
             newtraj._rmsd_traces = np.array(self._rmsd_traces[key],
