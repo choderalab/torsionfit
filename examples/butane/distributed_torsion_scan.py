@@ -8,6 +8,8 @@ import torsionfit.qmscan.qmtasks as qmtasks
 #                    method=['B3LYP'], basis_set=['cc-PVDZ'], symmetry='C1', mem='1000 mb')
 
 # Submit tasks
+# set environment variable CELERY_CONFIG which points to the config file (when running on the cluster the config file
+# has to be edited for the location of the redis server
 # First open redis by calling redis-server
 # Start celey workers with this command:
 # celery -A qmtasks worker -l info
