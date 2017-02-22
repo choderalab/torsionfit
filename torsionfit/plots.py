@@ -241,7 +241,7 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
     pp.close()
 
 
-def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=False):
+def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=False, ymin=-20, ymax=20, filename=None):
     """
     Generate trace plot for all parameters of a given torsion
 
@@ -266,11 +266,11 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(1) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.ylabel('kJ/mole')
     plt.xticks([])
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.yticks([-20, 20])
+    plt.yticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 3)
     plt.plot(multiplicity_traces[name + '_' + str(1)], 'k.', markersize=markersize, label='1')
@@ -286,11 +286,11 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(2) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.ylabel('kJ/mole')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
-    plt.yticks([-20, 20])
+    plt.yticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 7)
     plt.plot(multiplicity_traces[name + '_' + str(2)], 'k.', markersize=markersize, label='2')
@@ -306,10 +306,10 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(3) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.ylabel('kJ/mole')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.yticks([-20, 20])
+    plt.yticks([ymin, 0,  ymax])
     plt.xlabel('mcmc steps')
 
 
@@ -328,10 +328,10 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(4) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
-    plt.yticks([])
+    plt.yticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 6)
     plt.plot(multiplicity_traces[name + '_' + str(4)], 'k.', markersize=markersize, label='4')
@@ -347,10 +347,10 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(6) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.yticks([])
-    plt.xticks([])
+    plt.xticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 10)
     plt.plot(multiplicity_traces[name + '_' + str(6)], 'k.', markersize=markersize, label='6')
@@ -359,7 +359,10 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     plt.yticks([])
     plt.xlabel('mcmc steps')
 
-    fig.savefig('%s_traces.pdf' % name)
+    if not filename:
+        fig.savefig('%s_traces.pdf' % name)
+    else:
+        fig.savefig(filename)
     pp.savefig(fig, dpi=80)
     pp.close()
 
