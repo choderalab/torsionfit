@@ -427,8 +427,8 @@ class TorsionScanSet(Trajectory):
 
     def remove_nonoptimized(self):
         """
-        Remove configurations that optimizer fialed
-        Returns:
+        Remove configurations where optimizer failed
+        Returns: copy of scan set with only optimized structures
 
         """
         key = []
