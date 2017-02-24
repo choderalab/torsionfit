@@ -438,8 +438,7 @@ class TorsionScanSet(Trajectory):
         new_torsionscanset = self.slice(key)
         return new_torsionscanset
 
-
-    def compute_energy(self, param, offset=None, platform=None,):
+    def compute_energy(self, param, offset=None, platform=None):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
