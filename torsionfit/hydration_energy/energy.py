@@ -122,9 +122,9 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
     x_n = np.zeros([n_iter, n_atoms, 3]) # positions in nm
     u_n = np.zeros([n_iter], np.float64) # energy
 
-    logger.info('Running Simulation...')
+    logger().info('Running Simulation...')
     for iteration in range(n_iter):
-        logger.info('Iteration {}'.format(iteration))
+        logger().info('Iteration {} in {} s'.format(iteration, time.time() - initial_time))
         integrator.step(n_steps)
         state = context.getState(getEnergy=True, getPositions=True)
         x_n[iteration,:,:] = state.getPositions(asNumpy=True) / u.nanometers
@@ -135,20 +135,20 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
 
     final_time = time.time()
     elapsed_time = final_time - initial_time
-    logger.info('Finished running simulation {} s'.format(elapsed_time))
+    logger().info('Finished running simulation {} s'.format(elapsed_time))
 
     # clean up
     del context, integrator
 
-    logger.info('Discarding initial transient equilibration...')
+    logger().info('Discarding initial transient equilibration...')
     # Discard initial transient equilibration
     [t0, g, Neff_max] = timeseries.detectEquilibration(u_n)
     x_n = x_n[t0:, :, :]
     u_n = u_n[t0:]
 
     # subsample to remove correlation
-    logger.info('Subsample to remove correlation...')
-    indices = time_step.subsampleCorrelatedData(u_n, g=g)
+    logger().info('Subsample to remove correlation...')
+    indices = timeseries.subsampleCorrelatedData(u_n, g=g)
     x_n = x_n[indices, :, :]
     u_n = u_n[indices]
 
@@ -160,7 +160,7 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
         database['vacuum']['x_n'] = x_n
         database['vacuum']['u_n'] = u_n
 
-    logger.info("simulation %12.3f s | %5d samples discarded | %5d independent samples remain" % (elapsed_time, t0, len(indices)))
+    logger().info("simulation %12.3f s | %5d samples discarded | %5d independent samples remain" % (elapsed_time, t0, len(indices)))
 
     return database
 

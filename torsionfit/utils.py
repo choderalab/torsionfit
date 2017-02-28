@@ -21,6 +21,7 @@ def RMSE(scanSet, db):
         errors[i] = rmse
     return errors
 
+
 def logger(name='torsionFit', pattern='%(asctime)s %(levelname)s %(name)s: %(message)s',
            date_format='%H:%M:%S', handler=logging.StreamHandler(sys.stdout)):
     """
