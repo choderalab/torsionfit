@@ -88,8 +88,6 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
     :return:
     """
 
-    platform = mm.Platform.getPlatformByName('Reference')
-
     if solvated:
         system = database['solvated']['system']
         positions = database['solvated']['positions']
@@ -103,7 +101,21 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
     friction_coef = 1.0/u.picoseconds
 
     integrator = mm.LangevinIntegrator(temperature, friction_coef, time_step)
-    context = mm.Context(system, integrator, platform)
+    platform = _determine_fastest_platform()
+    platform_name = platform.getName()
+    logger().info('Using {} platform'.format(platform_name))
+    if platform_name == 'CUDA':
+        prop = dict(CudaPrecision='mixed')
+    elif platform_name == 'OpenCL':
+        prop = dict(OpenCLPrecision='mixed')
+    elif platform_name == 'CPU':
+        platform = mm.Platform.getPlatformByName('Reference')
+        prop = None
+
+    if prop is None:
+        context = mm.Context(system, integrator, platform)
+    else:
+        context = mm.Context(system, integrator, prop)
 
     # set coordinates
     context.setPositions(positions)
@@ -164,6 +176,56 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
 
     return database
 
+
+def _determine_fastest_platform():
+    """
+    Return the fastest available platform.
+    Returns
+    -------
+    platform : simtk.openmm.Platform
+    The fastest available platform.
+    """
+    platform_speeds = np.array([mm.Platform.getPlatform(i).getSpeed()
+                                    for i in range(mm.Platform.getNumPlatforms())])
+    fastest_platform_id = int(np.argmax(platform_speeds))
+    platform = mm.Platform.getPlatform(fastest_platform_id)
+    return platform
+
+# def _opencl_device_support_precision(precision_model):
+#     """
+#     Check if this device supports the given precision model for OpenCL platform.
+#     Some OpenCL devices do not support double precision. This offers a test
+#     function.
+#     Returns
+#     -------
+#     is_supported : bool
+#     True if this device supports double precision for OpenCL, False
+#     otherwise.
+#     """
+#     opencl_platform = mm.Platform.getPlatformByName('OpenCL')
+#
+#     # Platforms are singleton so we need to store
+#     # the old precision model before modifying it
+#     old_precision = opencl_platform.getPropertyDefaultValue('OpenCLPrecision')
+#
+#     # Test support by creating a toy context
+#     YamlBuilder._set_gpu_precision(opencl_platform, precision_model)
+#     system = mm.System()
+#     system.addParticle(1.0 * u.amu)  # system needs at least 1 particle
+#     integrator = mm.VerletIntegrator(1.0 * u.femtoseconds)
+#     try:
+#         context = mm.Context(system, integrator, opencl_platform)
+#         is_supported = True
+#     except Exception:
+#         is_supported = False
+#     else:
+#         del context
+#     del integrator
+#
+#     # Restore old precision
+#     YamlBuilder._set_gpu_precision(opencl_platform, old_precision)
+#
+#     return is_supported
 
 
 
