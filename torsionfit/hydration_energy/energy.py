@@ -115,7 +115,7 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
     if prop is None:
         context = mm.Context(system, integrator, platform)
     else:
-        context = mm.Context(system, integrator, prop)
+        context = mm.Context(system, integrator, platform, prop)
 
     # set coordinates
     context.setPositions(positions)
