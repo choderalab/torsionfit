@@ -2,13 +2,13 @@ from torsionfit.hydration_energy import energy
 from parmed.charmm import CharmmParameterSet
 from parmed.topologyobjects import DihedralType
 import cPickle as pickle
-import matplotlib.pyplot as plt
 from torsionfit import sqlite_plus, utils
 import simtk.openmm as mm
 import simtk.unit as u
 import simtk.openmm.app as app
 from pymbar import timeseries
 import numpy as np
+from tqdm import *
 
 param = CharmmParameterSet('../../data/charmm_ff/par_all36_cgenff.prm', '../../data/charmm_ff/top_all36_prot.rtf',
                           '../../data/charmm_ff/toppar_water_ions.str')
@@ -87,7 +87,7 @@ param.dihedral_types[p][1].phase = 0.0
 
 ddg_vacuum = np.zeros(len(idx))
 ddg_solvated = np.zeros(len(idx))
-for i in range(len(idx)):
+for i in tqdm(range(len(idx))):
     utils.param_from_db(param, db, idx[i], decouple_n=True)
     u_vac = energy.zwanzig(database['vacuum'])
     ddg_vacuum[i] = u_vac / u_vac.unit
