@@ -548,7 +548,7 @@ class TorsionScanSet(Trajectory):
         xyz = self.xyz[key]
         time = self.time[key]
         torsions = self.torsion_index[key]
-        if self.direction:
+        if self.direction.any():
             direction = self.direction[key]
         if self.optimized is not None:
             optimized = self.optimized[key]
@@ -570,10 +570,13 @@ class TorsionScanSet(Trajectory):
                 direction = direction.copy()
             except:
                 direction = self.direction.copy()
-            try:
-                optimized = optimized.copy()
-            except:
-                optimized = self.optimized.copy()
+            if self.optimized is not None:
+                try:
+                    optimized = optimized.copy()
+                except:
+                    optimized = self.optimized.copy()
+            else:
+                optimized = None
             steps = steps.copy()
             qm_energy = qm_energy.copy()
 
