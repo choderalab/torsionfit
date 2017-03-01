@@ -205,7 +205,7 @@ def _determine_fastest_platform():
     return platform
 
 
-def zwanzig(database):
+def zwanzig_to_charmm(database):
 
     temperature = 300*u.kelvin
     kT = kB * temperature
@@ -248,6 +248,67 @@ def zwanzig(database):
     ddf_12 = kT * np.log(expectation)
 
     return ddf_12
+
+def zwanzig(database):
+
+    temperature = 300*u.kelvin
+    kT = kB * temperature
+    beta = 1.0 / kT
+
+    structure_1 = database['structure_1']
+    structure_2 = database['structure_2']
+    system_1 = database['system_1']
+    system_2 = database['system_2']
+    context_1 = database['context_1']
+    context_2 = database['context_2']
+    x_n =database['x_n']
+    n_samples = x_n.shape[0]
+
+    # copy torsions for both systems
+    forces_1 = {system_1.getForce(i).__class__.__name__: system_1.getForce(i)
+                  for i in range(system_1.getNumForces())}
+    torsion_force_1 = forces_1['PeriodicTorsionForce']
+
+    forces_2 = {system_2.getForce(i).__class__.__name__: system_2.getForce(i)
+                  for i in range(system_2.getNumForces())}
+    torsion_force_2 = forces_2['PeriodicTorsionForce']
+
+    # create new force
+    new_torsion_force_1 = structure_1.omm_dihedral_force()
+    new_torsion_force_2 = structure_2.omm_dihedral_force()
+    # copy parameters
+    for i in range(new_torsion_force_1.getNumTorsions()):
+        torsion_1 = new_torsion_force_1.getTorsionParameters(i)
+        torsion_2 = new_torsion_force_2.getTorsionParameters(i)
+        torsion_force_1.setTorsionParameters(i, *torsion_1)
+        torsion_force_2.setTorsionParameters(i, *torsion_2)
+
+    # update parameters in context
+    torsion_force_1.updateParametersInContext(database['context_1'])
+    torsion_force_2.updateParametersInContext(database['context_2'])
+
+    #clean up
+    del new_torsion_force_1, new_torsion_force_2
+
+    # caclulate energy with new parameters for each sample
+    u_1 = np.zeros(n_samples)
+    u_2 = np.zeros(n_samples)
+    for sample in range(n_samples):
+        positions = u.Quantity(x_n[sample, :, :], u.nanometers)
+        context_1.setPositions(positions)
+        context_2.setPositions(positions)
+        state_1 = context_1.getState(getEnergy=True)
+        state_2 = context_2.getState(getEnergy=True)
+        u_1[sample] = beta * state_1.getPotentialEnergy()
+        u_2[sample] = beta * state_2.getPotentialEnergy()
+
+    # calculate energy difference
+    diff = u_1 - u_2
+    expectation = np.average(np.exp(-diff))
+    df_12 = kT * np.log(expectation)
+
+    return df_12
+
 
 
 def create_context(database, param, platform=None):
