@@ -29,7 +29,7 @@ db = sqlite_plus.load('../butane_n5_decouple_n.db')
 param_to_opt = utils.get_sampled_torsions(db)
 equil_t = np.zeros([6,3])
 for i in range(6):
-    torsion_k = '{}_{}_K'.format(param_to_opt, str(i+1))
+    torsion_k = '{}_{}_K'.format(param_to_opt[0], str(i+1))
     equil_t[i] = timeseries.detectEquilibration(db.trace(torsion_k)[:])
 
 min_n = max(equil_t[:,0])
