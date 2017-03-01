@@ -13,6 +13,7 @@ import time
 import numpy as np
 
 from torsionfit.utils import logger
+from torsionfit.TorsionScanSet import TorsionScanSet as ScanSet
 
 # -----------
 # Constants
@@ -33,6 +34,7 @@ def create_openmm_system(mol_name, path_to_files, param):
     :param param:
     :return:
     """
+    # ToDo make sure to add missing parameters before creating the system
 
     # create dict to store simulation data
 
@@ -59,24 +61,33 @@ def create_openmm_system(mol_name, path_to_files, param):
                  max_crds[1]-min_crds[1],
                  max_crds[2]-min_crds[2], 90.0, 90.0, 90.0)
 
-    system_solvate = psf_solvate.createSystem(param, nonbondedMethod=app.PME,
-                                constraints=app.HBonds,
-                                nonbondedCutoff = 12.0*u.angstroms,
-                                switchDistance=10.0*u.angstroms,)
+    # parameterize without deep copy parameters
+    psf_solvate.load_parameters(param, copy_parameters=False)
+    system_solvate = psf_solvate.createSystem(nonbondedMethod=app.PME,
+                                              constraints=app.HBonds,
+                                              nonbondedCutoff = 12.0*u.angstroms,
+                                              switchDistance=10.0*u.angstroms)
     positions_solvate = pdb_solvate.getPositions()
 
     # create openmm system in vacuum
-
-    system_vacuum = psf_vacuum.createSystem(param, nonbondedMethod=app.NoCutoff,
+    psf_vacuum.load_parameters(param, copy_parameters=False)
+    system_vacuum = psf_vacuum.createSystem(nonbondedMethod=app.NoCutoff,
                                             constraints=app.HBonds,
                                             implicitSolvent=None,
                                             removeCMMotion=False)
     positions_vacuum = pdb_vacuum.getPositions()
 
     # create database to store systems
-    database = {'solvated': {'system': system_solvate, 'positions': positions_solvate},
-                'vacuum': {'system': system_vacuum, 'positions': positions_vacuum}}
+    database = {'solvated': {'structure': psf_solvate, 'system': system_solvate, 'positions': positions_solvate},
+                'vacuum': {'structure': psf_vacuum, 'system': system_vacuum, 'positions': positions_vacuum}}
+    #return hydration_endpoints(database)
     return database
+
+# class hydration_endpoints():
+#
+#     def __init__(self, database):
+#         self.vacuum = ScanSet(positions=database['vacuum']['positions'], topology=)
+#         self.solvated = ScanSet()
 
 
 def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, n_iter=200):
@@ -149,9 +160,6 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
     elapsed_time = final_time - initial_time
     logger().info('Finished running simulation {} s'.format(elapsed_time))
 
-    # clean up
-    del context, integrator
-
     logger().info('Discarding initial transient equilibration...')
     # Discard initial transient equilibration
     [t0, g, Neff_max] = timeseries.detectEquilibration(u_n)
@@ -166,11 +174,16 @@ def generate_simulation_data(database, parameters, solvated=True, n_steps=2500, 
 
     # store data
     if solvated:
+        database['solvated']['context'] = context
         database['solvated']['x_n'] = x_n
         database['solvated']['u_n'] = u_n
     else:
+        database['vacuum']['context'] = context
         database['vacuum']['x_n'] = x_n
         database['vacuum']['u_n'] = u_n
+
+    # clean up
+    del context, integrator
 
     logger().info("simulation %12.3f s | %5d samples discarded | %5d independent samples remain" % (elapsed_time, t0, len(indices)))
 
@@ -190,6 +203,70 @@ def _determine_fastest_platform():
     fastest_platform_id = int(np.argmax(platform_speeds))
     platform = mm.Platform.getPlatform(fastest_platform_id)
     return platform
+
+
+def zwanzig(database):
+
+    temperature = 300*u.kelvin
+    kT = kB * temperature
+    beta = 1.0 / kT
+
+    system = database['system']
+    context = database['context']
+    structure = database['structure']
+    x_n =database['x_n']
+    u_1 = database['u_n']
+    n_samples = len(u_1)
+
+    # copy torsions
+    forces = {system.getForce(i).__class__.__name__: system.getForce(i)
+                  for i in range(system.getNumForces())}
+    torsion_force = forces['PeriodicTorsionForce']
+
+    # create new force
+    new_torsion_force = structure.omm_dihedral_force()
+    # copy parameters
+    for i in range(new_torsion_force.getNumTorsions()):
+        torsion = new_torsion_force.getTorsionParameters(i)
+        torsion_force.setTorsionParameters(i, *torsion)
+    # update parameters in context
+    torsion_force.updateParametersInContext(database['context'])
+    #clean up
+    del new_torsion_force
+
+    # caclulate energy with new parameters for each sample
+    u_2 = np.zeros(n_samples)
+    for sample in range(n_samples):
+        positions = u.Quantity(x_n[sample, :, :], u.nanometers)
+        context.setPositions(positions)
+        state = context.getState(getEnergy=True)
+        u_2[sample] = beta * state.getPotentialEnergy()
+
+    # calculate energy difference
+    diff = u_1 - u_2
+    expectation = np.average(np.exp(-diff))
+    ddf_12 = kT * np.log(expectation)
+
+    return ddf_12
+
+
+def create_context(database, param, platform=None):
+    #self.structure.load_parameters(param, copy_parameters=False)
+    #self.system = self.structure.createSystem()
+    platform = mm.Platform.getPlatformByName('Reference')
+    time_step = 2.0*u.femtoseconds
+    temperature = 300*u.kelvin
+    friction_coef = 1.0/u.picoseconds
+    integrator_solv = mm.LangevinIntegrator(temperature, friction_coef, time_step)
+    integrator_vacuum = mm.LangevinIntegrator(temperature, friction_coef, time_step)
+
+
+    solvated_system = database['solvated']['system']
+    vacuum_system = database['vacuum']['system']
+    if platform != None:
+        database['solvated']['context'] = mm.Context(database['solvated']['system'], integrator_solv, platform)
+        database['vacuum']['context'] = mm.Context(database['vacuum']['system'], integrator_vacuum, platform)
+
 
 # def _opencl_device_support_precision(precision_model):
 #     """
