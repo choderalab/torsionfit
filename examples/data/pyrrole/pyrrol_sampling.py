@@ -21,6 +21,8 @@ param_to_optimize = [('CG331', 'CG321', 'CG321', 'NG3C51'),
 param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm', 'pyrrol.str')
 model = Model.TorsionFitModelEliminatePhase(param, pyrrol_opt, decouple_n=True, sample_n5=True,
                                             param_to_opt=param_to_optimize )
+db = sqlite_plus.loag('pyrrol_4.db')
+sampler = MCMC(model.pymc_parameters, db=db)
+sampler.restore_sampler_state()
+sampler.sample(100000)
 
-sampler = MCMC(model.pymc_parameters, db=sqlite_plus, dbname='pyrrol_4.db')
-sampler.sample(iter=10000)
