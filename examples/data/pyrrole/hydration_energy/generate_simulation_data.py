@@ -17,7 +17,8 @@ db_solv = energy.generate_simulation_data(db, params, n_steps=3000, n_iter=400)
 db_new = {}
 for key in db_solv['solvated'].keys():
     if key == 'system' or key == 'context':
-        db_new[key] = db_solv['solvated'][key]
+	continue
+    db_new[key] = db_solv['solvated'][key]
 
 pickle.dump(db_new, open('solvated.pickle', 'w'))
 pickle.dump(db_solv, open('solvated_test.pickle', 'w'))
