@@ -18,5 +18,5 @@ pyrrol_opt = pyrrol_scan.extract_geom_opt()
 param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm')
 model = Model.TorsionFitModelEliminatePhase(param, pyrrol_opt, decouple_n=True, sample_n5=True, stream=stream)
 
-sampler = MCMC(model.pymc_parameters, db=sqlite_plus, dbname='pyrrol_all.db')
+sampler = MCMC(model.pymc_parameters, db=sqlite_plus, dbname='pyrrol_all_2.db')
 sampler.sample(iter=10000)
