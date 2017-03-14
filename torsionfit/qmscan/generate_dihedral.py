@@ -6,15 +6,14 @@ import errno
 def torsion_drive(atom1, atom2, atom3, atom4, interval, selection, path, mol_name,):
     """
     This function generates input pdbs of dihedral angles selected of intervals specified with interval
-    :param atom1:
-    :param atom2:
-    :param atom3:
-    :param atom4:
-    :param interval:
-    :param selection
-    :param path:
-    :param mole_name:
-    :return:
+    :param atom1: name of atom 1 of dihedral
+    :param atom2: name of atom 2 of dihedral
+    :param atom3: name of atom 3 of dihedral
+    :param atom4: name of atom 4 of dihedral
+    :param interval: int or float (in degrees) of intervals to generate torsion scan for
+    :param selection: name of selection for molecule
+    :param path: path to where pdb files should be saved
+    :param mole_name: name of molecule to append to filenamen
     """
 
     atom1 = selection + " and name " + atom1
