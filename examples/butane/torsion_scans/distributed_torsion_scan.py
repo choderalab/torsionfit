@@ -18,6 +18,7 @@ generate_scan_input('B3LYP_torsion_scan/', filetype='pdb', mol_name='butane', di
 # has to be edited for the location of the redis server
 # First open redis by calling redis-server
 # Start celey workers with this command:
-# celery -A qmtasks worker -l info
-# The default concurrency is 8.
+# celery -A qmtasks worker -l info (Run this command in directory where qmtasks is (torsionfit/qmscan). The default
+# concurrency is 8 which means that 8 jobs will run at a time. This option can be changed).
+# Then run this script
 qmtasks.run_psi4_distributed('B3LYP_torsion_scan/')
