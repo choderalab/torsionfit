@@ -1,3 +1,5 @@
+__author__ = 'Chaya D. Stern'
+
 from pymol import stored, cmd
 import os
 import errno
