@@ -1,3 +1,5 @@
+__author__ = 'Chaya D. Stern'
+
 import pymc
 from parmed.topologyobjects import DihedralType
 import numpy as np
@@ -124,12 +126,13 @@ class TorsionFitModel(object):
         """
         Update param set with missing multiplicities.
 
+        :rtype: object
         :param: chemistry.charmm.CharmmParameterSet
 
         :return: updated CharmmParameterSet with multiplicities 1-6 for parameters to optimize
         """
         multiplicities = [1, 2, 3, 4, 6]
-        if self.sample_n5:
+        if sample_n5:
             multiplicities = [1, 2, 3, 4, 5, 6]
         for p in self.parameters_to_optimize:
             reverse = tuple(reversed(p))
@@ -417,7 +420,7 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
                                                             -2 * log_sigma))
 
         # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
-        self.add_missing(param, self.sample_n5)
+        self.add_missing(param, sample_n5=self.sample_n5)
 
 
         @pymc.deterministic
