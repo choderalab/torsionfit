@@ -2,8 +2,10 @@
 """
 Created on Thu May  7 19:32:22 2015
 
-@author: sternc1
 """
+
+__author__ = 'Chaya D. Stern'
+
 import pandas as pd
 import numpy as np
 import simtk.openmm as mm
@@ -489,12 +491,12 @@ class TorsionScanSet(Trajectory):
         """
         This function computes mm_energy for scan using sampled torsions
         Args:
-            param:
-            db:
-            start:
-            end:
-            decouple_n:
-            phase:
+            param: parmed.charmm.parameterset
+            db: sqlit_plus database
+            start: int, start of mcmc chain. Defualt 0
+            end: int, end of mcmc chain. Default -1
+            decouple_n: flag if multiplicities were sampled
+            phase: flag if phases were sampled
 
         Returns:
 
