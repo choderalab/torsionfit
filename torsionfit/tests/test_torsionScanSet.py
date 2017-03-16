@@ -19,9 +19,7 @@ except ImportError:
     HAVE_OPENMM = False
 
 # create scan set
-structure = get_fun('butane.psf')
-scan = get_fun('MP2_torsion_scan/')
-test_scan = torsionset.parse_psi4_out(scan, structure)
+
 
 def test_read_logfile():
     """Tests the logfile parser"""
@@ -85,12 +83,18 @@ class TestScanSet(unittest.TestCase):
 
     def test_remove_nonoptimized(self):
         """ Test remove non_optimized structures """
+        structure = get_fun('butane.psf')
+        scan = get_fun('MP2_torsion_scan/')
+        test_scan = torsionset.parse_psi4_out(scan, structure)
         self.assertEqual(test_scan.n_frames, 14)
         scan_opt = test_scan.remove_nonoptimized()
         self.assertEqual(scan_opt.n_frames, 13)
 
     def test_to_dataframe(self):
         """ Tests to dataframe """
+        structure = get_fun('butane.psf')
+        scan = get_fun('MP2_torsion_scan/')
+        test_scan = torsionset.parse_psi4_out(scan, structure)
         test_scan.to_dataframe()
         structure = get_fun('MPR.psf')
         scan = torsionset.parse_gauss([get_fun('MPR.scan1.pos.log'), get_fun('MPR.scan1.neg.log')], structure)
@@ -99,6 +103,9 @@ class TestScanSet(unittest.TestCase):
 
     def test_compute_energy(self):
         """ Tests compute mm energy"""
+        structure = get_fun('butane.psf')
+        scan = get_fun('MP2_torsion_scan/')
+        test_scan = torsionset.parse_psi4_out(scan, structure)
         param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
         self.assertFalse(test_scan._have_mm_energy)
         scan_opt = test_scan.remove_nonoptimized()
@@ -111,12 +118,18 @@ class TestScanSet(unittest.TestCase):
 
     def test_create_context(self):
         """ Test create context """
+        structure = get_fun('butane.psf')
+        scan = get_fun('MP2_torsion_scan/')
+        test_scan = torsionset.parse_psi4_out(scan, structure)
         param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
         test_scan.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
         test_scan.create_context(param)
 
     def test_copy_torsions(self):
         """ Test copy torsions"""
+        structure = get_fun('butane.psf')
+        scan = get_fun('MP2_torsion_scan/')
+        test_scan = torsionset.parse_psi4_out(scan, structure)
         param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
         test_scan.compute_energy(param)
         test_scan.copy_torsions()
