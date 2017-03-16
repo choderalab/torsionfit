@@ -1,3 +1,5 @@
+__author__ = 'Chaya D. Stern'
+
 import pymc
 from parmed.topologyobjects import DihedralType
 import numpy as np
@@ -16,7 +18,7 @@ class TorsionFitModel(object):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, stream, frags, platform=None, param_to_opt=None, decouple_n=False):
+    def __init__(self, param, frags, stream=None, platform=None, param_to_opt=None, decouple_n=False):
         """Create a PyMC model for fitting torsions.
 
         Parameters
@@ -120,15 +122,18 @@ class TorsionFitModel(object):
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
                                                      value=qm_energy)
 
-    def add_missing(self, param):
+    def add_missing(self, param, sample_n5=False):
         """
         Update param set with missing multiplicities.
 
+        :rtype: object
         :param: chemistry.charmm.CharmmParameterSet
 
         :return: updated CharmmParameterSet with multiplicities 1-6 for parameters to optimize
         """
         multiplicities = [1, 2, 3, 4, 6]
+        if sample_n5:
+            multiplicities = [1, 2, 3, 4, 5, 6]
         for p in self.parameters_to_optimize:
             reverse = tuple(reversed(p))
             per = []
@@ -191,7 +196,7 @@ class TorsionFitModelContinuousPhase(TorsionFitModel):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, stream, frags, platform=None, param_to_opt=None, decouple_n=False):
+    def __init__(self, param, frags, stream=None, platform=None, param_to_opt=None, decouple_n=False):
 
         """Create a PyMC model for fitting torsions.
 
@@ -339,7 +344,7 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, stream, frags, platform=None, param_to_opt=None, decouple_n=False):
+    def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, decouple_n=False, sample_n5=False):
 
         """Create a PyMC model for fitting torsions.
 
@@ -364,6 +369,7 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
         self.frags = frags
         self.platform = platform
         self.decouple_n = decouple_n
+        self.sample_n5 = sample_n5
         if param_to_opt:
             self.parameters_to_optimize = param_to_opt
         else:
@@ -373,6 +379,8 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
         self._set_phase_0(param)
 
         multiplicities = [1, 2, 3, 4, 6]
+        if self.sample_n5:
+            multiplicities = [1, 2, 3, 4, 5, 6]
         multiplicity_bitstrings = dict()
 
         # offset
@@ -412,7 +420,7 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
                                                             -2 * log_sigma))
 
         # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
-        self.add_missing(param)
+        self.add_missing(param, sample_n5=self.sample_n5)
 
 
         @pymc.deterministic
@@ -428,7 +436,10 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
         size = sum([len(i.qm_energy) for i in self.frags])
         qm_energy = np.ndarray(0)
         for i in range(len(frags)):
-            qm_energy = np.append(qm_energy, frags[i].qm_energy)
+             qm_energy = np.append(qm_energy, frags[i].qm_energy)
+        #diff_energy = np.ndarray(0)
+        #for i in range(len(frags)):
+        #    diff_energy = np.append(diff_energy, frags[i].delta_energy)
         self.pymc_parameters['mm_energy'] = mm_energy
         self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
@@ -451,7 +462,7 @@ class TorsionFitModelEliminatePhase(TorsionFitModel):
                 m = int(param.dihedral_types[p][i].per)
                 multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
                 if (multiplicity_bitstring & multiplicity_bitmask) or self.decouple_n:
-                    if m == 5:
+                    if m == 5 and not self.sample_n5:
                         continue
                     k = torsion_name + '_' + str(m) + '_K'
                     pymc_variable = self.pymc_parameters[k]

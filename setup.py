@@ -41,6 +41,12 @@ def find_package_data(data_root, package_root):
             files.append(relpath(join(root, fn), package_root))
     return files
 
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join('..', path, filename))
+    return paths
 
 ################################################################################
 # SETUP
@@ -58,8 +64,8 @@ setup(
     url='https://github.com/choderalab/torsions',
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
     classifiers=CLASSIFIERS.splitlines(),
-    packages=['torsionfit', 'torsionfit.tests'],
-    package_data={ 'torsionfit.tests': ['reference/*']},
+    packages=['torsionfit', 'torsionfit.tests', 'torsionfit.qmscan'],
+    package_data={ '': package_files('torsionfit/tests/reference')},
     zip_safe=False,
     install_requires=[
         'numpy',

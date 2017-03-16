@@ -15,7 +15,7 @@ import pymbar
 multiplicities = (1, 2, 3, 4, 6)
 
 
-def get_parameter_names(model, db):
+def get_parameter_names(model, db, n5=False):
     """
     returns a dictionary that maps torsion name all associated parameters for convenient trace access in pymc.database
     :param model: torsionfit.TorsionFitModel
@@ -23,6 +23,10 @@ def get_parameter_names(model, db):
 
     :return: dictionary mapping torsion name to all associated parameters
     """
+    if n5:
+        multiplicities = tuple(range(1, 7))
+    else:
+        multiplicities = (1, 2, 3, 4, 6)
     torsion_parameters = {}
     torsions = model.parameters_to_optimize
     for name in torsions:
@@ -38,7 +42,7 @@ def get_parameter_names(model, db):
     return torsion_parameters
 
 
-def get_multiplicity_traces(torsion_parameters, db):
+def get_multiplicity_traces(torsion_parameters, db, n5=False):
     """
     returns traces for the multiplicity terms for all torsions in (0, 1)
 
@@ -47,7 +51,10 @@ def get_multiplicity_traces(torsion_parameters, db):
 
     :return: dict mapping torsion name to multiplicity terms trace
     """
-
+    if n5:
+        multiplicities = tuple(range(1, 7))
+    else:
+        multiplicities = (1, 2, 3, 4, 6)
     if type(torsion_parameters) == str:
         torsion_parameters = [torsion_parameters]
     else:
@@ -241,7 +248,7 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
     pp.close()
 
 
-def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=False):
+def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=False, ymin=-20, ymax=20, filename=None):
     """
     Generate trace plot for all parameters of a given torsion
 
@@ -266,54 +273,54 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(1) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.ylabel('kJ/mole')
     plt.xticks([])
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.yticks([-20, 20])
+    plt.yticks([ymin, 0, ymax])
 
-    axes_n = plt.subplot(5, 2, 3)
+    axes_n = plt.subplot(5, 2, 2)
     plt.plot(multiplicity_traces[name + '_' + str(1)], 'k.', markersize=markersize, label='1')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.ylim(-0.1, 1.1)
     plt.yticks([0, 1])
     plt.xticks([])
 
-    axes_k = plt.subplot(5, 2, 5)
+    axes_k = plt.subplot(5, 2, 3)
     plt.plot(db.trace(name + '_' + str(2) + '_K')[:], 'k.', markersize=markersize, label='K')
     if statistics:
         axes_k.axvline(statistics[name + '_' + '2' + '_K'][0], color='red', lw=1)
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(2) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.ylabel('kJ/mole')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
-    plt.yticks([-20, 20])
+    plt.yticks([ymin, 0, ymax])
 
-    axes_n = plt.subplot(5, 2, 7)
+    axes_n = plt.subplot(5, 2, 4)
     plt.plot(multiplicity_traces[name + '_' + str(2)], 'k.', markersize=markersize, label='2')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.ylim(-0.1, 1.1)
     plt.yticks([0, 1])
     plt.xticks([])
 
-    axes_k = plt.subplot(5, 2, 9)
+    axes_k = plt.subplot(5, 2, 5)
     plt.plot(db.trace(name + '_' + str(3) + '_K')[:], 'k.', markersize=markersize, label='K')
     if statistics:
         axes_k.axvline(statistics[name + '_' + '3' + '_K'][0], color='red', lw=1)
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(3) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.ylabel('kJ/mole')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.yticks([-20, 20])
+    plt.yticks([ymin, 0,  ymax])
     plt.xlabel('mcmc steps')
 
 
-    axes_n = plt.subplot(5, 2, 2)
+    axes_n = plt.subplot(5, 2, 6)
     plt.title(name, fontweight='bold')
     plt.plot(multiplicity_traces[name + '_' + str(3)], 'k.', markersize=markersize, label='3')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
@@ -321,36 +328,36 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     plt.yticks([])
     plt.xticks([])
 
-    axes_k = plt.subplot(5, 2, 4)
+    axes_k = plt.subplot(5, 2, 7)
     plt.plot(db.trace(name + '_' + str(4) + '_K')[:], 'k.', markersize=markersize, label='K')
     if statistics:
         axes_k.axvline(statistics[name + '_' + '4' + '_K'][0], color='red', lw=1)
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(4) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
-    plt.yticks([])
+    plt.yticks([ymin, 0, ymax])
 
-    axes_n = plt.subplot(5, 2, 6)
+    axes_n = plt.subplot(5, 2, 8)
     plt.plot(multiplicity_traces[name + '_' + str(4)], 'k.', markersize=markersize, label='4')
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.ylim(-0.1, 1.1)
     plt.yticks([])
     plt.xticks([])
 
-    axes_k = plt.subplot(5, 2, 8)
+    axes_k = plt.subplot(5, 2, 9)
     plt.plot(db.trace(name + '_' + str(6) + '_K')[:], 'k.', markersize=markersize, label='K')
     if statistics:
         axes_k.axvline(statistics[name + '_' + '6' + '_K'][0], color='red', lw=1)
     else:
         axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(6) + '_K')[:])[0], color='red',
                        lw=1)
-    plt.ylim(-20, 20)
+    plt.ylim(ymin, ymax)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.yticks([])
-    plt.xticks([])
+    plt.xticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 10)
     plt.plot(multiplicity_traces[name + '_' + str(6)], 'k.', markersize=markersize, label='6')
@@ -359,11 +366,166 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     plt.yticks([])
     plt.xlabel('mcmc steps')
 
-    fig.savefig('%s_traces.pdf' % name)
+    if not filename:
+        fig.savefig('%s_traces.pdf' % name)
+    else:
+        fig.savefig(filename)
     pp.savefig(fig, dpi=80)
     pp.close()
 
-def marg_mult(model, db, samples, burn, filename):
+def trace_no_phase_n5(name, db, markersize, statistics=False, equil=True,  multiplicity_traces=False, ymin=-20, ymax=20, filename=None):
+    """
+    Generate trace plot for all parameters of a given torsion
+
+    :param name: str. name of torsion parameter A_B_C_D where A, B, C, and D are atom types.
+    :param db: pymc.database (can also use pymc.sampler)
+    :param markersize: int.
+    :param statistics: dict that maps parameters to statistics from pymbar.timeseries.detectEquilibrium. Default: False
+    :param multiplicity_traces: dict that maps multiplicity term to (0,1) trace. Default is False.
+    """
+
+    if not multiplicity_traces:
+        multiplicity_traces = get_multiplicity_traces(torsion_parameters=name, db=db, n5=True)
+
+    pp = PdfPages('%s_traces.pdf' % name)
+    fig = plt.figure()
+
+    axes_k = plt.subplot(6, 2, 1)
+    plt.plot(db.trace(name + '_' + str(1) + '_K')[:], 'k.', markersize=markersize, label='K')
+    plt.title(name, fontweight='bold')
+    if equil:
+        if statistics:
+            axes_k.axvline(statistics[name + '_' + '1' + '_K'][0], color='red', lw=1)
+        else:
+            axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(1) + '_K')[:])[0], color='red',
+                       lw=1)
+    plt.ylim(ymin, ymax)
+    plt.ylabel('kJ/mole')
+    plt.xticks([])
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.yticks([ymin, 0, ymax])
+
+    axes_n = plt.subplot(6, 2, 2)
+    plt.title(name, fontweight='bold')
+    plt.plot(multiplicity_traces[name + '_' + str(1)], 'k.', markersize=markersize, label='1')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.ylim(-0.1, 1.1)
+    plt.yticks([0, 1])
+    plt.xticks([])
+
+    axes_k = plt.subplot(6, 2, 3)
+    plt.plot(db.trace(name + '_' + str(2) + '_K')[:], 'k.', markersize=markersize, label='K')
+    if equil:
+        if statistics:
+            axes_k.axvline(statistics[name + '_' + '2' + '_K'][0], color='red', lw=1)
+        else:
+            axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(2) + '_K')[:])[0], color='red',
+                       lw=1)
+    plt.ylim(ymin, ymax)
+    plt.ylabel('kJ/mole')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.xticks([])
+    plt.yticks([ymin, 0, ymax])
+
+    axes_n = plt.subplot(6, 2, 4)
+    plt.plot(multiplicity_traces[name + '_' + str(2)], 'k.', markersize=markersize, label='2')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.ylim(-0.1, 1.1)
+    plt.yticks([0, 1])
+    plt.xticks([])
+
+    axes_k = plt.subplot(6, 2, 5)
+    plt.plot(db.trace(name + '_' + str(3) + '_K')[:], 'k.', markersize=markersize, label='K')
+    if equil:
+        if statistics:
+            axes_k.axvline(statistics[name + '_' + '3' + '_K'][0], color='red', lw=1)
+        else:
+            axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(3) + '_K')[:])[0], color='red',
+                       lw=1)
+    plt.ylim(ymin, ymax)
+    plt.ylabel('kJ/mole')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.yticks([ymin, 0,  ymax])
+    plt.xticks([])
+
+    axes_n = plt.subplot(6, 2, 6)
+    plt.plot(multiplicity_traces[name + '_' + str(3)], 'k.', markersize=markersize, label='3')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.ylim(-0.1, 1.1)
+    plt.yticks([0, 1])
+    plt.xticks([])
+
+    axes_k = plt.subplot(6, 2, 7)
+    plt.plot(db.trace(name + '_' + str(4) + '_K')[:], 'k.', markersize=markersize, label='K')
+    if equil:
+        if statistics:
+            axes_k.axvline(statistics[name + '_' + '4' + '_K'][0], color='red', lw=1)
+        else:
+            axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(4) + '_K')[:])[0], color='red',
+                       lw=1)
+    plt.ylim(ymin, ymax)
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.xticks([])
+    plt.yticks([ymin, 0, ymax])
+    plt.ylabel('KJ/mol')
+
+    axes_n = plt.subplot(6, 2, 8)
+    plt.plot(multiplicity_traces[name + '_' + str(4)], 'k.', markersize=markersize, label='4')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.ylim(-0.1, 1.1)
+    plt.yticks([0, 1])
+    plt.xticks([])
+
+    axes_k = plt.subplot(6, 2, 9)
+    plt.plot(db.trace(name + '_' + str(5) + '_K')[:], 'k.', markersize=markersize, label='K')
+    if equil:
+        if statistics:
+            axes_k.axvline(statistics[name + '_' + '5' + '_K'][0], color='red', lw=1)
+        else:
+            axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(5) + '_K')[:])[0], color='red',
+                       lw=1)
+    plt.ylim(ymin, ymax)
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.xticks([])
+    plt.yticks([ymin, 0, ymax])
+    plt.ylabel('KJ/mol')
+
+    axes_n = plt.subplot(6, 2, 10)
+    plt.plot(multiplicity_traces[name + '_' + str(5)], 'k.', markersize=markersize, label='5')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.ylim(-0.1, 1.1)
+    plt.yticks([0, 1])
+    plt.xticks([])
+
+    axes_k = plt.subplot(6, 2, 11)
+    plt.plot(db.trace(name + '_' + str(6) + '_K')[:], 'k.', markersize=markersize, label='K')
+    if equil:
+        if statistics:
+            axes_k.axvline(statistics[name + '_' + '6' + '_K'][0], color='red', lw=1)
+        else:
+            axes_k.axvline(pymbar.timeseries.detectEquilibration(db.trace(name + '_' + str(6) + '_K')[:])[0], color='red',
+                       lw=1)
+    plt.ylim(ymin, ymax)
+    plt.yticks([ymin, 0, ymax])
+    plt.ylabel('KJ/mol')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.xlabel('mcmc steps')
+
+    axes_n = plt.subplot(6, 2, 12)
+    plt.plot(multiplicity_traces[name + '_' + str(6)], 'k.', markersize=markersize, label='6')
+    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    plt.ylim(-0.1, 1.1)
+    plt.yticks([0, 1])
+    plt.xlabel('mcmc steps')
+
+    if not filename:
+        fig.savefig('%s_traces.pdf' % name)
+    else:
+        fig.savefig(filename)
+    pp.savefig(fig, dpi=80)
+    pp.close()
+
+def marg_mult(model, db, samples, burn=0, filename=None, n5=False):
     """
     generates histogram for marginal distribution of posterior multiplicities.
 
@@ -373,12 +535,18 @@ def marg_mult(model, db, samples, burn, filename):
     :param burn: int. number of steps to skip
     :param filename: filename for plot to save
     """
+    if n5:
+        multiplicities = tuple(range(1, 7))
+    else:
+        multiplicities = (1, 2, 3, 4, 6)
     mult_bitstring = []
     for i in model.pymc_parameters.keys():
         if i.split('_')[-1] == 'bitstring':
             mult_bitstring.append(i)
-
-    histogram = np.zeros((len(mult_bitstring), samples, 5))
+    if n5:
+        histogram = np.zeros((len(mult_bitstring), samples, 5))
+    else:
+        histogram = np.zeros((len(mult_bitstring), samples, 5))
 
     for m, torsion in enumerate(mult_bitstring):
         for i, j in enumerate(db.trace('%s' % torsion)[burn:]):
@@ -390,4 +558,5 @@ def marg_mult(model, db, samples, burn, filename):
     plt.yticks([])
     plt.xlabel('multiplicity term')
     plt.ylabel('torsion')
-    plt.savefig(filename)
+    if filename:
+        plt.savefig(filename)
