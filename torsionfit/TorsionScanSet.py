@@ -472,7 +472,7 @@ class TorsionScanSet(Trajectory):
         min_energy = self.mm_energy.min()
         self.mm_energy -= min_energy
         if save:
-            self.initial_mm = self.mm_energy
+            self.initial_mm = deepcopy(self.mm_energy)
         if offset:
             offset = Quantity(value=offset.value, unit=energy_unit)
             self.mm_energy += offset
