@@ -26,16 +26,16 @@ param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_c
 stream = get_fun('PRL.str')
 structure = get_fun('PRL.psf')
 logfiles = [get_fun('PRL.scan2.pos.log'), get_fun('PRL.scan2.neg.log')]
-frag = torsionset.read_scan_logfile(logfiles, structure)
+frag = torsionset.parse_gauss(logfiles, structure)
 frag = frag.extract_geom_opt()
-model = TorsionFitModel(param, stream, frag, platform=platform)
+model = TorsionFitModel(param=param, stream=stream, frags=frag, platform=platform)
 sampler = MCMC(model.pymc_parameters)
-continuous_model = TorsionFitModelContinuousPhase(param, stream, frag, param_to_opt=model.parameters_to_optimize,
+continuous_model = TorsionFitModelContinuousPhase(param=param, stream=stream, frags=frag, param_to_opt=model.parameters_to_optimize,
                                                   platform=platform)
 continuous_sampler = MCMC(continuous_model.pymc_parameters)
 
 param_2 = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-eliminate_phase = TorsionFitModelEliminatePhase(param_2, stream, frag, platform=platform)
+eliminate_phase = TorsionFitModelEliminatePhase(param_2, stream=stream, frags=frag, platform=platform)
 eliminate_phase_sampler = MCMC(eliminate_phase.pymc_parameters)
 
 

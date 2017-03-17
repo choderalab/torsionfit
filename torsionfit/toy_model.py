@@ -88,15 +88,15 @@ class ToyModel(object):
 
         # create torsionfit.TorsionFitModel
         if continuous:
-            self.model = Model.TorsionFitModelContinuousPhase(self._param, self._struct, self.scan_set,
+            self.model = Model.TorsionFitModelContinuousPhase(self._param,  self.scan_set,
                                                               platform=self._platform, param_to_opt=[self._dih_type],
                                                               decouple_n=decouple_n)
         elif negative_K:
-            self.model = Model.TorsionFitModelEliminatePhase(self._param, self._struct, self.scan_set,
+            self.model = Model.TorsionFitModelEliminatePhase(param=self._param, frags=self.scan_set,
                                                              platform=self._platform, param_to_opt=[self._dih_type],
                                                              decouple_n=decouple_n)
         else:
-            self.model = Model.TorsionFitModel(self._param, self._struct, self.scan_set, platform=self._platform,
+            self.model = Model.TorsionFitModel(self._param, self.scan_set, platform=self._platform,
                                                param_to_opt=[self._dih_type], decouple_n=decouple_n)
 
     def _spher2cart(self, r, theta, phi):

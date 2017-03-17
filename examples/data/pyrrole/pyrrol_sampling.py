@@ -1,34 +1,28 @@
-# opemm imports
-import simtk.openmm as mm
 
-# ParmEd imports
-from chemistry.charmm.parameters import CharmmParameterSet
-#import cProfile
-#import pstats
-#import StringIO
-import TorsionScanSet, TorsionFitModel
+from torsionfit import TorsionScanSet as ScanSet
+import torsionfit.TorsionFitModel as Model
+from torsionfit import sqlite_plus
+from pymc import MCMC
+from parmed.charmm import CharmmParameterSet
 import glob
 from pymc import MCMC
-#from memory_profiler import profile
 
-param = CharmmParameterSet('../../charmm_ff/top_all36_cgenff.rtf', '../../charmm_ff/par_all36_cgenff.prm')
-stream = '../../structures/Pyrrol/pyrrol.str'
-structure = '../../structures/Pyrrol/pyrrol.psf'
-scan = glob.glob('../../structures/Pyrrol/torsion-scan/*.log')
-pyrrol_scan = TorsionScanSet.read_scan_logfile(scan, structure)
+structure = 'pyrrol.psf'
+scan = glob.glob('torsion-scan/*.log')
+
+pyrrol_scan = ScanSet.parse_gauss(scan, structure)
 pyrrol_opt = pyrrol_scan.extract_geom_opt()
-#create pymc model
-platform = mm.Platform.getPlatformByName('Reference')
-model = TorsionFitModel.TorsionFitModel(param, stream, pyrrol_opt, platform=platform)
-#update param with missing parameters
-model.add_missing(param)
-sampler = MCMC(model.pymc_parameters, db='sqlite', dbname='pyrrol.database', verbose=5)
 
-sampler.sample(iter=10000)
+# set up torsionfit model
+param_to_optimize = [('CG331', 'CG321', 'CG321', 'NG3C51'),
+                    ('CG321', 'CG321', 'NG3C51', 'CG2R51'),
+                    ('CG321', 'CG321', 'NG3C51', 'CG251O'),
+                    ('CG2D2', 'CG251O', 'NG3C51', 'CG321'),]
+param = CharmmParameterSet('../charmm_ff/top_all36_cgenff.rtf', '../charmm_ff/par_all36_cgenff.prm', 'pyrrol.str')
+model = Model.TorsionFitModelEliminatePhase(param, pyrrol_opt, decouple_n=True, sample_n5=True,
+                                            param_to_opt=param_to_optimize )
+db = sqlite_plus.load('pyrrol_4.db')
+sampler = MCMC(model.pymc_parameters, db=db)
+sampler.restore_sampler_state()
+sampler.sample(100000)
 
-#cProfile.run('sampler.sample(iter=50)', 'statfile')
-#sampler.db.close()
-#stream = StringIO.StringIO()
-#pstats.print_stats()
-
-#print(stream.getvalue())

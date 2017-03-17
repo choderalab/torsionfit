@@ -1,0 +1,84 @@
+#! Torsion scan of butane
+
+memory 1000 mb
+
+
+molecule c4h10 {
+  0 1
+  H           -1.781487710695    -1.339015245276    -0.924843604480
+  H           -2.809655081231    -0.316498366521     0.106834552942
+  H           -1.696171739547    -1.492504703619     0.844458676121
+  C           -1.808280241011    -0.768304160325     0.019321692974
+  H           -0.781385143240     0.870036270346     0.998325840230
+  H           -0.865561341910     1.021940295457    -0.757790563119
+  C           -0.705914797210     0.292313565545     0.058091534575
+  H            0.782112955956    -0.867612327944    -1.001664537213
+  H            0.864488252487    -1.023755932239     0.754159895630
+  C            0.705817366890    -0.292132845559    -0.060119676721
+  H            1.697771204799     1.493890140835    -0.841405738393
+  H            2.809791237804     0.316266152249    -0.104120355409
+  H            1.780184254006     1.337108071239     0.927741879375
+  C            1.808370373970     0.768135672436    -0.017435993935
+}
+
+# Now generate torsion scan (half scan in positive direction)
+
+steps = 18
+start_angle = 180
+step_size = 10
+
+table = Table(rows=["D"], cols=["E(SCF)"])
+
+for counter in range(0, steps):
+    # set smaller basis for geometry optimization
+    set{
+        basis cc-pVDZ
+        scf_type df
+        guess sad
+    }
+
+    dihedral = 1.0 * counter * step_size + start_angle
+    dihedral_string = "4 7 10 14 %.5f" % dihedral
+
+    set optking{
+        frozen_dihedral = ""
+        fixed_dihedral = $dihedral_string
+    }
+
+    optimize('b3lyp')  #geometry optimization using b3lyp
+    geom = c4h10.geometry()
+    geom.print_out() # Print out optimized geometry
+
+    # Print to screen
+    print('-------------------------------------------------------')
+    print('| Optimized geometry for dihedral %s  |' % dihedral_string)
+    print('-------------------------------------------------------')
+    geom_py = mat2arr(geom)
+    print(geom_py)
+
+    for atom in range(c4h10.natom()):
+        print("""{:4} {:4} {:12} {:8.4f} {:12.6f} {:12.6f} {:12.6f}   {:12.6f}""".format(
+                                  c4h10.Z(atom),       # atomic number
+                                  c4h10.symbol(atom),  # element symbol
+                                  c4h10.label(atom),   # input element label
+                                  c4h10.charge(atom),  # element charge
+                                  c4h10.x(atom),       # x-coordinate
+                                  c4h10.y(atom),       # y-coordinate
+                                  c4h10.z(atom),       # z-coordinate
+                                  c4h10.mass(atom),    # mass
+              ))
+
+    energy('b3lyp') # single point energy
+    escf = get_variable('SCF TOTAL ENERGY')
+    table[dihedral] = [escf]
+
+print('------------------------')
+print('    Table of Energies   ')
+print('------------------------')
+print table
+relative = table.copy()
+relative.absolute_to_relative(Factor=psi_hartree2kJmol)
+print('Relative table (KJ/mol)')
+print relative
+
+
