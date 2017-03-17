@@ -333,7 +333,6 @@ class TorsionScanSet(Trajectory):
         self.context = None
         self.system = None
         self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-        self.energy = np.array
         self.optimized = optimized
 
         # Don't allow an empty TorsionScanSet to be created
@@ -477,10 +476,7 @@ class TorsionScanSet(Trajectory):
             offset = Quantity(value=offset.value, unit=energy_unit)
             self.mm_energy += offset
         self.delta_energy = (self.qm_energy - self.mm_energy)
-        #self.delta_energy = self.delta_energy - self.delta_energy.min()
-
-        # Compute deviation between MM and QM energies with offset
-        #self.delta_energy = mm_energy - self.qm_energy + Quantity(value=offset, unit=kilojoule_per_mole)
+        # self.delta_energy = self.delta_energy - self.delta_energy.min()
 
     def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False):
 
