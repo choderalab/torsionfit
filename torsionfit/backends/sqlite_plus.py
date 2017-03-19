@@ -339,9 +339,13 @@ def var_str(shape):
 def get_sampled_torsions(db):
     """
     Returns a list of torsions that were sampled in the database in the form of A_B_C_D
-    :param db: pymc sqlit_plus database
 
-    Returns:
+    Parameters
+    ----------
+    db: pymc sqlit_plus database
+
+    Returns
+    -------
     list of torsions that were sampled
 
     """
@@ -355,12 +359,21 @@ def get_sampled_torsions(db):
 
 
 def get_multiplicity_trace(key, db):
+
     """
     This function takes a bitstring key and data base and returns a dictionary of [0,1] traces for each multiplicity
     term. 0 when that multiplicity is off and 1 when it's on
-    :param key: str (A_B_C_D_multiplicity_bitstring)
-    :param db: pymc sqlite_plus database
-    :return: dictionary of multiplicity mapped to lists of 0 and 1
+
+    Parameters
+    ----------
+    key : str
+        Format should be (A_B_C_D_multiplicity_bitstring)
+    db : pymc sqlite_plus database
+
+    Returns
+    -------
+    multiplicity_trace: dict
+        Dictionary of multiplicities mapped to list of 0 and 1.
 
     """
     multiplicities = (1, 2, 3, 4, 6)
