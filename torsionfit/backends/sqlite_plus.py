@@ -31,14 +31,10 @@ Added support for multidimensional arrays, DH Oct. 2009
 # TODO: Add support for integer valued objects.
 
 import numpy as np
-from numpy import zeros, shape, squeeze, transpose
+from numpy import squeeze
 import sqlite3
-from sqlite3 import OperationalError
-import pymc
 from pymc.database import base, pickle, ram
-import pdb
 import os
-import warnings
 try:
     import cPickle as pickle
 except ImportError:
@@ -264,6 +260,59 @@ class Database(base.Database):
         else:
             return self._chains[chain]
 
+    def get_sampled_torsions(self):
+        """
+        Returns a list of torsions that were sampled in the database in the form of A_B_C_D
+
+        Parameters
+        ----------
+        db: pymc sqlit_plus database
+
+        Returns
+        -------
+        list of torsions that were sampled
+
+        """
+        torsions = []
+        for key in self.getstate()['stochastics']:
+            key_split = key.split('_')
+            if key_split[-1] == 'bitstring':
+                name = key_split[0] + '_' + key_split[1] + '_' + key_split[2] + '_' + key_split[3]
+                torsions.append(name)
+        return torsions
+
+    def get_multiplicity_trace(self, key, n5=False):
+
+        """
+        This function takes a bitstring key and data base and returns a dictionary of [0,1] traces for each multiplicity
+        term. 0 when that multiplicity is off and 1 when it's on
+
+        Parameters
+        ----------
+        key : str
+            Format should be (A_B_C_D_multiplicity_bitstring)
+        db : pymc sqlite_plus database
+
+        Returns
+        -------
+        multiplicity_trace: dict
+            Dictionary of multiplicities mapped to list of 0 and 1.
+
+        """
+        multiplicities = (1, 2, 3, 4, 6)
+        if n5:
+            multiplicities = (1, 2, 3, 4, 5, 6)
+        multiplicity_trace = {}
+        key = '{}_multiplicity_bitstring'.format(key)
+        for m in multiplicities:
+            multiplicity_trace[str(m)] = []
+            for i in self.trace(key)[:]:
+                if 2**(m-1) & int(i):
+                    multiplicity_trace[str(m)].append(1)
+                else:
+                    multiplicity_trace[str(m)].append(0)
+        return multiplicity_trace
+
 
 def load(dbname):
     """Load an existing SQLite database.
@@ -334,55 +383,3 @@ def var_str(shape):
     size = np.prod(shape)
     indices = (np.indices(shape) + 1).reshape(-1, size)
     return ['v' + '_'.join(map(str, i)) for i in zip(*indices)]
-
-
-def get_sampled_torsions(db):
-    """
-    Returns a list of torsions that were sampled in the database in the form of A_B_C_D
-
-    Parameters
-    ----------
-    db: pymc sqlit_plus database
-
-    Returns
-    -------
-    list of torsions that were sampled
-
-    """
-    torsions = []
-    for key in db.getstate()['stochastics']:
-        key_split = key.split('_')
-        if key_split[-1] == 'bitstring':
-            name = key_split[0] + '_' + key_split[1] + '_' + key_split[2] + '_' + key_split[3]
-            torsions.append(name)
-    return torsions
-
-
-def get_multiplicity_trace(key, db):
-
-    """
-    This function takes a bitstring key and data base and returns a dictionary of [0,1] traces for each multiplicity
-    term. 0 when that multiplicity is off and 1 when it's on
-
-    Parameters
-    ----------
-    key : str
-        Format should be (A_B_C_D_multiplicity_bitstring)
-    db : pymc sqlite_plus database
-
-    Returns
-    -------
-    multiplicity_trace: dict
-        Dictionary of multiplicities mapped to list of 0 and 1.
-
-    """
-    multiplicities = (1, 2, 3, 4, 6)
-    multiplicity_trace = {}
-    for m in multiplicities:
-        multiplicity_trace[str(m)] = []
-        for i in db.trace(key)[:]:
-            if 2**(m-1) & int(i):
-                multiplicity_trace[str(m)].append(1)
-            else:
-                multiplicity_trace[str(m)].append(0)
-    return multiplicity_trace

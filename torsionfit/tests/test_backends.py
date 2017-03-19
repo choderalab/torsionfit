@@ -9,12 +9,14 @@ from pymc.examples import disaster_model
 from pymc import MCMC
 import pymc
 import pymc.database
-import torsionfit.netcdf4 as netcdf4
-import torsionfit.sqlite_plus as sqlite_plus
+from torsionfit.backends import netcdf4, sqlite_plus
+from torsionfit.tests.utils import get_fun
+
 from pymc.tests.test_database import TestPickle, TestSqlite
 import numpy as np
 import nose
 import warnings
+import unittest
 
 testdir = 'testresults'
 try:
@@ -79,3 +81,28 @@ class TestSqlitePlus(TestSqlite):
             assert_equal(sm.accepted + sm.rejected, 75)
         finally:
             warnings.filters = original_filters
+
+
+class TestSqlitPlusDB(unittest.TestCase):
+
+    def test_get_sampled_torsions(self):
+        """ Tests get torsions sampled from db """
+
+        param_to_opt=[('CG331', 'CG321', 'CG321', 'CG331'),
+                      ('HGA3', 'CG331', 'CG321', 'HGA2'),
+                      ('HGA3', 'CG331', 'CG321', 'CG321'),
+                      ('HGA2', 'CG321', 'CG321', 'HGA2'),
+                      ('CG331', 'CG321', 'CG321', 'HGA2')]
+        db = sqlite_plus.load(get_fun('butane.db'))
+        param_list = db.get_sampled_torsions()
+        param_list = [tuple(param.split('_')) for param in param_list]
+        self.assertEqual(set(param_list), set(param_to_opt))
+
+    def test_get_multiplicity_traces(self):
+        """Tests turing multiplicity bitstring into multiplicity traces"""
+        db = sqlite_plus.load(get_fun('butane.db'))
+        param_list = db.get_sampled_torsions()
+        mult = db.get_multiplicity_trace(param_list[0], n5=True)
+        keys = ['1', '2', '3', '4', '5', '6']
+        self.assertEqual(set(mult.keys()), set(keys))
+
