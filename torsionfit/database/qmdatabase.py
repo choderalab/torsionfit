@@ -1,23 +1,18 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu May  7 19:32:22 2015
-
-"""
-
 __author__ = 'Chaya D. Stern'
 
 import pandas as pd
 import numpy as np
-import simtk.openmm as mm
-import simtk.unit as u
-import mdtraj as md
-from copy import copy, deepcopy
+
+from simtk.unit import Quantity, nanometers, kilojoules_per_mole
+
 from cclib.parser import Gaussian, Psi
 from cclib.parser.utils import convertor
-from mdtraj import Trajectory
-from simtk.unit import Quantity, nanometers, kilojoules_per_mole
+
+import mdtraj as md
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
-import torsionfit.utils as utils
+from torsionfit.database import DataBase
+
+from copy import deepcopy
 from fnmatch import fnmatch
 import os
 import re
@@ -134,7 +129,7 @@ def parse_psi4_log(logfiles, structure):
 
         fi.close()
         angles = np.append(angles, angle, axis=0)
-    return TorsionScanSet(positions, topology, structure, torsions, directions, angles, qm_energies)
+    return QMDataBase(positions, topology, structure, torsions, directions, angles, qm_energies)
 
 
 def parse_psi4_out(oufiles_dir, structure):
@@ -190,7 +185,7 @@ def parse_psi4_out(oufiles_dir, structure):
             data.optdone
         except AttributeError:
             optimizer = False
-            print("Warning: Optimizer failed for {}".format(f))
+            warnings.warn("Warning: Optimizer failed for {}".format(f))
         optimized = np.append(optimized, optimizer)
 
         positions = np.append(positions, data.atomcoords[-1][np.newaxis]*0.1, axis=0)
@@ -208,8 +203,8 @@ def parse_psi4_out(oufiles_dir, structure):
     # Subtract lowest energy to find relative energies
     qm_energies = qm_energies - min(qm_energies)
     angles = np.asarray(dih_angle)
-    return TorsionScanSet(positions=positions, topology=topology, structure=structure, torsions=torsions, angles=angles,
-                          qm_energies=qm_energies, optimized=optimized)
+    return QMDataBase(positions=positions, topology=topology, structure=structure, torsions=torsions, angles=angles,
+                      qm_energies=qm_energies, optimized=optimized)
 
 
 def parse_gauss(logfiles, structure):
@@ -241,12 +236,6 @@ def parse_gauss(logfiles, structure):
         torsion = np.ndarray((1, 4), dtype=int)
         step = np.ndarray((0, 3), dtype=int)
         index = (2, 12, -1)
-        # f = file.split('/')[-1].split('.')
-        # if f[2] == 'pos':
-        #     direction[0] = 1
-        # else:
-        #     direction[0] = 0
-
         log = Gaussian(file)
         data = log.parse()
         # convert angstroms to nanometers
@@ -285,22 +274,15 @@ def parse_gauss(logfiles, structure):
             directions = np.append(directions, direction, axis=0)
         del log
         del data
-    return TorsionScanSet(positions=positions, topology=topology, structure=structure, torsions=torsions, steps=steps,
+    return QMDataBase(positions=positions, topology=topology, structure=structure, torsions=torsions, steps=steps,
                           qm_energies=qm_energies, directions=directions)
 
 
-class TorsionScanSet(Trajectory):
+class QMDataBase(DataBase):
     """container object for torsion scan
 
-    A TorsionScanSet should be constructed by loading Gaussian 09 torsion scan log files from disk
+    A TorsionScanSet should be constructed by loading Gaussian 09 torsion scan log files or a psi4 output file from disk
     with an mdtraj.Topology object
-
-    Examples
-    --------
-    >>> torsion_set = read_scan_logfile('../examples/data/pyrrole/torsion-scan/PRL.scan2.neg.log', '../examples/data/pyrrole/pyrrol.psf')
-    >>> print(torsion_set)
-    <torsions.TorsionScanSet with 40 frames, 22 atoms, 1 residues, without MM Energy>
-
 
     Attributes
     ----------
@@ -314,82 +296,65 @@ class TorsionScanSet(Trajectory):
     """
 
     def __init__(self, positions, topology, structure, torsions, qm_energies, angles=None, steps=None, directions=None,
-                 optimized=None):
+                 optimized=None, time=None):
         """Create new TorsionScanSet object"""
         assert isinstance(topology, object)
-        if angles is not None:
-            super(TorsionScanSet, self).__init__(positions, topology, time=angles)
-        else:
-            super(TorsionScanSet, self).__init__(positions, topology)
-        self.structure = structure
+        super(QMDataBase, self).__init__(positions, topology, structure, time)
         self.qm_energy = Quantity(value=qm_energies, unit=kilojoules_per_mole)
-        self.mm_energy = Quantity()
         self.initial_mm = Quantity()
         self.delta_energy = Quantity()
         self.torsion_index = torsions
         self.direction = directions
         self.steps = steps
-        self.positions = positions
-        self.context = None
-        self.system = None
-        self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
+        self.angles = angles
         self.optimized = optimized
 
-        # Don't allow an empty TorsionScanSet to be created
-        if self.n_frames == 0:
-            msg = 'TorsionScanSet has no frames!\n'
-            msg += '\n'
-            msg += 'positions provided were:\n'
-            msg += str(positions)
-            raise Exception(msg)
+    def compute_energy(self, param, offset=None, platform=None):
+        """ Computes energy for a given structure with a given parameter set
 
-    def create_context(self, param, platform=None):
-        self.structure.load_parameters(param, copy_parameters=False)
-        self.system = self.structure.createSystem()
-        if platform != None:
-            self.context = mm.Context(self.system, self.integrator, platform)
-        else:
-            self.context = mm.Context(self.system, self.integrator)
+        Parameters
+        ----------
+        param: parmed.charmm.CharmmParameterSet
+        platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
+        """
 
-    def copy_torsions(self, param=None, platform=None):
-        forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
-                  for i in range(self.system.getNumForces())}
-        torsion_force = forces['PeriodicTorsionForce']
+        # Save initial mm energy
+        save = False
+        if not self._have_mm_energy:
+            save = True
 
-        # create new force
-        new_torsion_force = self.structure.omm_dihedral_force()
+        # calculate energy
+        self.energy(param, platform)
 
-        # sanity check
-        if torsion_force.getNumTorsions() != new_torsion_force.getNumTorsions():
-            # create new context and new integrator. First delete old context and integrator
-            del self.system
-            del self.context
-            del self.integrator
-            self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
-            self.create_context(param, platform)
-            forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
-                      for i in range(self.system.getNumForces())}
-            torsion_force = forces['PeriodicTorsionForce']
+        # Subtract off minimum of mm_energy and add offset
+        energy_unit = kilojoules_per_mole
 
-        # copy parameters
-        for i in range(new_torsion_force.getNumTorsions()):
-            torsion = new_torsion_force.getTorsionParameters(i)
-            torsion_force.setTorsionParameters(i, *torsion)
-        # update parameters in context
-        torsion_force.updateParametersInContext(self.context)
-
-        # clean up
-        del new_torsion_force
+        min_energy = self.mm_energy.min()
+        self.mm_energy -= min_energy
+        if save:
+            self.initial_mm = deepcopy(self.mm_energy)
+        if offset:
+            offset = Quantity(value=offset.value, unit=energy_unit)
+            self.mm_energy += offset
+        self.delta_energy = (self.qm_energy - self.mm_energy)
+        # self.delta_energy = self.delta_energy - self.delta_energy.min()
 
     def to_dataframe(self, psi4=True):
-        """ convert TorsionScanSet to pandas dataframe """
+
+        """ convert TorsionScanSet to pandas dataframe
+
+        Parameters
+        ----------
+        psi4 : bool
+            Flag if QM log file is from psi4. Default True.
+        """
 
         if psi4:
             if len(self.mm_energy) == self.n_frames and len(self.delta_energy) == self.n_frames:
-                data =[(self.torsion_index[i], self.time[i], self.qm_energy[i], self.mm_energy[i], self.delta_energy[i],
+                data =[(self.torsion_index[i], self.angles[i], self.qm_energy[i], self.mm_energy[i], self.delta_energy[i],
                        self.optimized[i]) for i in range(self.n_frames)]
             else:
-                data =[(self.torsion_index[i], self.time[i], self.qm_energy[i], float('nan'), float('nan'),
+                data =[(self.torsion_index[i], self.angles[i], self.qm_energy[i], float('nan'), float('nan'),
                        self.optimized[i]) for i in range(self.n_frames)]
             torsion_set = pd.DataFrame(data, columns=['Torsion', 'Torsion angle', 'QM energy (KJ/mol)', 'MM energy (KJ/mol)',
                                                       'Delta energy (KJ/mol)', 'Optimized'])
@@ -404,14 +369,15 @@ class TorsionScanSet(Trajectory):
                                                       'Delta energy (KJ/mol)'])
         return torsion_set
 
-    def _string_summary_basic(self):
-        """Basic summary of TorsionScanSet in string form."""
-        energy_str = 'with MM Energy' if self._have_mm_energy else 'without MM Energy'
-        value = "torsions.TorsionScanSet with %d frames, %d atoms, %d residues, %s" % (
-                     self.n_frames, self.n_atoms, self.n_residues, energy_str)
-        return value
-
     def extract_geom_opt(self):
+        """
+        Extracts optimized geometry for Gaussian torsion scan.
+
+        Returns
+        -------
+        New QMDataBase
+
+        """
         key = []
         for i, step in enumerate(self.steps):
             try:
@@ -427,6 +393,10 @@ class TorsionScanSet(Trajectory):
         Remove configurations where optimizer failed
         Returns: copy of scan set with only optimized structures
 
+        Returns
+        -------
+        new QMDataBase
+
         """
         key = []
         for i, optimized in enumerate(self.optimized):
@@ -434,73 +404,6 @@ class TorsionScanSet(Trajectory):
                 key.append(i)
         new_torsionscanset = self.slice(key)
         return new_torsionscanset
-
-    def compute_energy(self, param, offset=None, platform=None):
-        """ Computes energy for a given structure with a given parameter set
-
-        Parameters
-        ----------
-        param: parmed.charmm.CharmmParameterSet
-        platform: simtk.openmm.Platform to evaluate energy on (if None, will select automatically)
-        """
-
-        if self.n_frames == 0:
-            raise Exception("self.n_frames = 0! There are no frames to compute energy for.")
-
-        # Check if context exists.
-        if not self.context:
-            self.create_context(param, platform)
-        else:
-            # copy new torsion parameters
-            self.copy_torsions(param, platform)
-
-        # Save initial mm energy
-        save = False
-        if not self._have_mm_energy:
-            save = True
-        # Compute potential energies for all snapshots.
-        self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
-        for i in range(self.n_frames):
-            self.context.setPositions(self.positions[i])
-            state = self.context.getState(getEnergy=True)
-            self.mm_energy[i] = state.getPotentialEnergy()
-
-        # Subtract off minimum of mm_energy and add offset
-        energy_unit = kilojoules_per_mole
-
-        min_energy = self.mm_energy.min()
-        self.mm_energy -= min_energy
-        if save:
-            self.initial_mm = deepcopy(self.mm_energy)
-        if offset:
-            offset = Quantity(value=offset.value, unit=energy_unit)
-            self.mm_energy += offset
-        self.delta_energy = (self.qm_energy - self.mm_energy)
-        # self.delta_energy = self.delta_energy - self.delta_energy.min()
-
-    def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False):
-
-        """
-        This function computes mm_energy for scan using sampled torsions
-        Args:
-            param: parmed.charmm.parameterset
-            db: sqlit_plus database
-            start: int, start of mcmc chain. Defualt 0
-            end: int, end of mcmc chain. Default -1
-            decouple_n: flag if multiplicities were sampled
-            phase: flag if phases were sampled
-
-        Returns:
-
-        """
-        N = len(db.sigma[start:end])
-        mm_energy = np.zeros((N, self.n_frames))
-        for i in range(N):
-            utils.param_from_db(param, db,  i, decouple_n, phase)
-            self.compute_energy(param)
-            mm_energy[i] = self.mm_energy._value
-
-        return mm_energy
 
     @property
     def _have_mm_energy(self):
@@ -517,7 +420,6 @@ class TorsionScanSet(Trajectory):
     #         except:
     #             pass
     #     return len(torsions), torsions
-
 
     def __getitem__(self, key):
         "Get a slice of this trajectory"
@@ -548,6 +450,8 @@ class TorsionScanSet(Trajectory):
             optimized = self.optimized[key]
         if self.steps is not None:
             steps = self.steps[key]
+        if self.angles is not None:
+            angles = self.angles[key]
         qm_energy = self.qm_energy[key]
         unitcell_lengths, unitcell_angles = None, None
         if self.unitcell_angles is not None:
@@ -574,6 +478,10 @@ class TorsionScanSet(Trajectory):
                 steps = steps.copy()
             else:
                 steps = self.steps
+            if self.angles is not None:
+                angles = angles.copy()
+            else:
+                angles = self.angles
             if self.unitcell_angles is not None:
                 unitcell_angles = unitcell_angles.copy()
             if self.unitcell_lengths is not None:
@@ -581,9 +489,10 @@ class TorsionScanSet(Trajectory):
 
         newtraj = self.__class__(
             positions=xyz, topology=topology, structure=structure, torsions=torsions, directions=direction, steps=steps,
-            qm_energies=qm_energy, optimized=optimized, angles=time)
+            qm_energies=qm_energy, optimized=optimized, angles=angles, time=time)
 
         if self._rmsd_traces is not None:
             newtraj._rmsd_traces = np.array(self._rmsd_traces[key],
                                             ndmin=1, copy=True)
         return newtraj
+
