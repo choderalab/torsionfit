@@ -83,7 +83,7 @@ class DataBase(Trajectory):
             del self.system
             del self.context
             del self.integrator
-            self.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
+            self.integrator = mm.VerletIntegrator(0.004*picoseconds)
             self.create_context(param, platform)
             forces = {self.system.getForce(i).__class__.__name__: self.system.getForce(i)
                       for i in range(self.system.getNumForces())}
