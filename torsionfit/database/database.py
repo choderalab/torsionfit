@@ -126,29 +126,12 @@ class DataBase(Trajectory):
             # copy new torsion parameters
             self.copy_torsions(param, platform)
 
-        # # Save initial mm energy
-        # save = False
-        # if not self._have_mm_energy:
-        #     save = True
         # Compute potential energies for all snapshots.
         self.mm_energy = Quantity(value=np.zeros([self.n_frames], np.float64), unit=kilojoules_per_mole)
         for i in range(self.n_frames):
             self.context.setPositions(self.positions[i])
             state = self.context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
-
-        # # Subtract off minimum of mm_energy and add offset
-        # energy_unit = kilojoules_per_mole
-        #
-        # min_energy = self.mm_energy.min()
-        # self.mm_energy -= min_energy
-        # if save:
-        #     self.initial_mm = deepcopy(self.mm_energy)
-        # if offset:
-        #     offset = Quantity(value=offset.value, unit=energy_unit)
-        #     self.mm_energy += offset
-        # self.delta_energy = (self.qm_energy - self.mm_energy)
-        # # self.delta_energy = self.delta_energy - self.delta_energy.min()
 
     def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False):
 
