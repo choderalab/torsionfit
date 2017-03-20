@@ -135,6 +135,16 @@ class TestFitModel(unittest.TestCase):
         self.assertTrue(model.rj)
         self.assertTrue(('CG331_CG321_CG321_CG331_multiplicity_bitstring' in model.pymc_parameters))
 
+    def test_phase(self):
+        """ Test phase on and off
+
+        """
+        self.assertFalse(model.sample_phase)
+        self.assertFalse('CG331_CG321_CG321_CG331_1_Phase' in model.pymc_parameters)
+
+        model_phase = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True)
+        self.assertTrue(model_phase.sample_phase)
+        self.assertTrue('CG331_CG321_CG321_CG331_1_Phase' in model_phase.pymc_parameters)
 
 
 
