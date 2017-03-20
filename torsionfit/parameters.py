@@ -4,11 +4,10 @@ Useful functions for manipulating parameters in a Parmed CharmmParameterSet.
 """
 __author__ = 'Chaya D. Stern'
 
-from torsionfit.backends import sqlite_plus
 from parmed.topologyobjects import DihedralType
 
 
-def add_missing(param_list, param, sample_n5=False):
+def add_missing(param_list, param, sample_n5=False, sample_phase=True):
 
     """
     Update param set with missing multiplicities. The modifications are in place.
@@ -25,7 +24,7 @@ def add_missing(param_list, param, sample_n5=False):
     multiplicities = [1, 2, 3, 4, 6]
     if sample_n5:
         multiplicities = [1, 2, 3, 4, 5, 6]
-    if param_list is not list:
+    if type(param_list) is not list:
         param_list = [param_list]
     for p in param_list:
         reverse = tuple(reversed(p))
@@ -50,7 +49,7 @@ def set_phase_0(param_list, param):
     param : parmed CharmmParameterSet
 
     """
-    if param_list is not list:
+    if type(param_list) is not list:
         param_list = [param_list]
     for p in param_list:
         reverse_p = tuple(reversed(p))
