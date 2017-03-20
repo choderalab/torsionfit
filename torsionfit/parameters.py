@@ -25,6 +25,8 @@ def add_missing(param_list, param, sample_n5=False):
     multiplicities = [1, 2, 3, 4, 6]
     if sample_n5:
         multiplicities = [1, 2, 3, 4, 5, 6]
+    if param_list is not list:
+        param_list = [param_list]
     for p in param_list:
         reverse = tuple(reversed(p))
         per = []
@@ -48,7 +50,8 @@ def set_phase_0(param_list, param):
     param : parmed CharmmParameterSet
 
     """
-
+    if param_list is not list:
+        param_list = [param_list]
     for p in param_list:
         reverse_p = tuple(reversed(p))
         for i in range(len(param.dihedral_types[p])):
@@ -71,7 +74,7 @@ def param_from_db(param, db, i=-1, decouple_n=False, phase=False, n_5=True):
      n_5: bool
         Flag if multiplicity of 5 was sampled and also needs to be modified. Default is True.
     """
-    torsions = sqlite_plus.get_sampled_torsions(db)
+    torsions = db.get_sampled_torsions()
     for torsion_name in torsions:
         multiplicity_bitstring = int(db.trace(torsion_name + '_multiplicity_bitstring')[i])
         t = tuple(torsion_name.split('_'))
@@ -80,6 +83,7 @@ def param_from_db(param, db, i=-1, decouple_n=False, phase=False, n_5=True):
             m = int(param.dihedral_types[t][n].per)
             multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
             if (multiplicity_bitstring & multiplicity_bitmask) or decouple_n:
+
                 if m == 5 and not n_5:
                     continue
                 k = torsion_name + '_' + str(m) + '_K'
