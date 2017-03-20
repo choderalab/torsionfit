@@ -4,7 +4,7 @@ Useful functions for manipulating parameters in a Parmed CharmmParameterSet.
 """
 __author__ = 'Chaya D. Stern'
 
-from torsionfit import sqlite_plus
+from torsionfit.backends import sqlite_plus
 from parmed.topologyobjects import DihedralType
 
 
