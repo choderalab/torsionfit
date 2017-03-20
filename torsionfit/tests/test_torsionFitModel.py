@@ -1,8 +1,9 @@
 """Test TorsionFitModel"""
 
 from torsionfit.tests.utils import get_fun
-import torsionfit.TorsionScanSet as torsionset
-from torsionfit.TorsionFitModel import TorsionFitModel, TorsionFitModelContinuousPhase, TorsionFitModelEliminatePhase
+import torsionfit.database.qmdatabase as qmdb
+from torsionfit.model import TorsionFitModel
+import torsionfit.parameters as par
 from pymc import MCMC
 import glob
 import pymc
@@ -21,22 +22,13 @@ try:
 except ImportError:
     HAVE_OPENMM = False
 
-platform = mm.Platform.getPlatformByName('Reference')
 param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-stream = get_fun('PRL.str')
-structure = get_fun('PRL.psf')
-logfiles = [get_fun('PRL.scan2.pos.log'), get_fun('PRL.scan2.neg.log')]
-frag = torsionset.parse_gauss(logfiles, structure)
-frag = frag.extract_geom_opt()
-model = TorsionFitModel(param=param, stream=stream, frags=frag, platform=platform)
-sampler = MCMC(model.pymc_parameters)
-continuous_model = TorsionFitModelContinuousPhase(param=param, stream=stream, frags=frag, param_to_opt=model.parameters_to_optimize,
-                                                  platform=platform)
-continuous_sampler = MCMC(continuous_model.pymc_parameters)
-
-param_2 = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-eliminate_phase = TorsionFitModelEliminatePhase(param_2, stream=stream, frags=frag, platform=platform)
-eliminate_phase_sampler = MCMC(eliminate_phase.pymc_parameters)
+structure = get_fun('butane.psf')
+logfiles = get_fun('MP2_torsion_scan/')
+frag = qmdb.parse_psi4_out(logfiles, structure)
+frag = frag.remove_nonoptimized()
+to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
+model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize)
 
 
 class TestFitModel(unittest.TestCase):
@@ -44,22 +36,26 @@ class TestFitModel(unittest.TestCase):
 
     def test_pymc_model(self):
         """ Tests sampler """
+
+        sampler = MCMC(model.pymc_parameters)
         self.assert_(isinstance(model, TorsionFitModel))
         self.assert_(isinstance(sampler, pymc.MCMC))
-        self.assert_(isinstance(continuous_model, TorsionFitModelContinuousPhase))
-        self.assert_(isinstance(continuous_sampler, pymc.MCMC))
-        self.assert_(isinstance(eliminate_phase, TorsionFitModelEliminatePhase))
-        self.assert_(isinstance(eliminate_phase_sampler, pymc.MCMC))
 
         sampler.sample(iter=1)
-        continuous_sampler.sample(iter=1)
-        eliminate_phase_sampler.sample(iter=1)
 
     def test_update_param_continuous(self):
         """ Tests that update parameter updates the reverse dihedral too in continuous  """
 
-        continuous_model.update_param(param)
-        torsion = continuous_model.parameters_to_optimize[0]
+        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
+        structure = get_fun('butane.psf')
+        logfiles = get_fun('MP2_torsion_scan/')
+        frag = qmdb.parse_psi4_out(logfiles, structure)
+        frag = frag.remove_nonoptimized()
+        to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
+
+        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
+                                continuous_phase=True)
+        torsion = model.parameters_to_optimize[0]
         torsion_reverse = tuple(reversed(torsion))
         self.assertEqual(param.dihedral_types[torsion], param.dihedral_types[torsion_reverse])
 
@@ -81,8 +77,16 @@ class TestFitModel(unittest.TestCase):
 
     def test_update_param_struct_cont(self):
         """ Tests that update parameter updates assigned parameters in the structure """
+        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
+        structure = get_fun('butane.psf')
+        logfiles = get_fun('MP2_torsion_scan/')
+        frag = qmdb.parse_psi4_out(logfiles, structure)
+        frag = frag.remove_nonoptimized()
+        to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
 
-        continuous_model.update_param(param)
+        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
+                                continuous_phase=True)
+        model.update_param(param)
         torsion = frag.structure.dihedrals[0]
         self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
                                                                torsion.atom3.type, torsion.atom4.type)])
@@ -90,7 +94,7 @@ class TestFitModel(unittest.TestCase):
     def test_add_missing(self):
         """ Tests that add_missing adds missing terms to parameters_to_optimize """
 
-        model.add_missing(param)
+        par.add_missing(param_list=to_optimize, param=param)
         for i in model.frags[0].structure.dihedrals:
             key = (i.atom1.type, i.atom2.type, i.atom3.type, i.atom4.type)
             key_reverse = tuple(reversed(key))
@@ -100,21 +104,36 @@ class TestFitModel(unittest.TestCase):
     def test_add_missing_cond(self):
         """ Tests that add_missing adds missing terms to parameters_to_optimize """
 
-        continuous_model.add_missing(param)
-        for i in continuous_model.frags[0].structure.dihedrals:
+        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
+        structure = get_fun('butane.psf')
+        logfiles = get_fun('MP2_torsion_scan/')
+        frag = qmdb.parse_psi4_out(logfiles, structure)
+        frag = frag.remove_nonoptimized()
+        to_optimize = [('CG331', 'CG321', 'CG321', 'HGA2')]
+
+        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
+                                continuous_phase=True)
+
+        par.add_missing(param_list=to_optimize, param=param)
+        for i in model.frags[0].structure.dihedrals:
             key = (i.atom1.type, i.atom2.type, i.atom3.type, i.atom4.type)
             key_reverse = tuple(reversed(key))
-            if key in continuous_model.parameters_to_optimize or key_reverse in continuous_model.parameters_to_optimize:
+            if key in model.parameters_to_optimize or key_reverse in model.parameters_to_optimize:
                 self.assert_(len(i.type) == 5)
 
-    def test_set_phase_0(self):
-        """ Tests that all phases are set to 0"""
+    def test_rj(self):
+        """ Test reversible jump is off
 
-        for p in eliminate_phase.parameters_to_optimize:
-            reverse_p = tuple(reversed(p))
-            for i in range(len(param_2.dihedral_types[p])):
-                self.assert_(param_2.dihedral_types[p][i].phase == 0)
-                self.assert_(param_2.dihedral_types[reverse_p][i].phase == 0)
+        """
+        self.assertFalse(model.rj)
+        self.assertTrue(('CG331_CG321_CG321_CG331_multiplicity_bitstring' not in model.pymc_parameters))
+
+    def test_rj_on(self):
+        """Test reversible jump is on"""
+
+        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, rj=True)
+        self.assertTrue(model.rj)
+        self.assertTrue(('CG331_CG321_CG321_CG331_multiplicity_bitstring' in model.pymc_parameters))
 
 
 
