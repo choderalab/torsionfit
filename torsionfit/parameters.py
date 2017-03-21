@@ -7,7 +7,7 @@ __author__ = 'Chaya D. Stern'
 from parmed.topologyobjects import DihedralType
 
 
-def add_missing(param_list, param, sample_n5=False, sample_phase=True):
+def add_missing(param_list, param, sample_n5=False):
 
     """
     Update param set with missing multiplicities. The modifications are in place.
@@ -58,90 +58,63 @@ def set_phase_0(param_list, param):
             param.dihedral_types[reverse_p][i].phase = 0
 
 
-def param_from_db(param, db, i=-1, decouple_n=False, phase=False, n_5=True):
+def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=False, phase=False, n_5=True):
     """
-    This function parameterizes sampled torsion with values of sample i in database. The modifications are in place.
+    This function parameterizes sampled torsion with values of sample i in database or current value in pymc model.
+    The modifications are in place.
 
     parameters:
     -----------
+     param_list: list
+      list of tuples of torsions being sampled [(A, B, C, D), (E, F, G, H)]
      param: parmed.charmm.parameterset
-     db: sqlit_plus database
+     db: sqlit_plus database or pymc sampler
+        default is None
+     model: pymc model
+        default is None
      i: int, sample to use
-     decouple_n: flag if multiplicities were sampled. (When true, the n was decoupled and it wasn't sampled)
+        default is -1
+     rj: flag if reversible jump is on.
          Default False
-     phase: flag if phases were sampled.
+     phase: bool
+        Flag if phases were sampled. Default is False
      n_5: bool
         Flag if multiplicity of 5 was sampled and also needs to be modified. Default is True.
     """
-    torsions = db.get_sampled_torsions()
-    for torsion_name in torsions:
-        multiplicity_bitstring = int(db.trace(torsion_name + '_multiplicity_bitstring')[i])
-        t = tuple(torsion_name.split('_'))
+
+    for t in param_list:
+        torsion_name = t[0] + '_' + t[1] + '_' + t[2] + '_' + t[3]
+        if rj:
+            multiplicity_key = torsion_name + '_multiplicity_bitstring'
+            if db is not None:
+                multiplicity_bitstring = int(db.trace(multiplicity_key)[i])
+            if model is not None:
+                multiplicity_bitstring = model.pymc_parameters[multiplicity_key].value
+        else:
+            multiplicity_bitstring = 65
         reverse_t = tuple(reversed(t))
         for n in range(len(param.dihedral_types[t])):
             m = int(param.dihedral_types[t][n].per)
             multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
-            if (multiplicity_bitstring & multiplicity_bitmask) or decouple_n:
-
+            if (multiplicity_bitstring & multiplicity_bitmask) or not rj:
                 if m == 5 and not n_5:
                     continue
                 k = torsion_name + '_' + str(m) + '_K'
-                sample = db.trace(k)[i]
+                if db is not None:
+                    sample = db.trace(k)[i]
+                if model is not None:
+                    sample = model.pymc_parameters[k].value
                 param.dihedral_types[t][n].phi_k = sample
                 param.dihedral_types[reverse_t][n].phi_k = sample
                 if phase:
                     p = torsion_name + '_' + str(m) + '_Phase'
-                    sample = db.trace(p)[i]
+                    if db is not None:
+                        sample = db.trace(p)[i]
+                    if model is not None:
+                        sample = model.pymc_parameters[p].value
                     param.dihedral_types[t][n].phase = sample
                     param.dihedral_types[reverse_t][n].phase = sample
             else:
                 # This torsion periodicity is disabled.
                 param.dihedral_types[t][n].phi_k = 0
                 param.dihedral_types[reverse_t][n].phi_k = 0
-
-
-# def update_param(self, param):
-#     """
-#     Update param set based on current pymc model parameters.
-#
-#     :mol: torsionfit.TorsionScanSet
-#
-#     :return: updated torsionfit.TorsionScanSet parameters based on current TorsionFitModel parameters
-#     """
-#
-#     for p in self.parameters_to_optimize:
-#         torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
-#         multiplicity_bitstring = self.pymc_parameters[torsion_name + '_multiplicity_bitstring'].value
-#         reverse_p = tuple(reversed(p))
-#         for i in range(len(param.dihedral_types[p])):
-#             m = int(param.dihedral_types[p][i].per)
-#             multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
-#             if (multiplicity_bitstring & multiplicity_bitmask) or self.decouple_n:
-#                 if m == 5:
-#                     continue
-#                 k = torsion_name + '_' + str(m) + '_K'
-#                 phase = torsion_name + '_' + str(m) + '_Phase'
-#                 pymc_variable = self.pymc_parameters[k]
-#                 param.dihedral_types[p][i].phi_k = pymc_variable.value
-#                 param.dihedral_types[reverse_p][i].phi_k = pymc_variable.value
-#                 pymc_variable = self.pymc_parameters[phase].value
-#                 if pymc_variable == 1:
-#                     param.dihedral_types[p][i].phase = 180
-#                     param.dihedral_types[reverse_p][i].phase = 180
-#                     break
-#
-#                 if pymc_variable == 0:
-#                     param.dihedral_types[p][i].phase = 0
-#                     param.dihedral_types[reverse_p][i].phase = 0
-#                     break
-#             else:
-#                 # This torsion periodicity is disabled.
-#                 param.dihedral_types[p][i].phi_k = 0
-#                 param.dihedral_types[reverse_p][i].phi_k = 0
-
-
-
-
-
-
-

@@ -5,15 +5,9 @@ import torsionfit.database.qmdatabase as qmdb
 from torsionfit.model import TorsionFitModel
 import torsionfit.parameters as par
 from pymc import MCMC
-import glob
 import pymc
-from numpy.testing import assert_
-from cclib.parser import Gaussian
-from cclib.parser.utils import convertor
-from numpy.testing import TestCase
 from parmed.charmm import CharmmParameterSet
 import unittest
-
 
 try:
     from simtk.openmm import app
@@ -62,7 +56,8 @@ class TestFitModel(unittest.TestCase):
     def test_update_param(self):
         """ Tests that update parameter updates the reverse dihedral too """
 
-        model.update_param(param)
+        par.update_param_from_sample(model.parameters_to_optimize, param, model=model, rj=model.rj,
+                                     phase=model.sample_phase, n_5=model.sample_n5)
         torsion = model.parameters_to_optimize[0]
         torsion_reverse = tuple(reversed(torsion))
         self.assertEqual(param.dihedral_types[torsion], param.dihedral_types[torsion_reverse])
@@ -70,7 +65,8 @@ class TestFitModel(unittest.TestCase):
     def test_update_param_struct(self):
         """ Tests that update parameter updates assigned parameters in the structure """
 
-        model.update_param(param)
+        par.update_param_from_sample(model.parameters_to_optimize, param, model=model, rj=model.rj,
+                                     phase=model.sample_phase, n_5=model.sample_n5)
         torsion = frag.structure.dihedrals[0]
         self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
                                                                torsion.atom3.type, torsion.atom4.type)])
@@ -86,7 +82,8 @@ class TestFitModel(unittest.TestCase):
 
         model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
                                 continuous_phase=True)
-        model.update_param(param)
+        par.update_param_from_sample(model.parameters_to_optimize, param, model=model, rj=model.rj,
+                                     phase=model.sample_phase, n_5=model.sample_n5)
         torsion = frag.structure.dihedrals[0]
         self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
                                                                torsion.atom3.type, torsion.atom4.type)])
