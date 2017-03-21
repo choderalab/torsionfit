@@ -275,7 +275,7 @@ def parse_gauss(logfiles, structure):
         del log
         del data
     return QMDataBase(positions=positions, topology=topology, structure=structure, torsions=torsions, steps=steps,
-                          qm_energies=qm_energies, directions=directions)
+                      qm_energies=qm_energies, directions=directions)
 
 
 class QMDataBase(DataBase):
@@ -324,7 +324,7 @@ class QMDataBase(DataBase):
             save = True
 
         # calculate energy
-        self.energy(param, platform)
+        super(QMDataBase, self).compute_energy(param, platform)
 
         # Subtract off minimum of mm_energy and add offset
         energy_unit = kilojoules_per_mole
@@ -349,24 +349,25 @@ class QMDataBase(DataBase):
             Flag if QM log file is from psi4. Default True.
         """
 
-        if psi4:
-            if len(self.mm_energy) == self.n_frames and len(self.delta_energy) == self.n_frames:
-                data =[(self.torsion_index[i], self.angles[i], self.qm_energy[i], self.mm_energy[i], self.delta_energy[i],
-                       self.optimized[i]) for i in range(self.n_frames)]
-            else:
-                data =[(self.torsion_index[i], self.angles[i], self.qm_energy[i], float('nan'), float('nan'),
-                       self.optimized[i]) for i in range(self.n_frames)]
-            torsion_set = pd.DataFrame(data, columns=['Torsion', 'Torsion angle', 'QM energy (KJ/mol)', 'MM energy (KJ/mol)',
-                                                      'Delta energy (KJ/mol)', 'Optimized'])
+        if len(self.mm_energy) == self.n_frames and len(self.delta_energy) == self.n_frames:
+            mm_energy = self.mm_energy
+            delta_energy = self.delta_energy
         else:
-            if len(self.mm_energy) == self.n_frames and len(self.delta_energy) == self.n_frames:
-                data =[(self.torsion_index[i], self.direction[i], self.steps[i], self.qm_energy[i], self.mm_energy[i],
-                        self.delta_energy[i]) for i in range(self.n_frames)]
-            else:
-                data =[(self.torsion_index[i], self.direction[i], self.steps[i], self.qm_energy[i], float('nan'),
-                       float('nan')) for i in range(self.n_frames)]
-            torsion_set = pd.DataFrame(data, columns=['Torsion', 'direction','steps', 'QM energy (KJ/mol)', 'MM energy (KJ/mol)',
-                                                      'Delta energy (KJ/mol)'])
+            mm_energy = [float('nan') for _ in range(self.n_frames)]
+            delta_energy = [float('nan') for _ in range(self.n_frames)]
+        if psi4:
+            data = [(self.torsion_index[i], self.angles[i], self.qm_energy[i], mm_energy[i], delta_energy[i],
+                    self.optimized[i]) for i in range(self.n_frames)]
+
+            columns = ['Torsion', 'Torsion angle', 'QM energy (KJ/mol)', 'MM energy (KJ/mol)', 'Delta energy (KJ/mol)',
+                       'Optimized']
+        else:
+            data = [(self.torsion_index[i], self.direction[i], self.steps[i], self.qm_energy[i], mm_energy[i],
+                     delta_energy[i]) for i in range(self.n_frames)]
+            columns = ['Torsion', 'direction','steps', 'QM energy (KJ/mol)', 'MM energy (KJ/mol)',
+                       'Delta energy (KJ/mol)']
+
+        torsion_set = pd.DataFrame(data, columns=columns)
         return torsion_set
 
     def extract_geom_opt(self):

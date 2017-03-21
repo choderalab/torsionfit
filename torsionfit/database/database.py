@@ -106,7 +106,7 @@ class DataBase(Trajectory):
                      self.n_frames, self.n_atoms, self.n_residues, energy_str)
         return value
 
-    def energy(self, param, platform=None):
+    def compute_energy(self, param, platform=None):
         """ Computes energy for a given structure with a given parameter set
 
         Parameters
@@ -133,7 +133,7 @@ class DataBase(Trajectory):
             state = self.context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
 
-    def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False):
+    def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False, n_5=True):
 
         """
         This function computes mm_energy for scan using sampled torsions
@@ -144,14 +144,16 @@ class DataBase(Trajectory):
             end: int, end of mcmc chain. Default -1
             decouple_n: flag if multiplicities were sampled
             phase: flag if phases were sampled
+            n_5: flag if multiplicity of 5 was sampled
 
         Returns:
 
         """
         N = len(db.sigma[start:end])
         mm_energy = np.zeros((N, self.n_frames))
+        param_list = db.get_sampled_torsions()
         for i in range(N):
-            par.param_from_db(param, db,  i, decouple_n, phase)
+            par.update_param_from_sample(param_list, param, db=db,  i=i, rj=decouple_n, phase=phase, n_5=n_5)
             self.compute_energy(param)
             mm_energy[i] = self.mm_energy._value
 
