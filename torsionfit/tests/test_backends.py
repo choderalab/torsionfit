@@ -95,7 +95,6 @@ class TestSqlitPlusDB(unittest.TestCase):
                       ('CG331', 'CG321', 'CG321', 'HGA2')]
         db = sqlite_plus.load(get_fun('butane.db'))
         param_list = db.get_sampled_torsions()
-        param_list = [tuple(param.split('_')) for param in param_list]
         self.assertEqual(set(param_list), set(param_to_opt))
 
     def test_get_multiplicity_traces(self):

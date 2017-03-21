@@ -277,7 +277,7 @@ class Database(base.Database):
         for key in self.getstate()['stochastics']:
             key_split = key.split('_')
             if key_split[-1] == 'bitstring':
-                name = key_split[0] + '_' + key_split[1] + '_' + key_split[2] + '_' + key_split[3]
+                name = (key_split[0], key_split[1], key_split[2], key_split[3])
                 torsions.append(name)
         return torsions
 
@@ -303,7 +303,7 @@ class Database(base.Database):
         if n5:
             multiplicities = (1, 2, 3, 4, 5, 6)
         multiplicity_trace = {}
-        key = '{}_multiplicity_bitstring'.format(key)
+        key = '{}_{}_{}_{}_multiplicity_bitstring'.format(key[0], key[1], key[2], key[3])
         for m in multiplicities:
             multiplicity_trace[str(m)] = []
             for i in self.trace(key)[:]:
