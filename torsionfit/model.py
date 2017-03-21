@@ -150,7 +150,7 @@ class TorsionFitModel(object):
                                                             -2 * log_sigma))
 
         # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
-        par.add_missing(self.parameters_to_optimize, param, sample_n5=self.sample_n5, sample_phase=self.sample_phase)
+        par.add_missing(self.parameters_to_optimize, param, sample_n5=self.sample_n5)
 
         @pymc.deterministic
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
