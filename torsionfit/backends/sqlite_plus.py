@@ -201,8 +201,6 @@ class Database(base.Database):
             # Get state for each chain
             rows = self.cur.execute("SELECT * FROM state")
             for row in rows:
-                bytes(row[1])
-                print(type(row[1]))
                 try:
                     self._chains[row[0]] = pickle.loads(row[1], encoding='latin1')
                 except TypeError:
