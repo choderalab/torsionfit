@@ -35,6 +35,8 @@ from numpy import squeeze
 import sqlite3
 from pymc.database import base, pickle, ram
 import os
+import codecs
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -199,7 +201,12 @@ class Database(base.Database):
             # Get state for each chain
             rows = self.cur.execute("SELECT * FROM state")
             for row in rows:
-                self._chains[row[0]] = pickle.loads(bytes(row[1]))
+                bytes(row[1])
+                print(type(row[1]))
+                try:
+                    self._chains[row[0]] = pickle.loads(row[1], encoding='latin1')
+                except TypeError:
+                    self._chains[row[0]] = pickle.loads(bytes(row[1]))
         else:
             self.chains = 0
 
@@ -242,11 +249,14 @@ class Database(base.Database):
 
         # pickle state
         chain = range(self.chains)[chain]
+        #state_pickle = codecs.encode(pickle.dumps(state), "base64")
         state_pickle = pickle.dumps(state)
+
         binary = sqlite3.Binary(state_pickle)
+        #text = sqlite3.
 
         # insert into SQL table
-        self.cur.execute("INSERT INTO state VALUES(?, ?)", (chain, binary,))
+        self.cur.execute("INSERT INTO state VALUES(?, ?)", (chain, binary))
 
     def getstate(self, chain=-1):
 
