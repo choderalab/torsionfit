@@ -156,7 +156,7 @@ class TorsionFitModel(object):
         def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             mm = np.ndarray(0)
             par.update_param_from_sample(self.parameters_to_optimize, param, model=self, rj=self.rj,
-                                         phase=self.sample_phase, n_5=self.sample_n5)
+                                         phase=self.sample_phase, n_5=self.sample_n5, continuous=self.continuous_phase)
             for mol in self.frags:
                 mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
                                    platform=self.platform)
