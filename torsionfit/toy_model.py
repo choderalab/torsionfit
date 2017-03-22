@@ -116,7 +116,7 @@ class ToyModel(object):
         """
         n_increments = n_increments
         n_atoms = 4
-        phis = np.arange(-np.pi, +np.pi, np.pi/n_increments)
+        phis = np.arange(-np.pi/2, +np.pi/2, (np.pi/2)/n_increments)
         positions = np.zeros((len(phis), n_atoms, 3))
 
         # Get bond length in nm
