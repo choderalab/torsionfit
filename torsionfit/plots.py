@@ -91,7 +91,7 @@ def get_statistics(db, torsion_parameters):
     return statistics
 
 
-def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=False):
+def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=False, continuous=False, filename=None):
     """
     Generate trace plot for all parameters of a given torsion
 
@@ -103,7 +103,10 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
     """
 
     if not multiplicity_traces:
-        multiplicity_traces = get_multiplicity_traces(torsion_parameters=name, db=db)
+        try:
+            multiplicity_traces = get_multiplicity_traces(torsion_parameters=name, db=db)
+        except KeyError:
+            pass
 
     pp = PdfPages('%s_traces.pdf' % name)
     fig = plt.figure()
@@ -124,17 +127,24 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 3)
     plt.plot(db.trace(name + '_' + str(1) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 181)
+    if continuous:
+        plt.ylim(-1.0, 181)
+        plt.yticks([1, 180])
+    else:
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
-    plt.yticks([0, 1])
 
     axes_n = plt.subplot(9, 2, 5)
-    plt.plot(multiplicity_traces[name + '_' + str(1)], 'k.', markersize=markersize, label='1')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([0, 1])
-    plt.xticks([])
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(1)], 'k.', markersize=markersize, label='1')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
+        plt.xticks([])
+    except:
+        pass
 
     axes_k = plt.subplot(9, 2, 7)
     plt.plot(db.trace(name + '_' + str(2) + '_K')[:], 'k.', markersize=markersize, label='K')
@@ -151,17 +161,24 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 9)
     plt.plot(db.trace(name + '_' + str(2) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 181)
+    if continuous:
+        plt.ylim(-1.0, 181)
+        plt.yticks([1, 180])
+    else:
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
-    plt.yticks([0, 1])
 
     axes_n = plt.subplot(9, 2, 11)
-    plt.plot(multiplicity_traces[name + '_' + str(2)], 'k.', markersize=markersize, label='2')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([0, 1])
-    plt.xticks([])
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(2)], 'k.', markersize=markersize, label='2')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
+        plt.xticks([])
+    except:
+        pass
 
     axes_k = plt.subplot(9, 2, 13)
     plt.plot(db.trace(name + '_' + str(3) + '_K')[:], 'k.', markersize=markersize, label='K')
@@ -178,17 +195,24 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 15)
     plt.plot(db.trace(name + '_' + str(3) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
     plt.xticks([])
-    plt.yticks([0, 1])
+    if continuous:
+        plt.ylim(-1.0, 181)
+        plt.yticks([1, 180])
+    else:
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
 
     axes_n = plt.subplot(9, 2, 17)
-    plt.plot(multiplicity_traces[name + '_' + str(3)], 'k.', markersize=markersize, label='3')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([0, 1])
-    plt.xlabel('mcmc steps')
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(3)], 'k.', markersize=markersize, label='3')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
+        plt.xlabel('mcmc steps')
+    except:
+        pass
 
     axes_k = plt.subplot(9, 2, 2)
     plt.title(name, fontweight='bold')
@@ -205,17 +229,25 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 4)
     plt.plot(db.trace(name + '_' + str(4) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    if continuous:
+        plt.ylim(-1.0, 181)
+        plt.yticks([1, 180])
+    else:
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
     plt.xticks([])
     plt.yticks([])
 
-    axes_n = plt.subplot(9, 2, 6)
-    plt.plot(multiplicity_traces[name + '_' + str(4)], 'k.', markersize=markersize, label='4')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([])
-    plt.xticks([])
+    try:
+        axes_n = plt.subplot(9, 2, 6)
+        plt.plot(multiplicity_traces[name + '_' + str(4)], 'k.', markersize=markersize, label='4')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([])
+        plt.xticks([])
+    except:
+        pass
 
     axes_k = plt.subplot(9, 2, 8)
     plt.plot(db.trace(name + '_' + str(6) + '_K')[:], 'k.', markersize=markersize, label='K')
@@ -231,19 +263,30 @@ def trace_plots(name, db, markersize, statistics=False, multiplicity_traces=Fals
 
     axes_phase = plt.subplot(9, 2, 10)
     plt.plot(db.trace(name + '_' + str(6) + '_Phase')[:], '.', markersize=markersize, label='Phase')
-    plt.ylim(-0.1, 181)
     plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+    if continuous:
+        plt.ylim(-1.0, 181)
+        plt.yticks([1, 180])
+    else:
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
     plt.xticks([])
     plt.yticks([])
 
     axes_n = plt.subplot(9, 2, 12)
-    plt.plot(multiplicity_traces[name + '_' + str(6)], 'k.', markersize=markersize, label='6')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([])
-    plt.xlabel('mcmc steps')
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(6)], 'k.', markersize=markersize, label='6')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([])
+        plt.xlabel('mcmc steps')
+    except:
+        pass
 
-    fig.savefig('%s_traces.pdf' % name)
+    if filename is None:
+        fig.savefig('%s_traces.pdf' % name)
+    else:
+        fig.savefig(filename)
     pp.savefig(fig, dpi=80)
     pp.close()
 
@@ -260,7 +303,10 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     """
 
     if not multiplicity_traces:
-        multiplicity_traces = get_multiplicity_traces(torsion_parameters=name, db=db)
+        try:
+            multiplicity_traces = get_multiplicity_traces(torsion_parameters=name, db=db)
+        except KeyError:
+            pass
 
     pp = PdfPages('%s_traces.pdf' % name)
     fig = plt.figure()
@@ -280,11 +326,14 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     plt.yticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 2)
-    plt.plot(multiplicity_traces[name + '_' + str(1)], 'k.', markersize=markersize, label='1')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([0, 1])
-    plt.xticks([])
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(1)], 'k.', markersize=markersize, label='1')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
+        plt.xticks([])
+    except:
+        pass
 
     axes_k = plt.subplot(5, 2, 3)
     plt.plot(db.trace(name + '_' + str(2) + '_K')[:], 'k.', markersize=markersize, label='K')
@@ -300,11 +349,14 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     plt.yticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 4)
-    plt.plot(multiplicity_traces[name + '_' + str(2)], 'k.', markersize=markersize, label='2')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([0, 1])
-    plt.xticks([])
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(2)], 'k.', markersize=markersize, label='2')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([0, 1])
+        plt.xticks([])
+    except:
+        pass
 
     axes_k = plt.subplot(5, 2, 5)
     plt.plot(db.trace(name + '_' + str(3) + '_K')[:], 'k.', markersize=markersize, label='K')
@@ -322,11 +374,14 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
 
     axes_n = plt.subplot(5, 2, 6)
     plt.title(name, fontweight='bold')
-    plt.plot(multiplicity_traces[name + '_' + str(3)], 'k.', markersize=markersize, label='3')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([])
-    plt.xticks([])
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(3)], 'k.', markersize=markersize, label='3')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([])
+        plt.xticks([])
+    except:
+        pass
 
     axes_k = plt.subplot(5, 2, 7)
     plt.plot(db.trace(name + '_' + str(4) + '_K')[:], 'k.', markersize=markersize, label='K')
@@ -341,11 +396,14 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     plt.yticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 8)
-    plt.plot(multiplicity_traces[name + '_' + str(4)], 'k.', markersize=markersize, label='4')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([])
-    plt.xticks([])
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(4)], 'k.', markersize=markersize, label='4')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([])
+        plt.xticks([])
+    except:
+        pass
 
     axes_k = plt.subplot(5, 2, 9)
     plt.plot(db.trace(name + '_' + str(6) + '_K')[:], 'k.', markersize=markersize, label='K')
@@ -360,11 +418,14 @@ def trace_no_phase(name, db, markersize, statistics=False, multiplicity_traces=F
     plt.xticks([ymin, 0, ymax])
 
     axes_n = plt.subplot(5, 2, 10)
-    plt.plot(multiplicity_traces[name + '_' + str(6)], 'k.', markersize=markersize, label='6')
-    plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
-    plt.ylim(-0.1, 1.1)
-    plt.yticks([])
-    plt.xlabel('mcmc steps')
+    try:
+        plt.plot(multiplicity_traces[name + '_' + str(6)], 'k.', markersize=markersize, label='6')
+        plt.legend(bbox_to_anchor=(0.9, 1), loc=2, borderaxespad=0.)
+        plt.ylim(-0.1, 1.1)
+        plt.yticks([])
+        plt.xlabel('mcmc steps')
+    except:
+        pass
 
     if not filename:
         fig.savefig('%s_traces.pdf' % name)

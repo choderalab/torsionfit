@@ -10,8 +10,8 @@ import simtk.openmm as mm
 import simtk.unit as units
 import mdtraj as md
 import numpy as np
-import torsionfit.TorsionScanSet as ScanSet
-import torsionfit.TorsionFitModel as Model
+import torsionfit.database.qmdatabase as ScanSet
+import torsionfit.model as Model
 from torsionfit.tests.utils import get_fun
 import copy
 
@@ -33,8 +33,8 @@ class ToyModel(object):
 
     """
 
-    def __init__(self, true_value=False, initial_value=False, decouple_n=False, continuous=False,
-                 n_increments=13, negative_K=False):
+    def __init__(self, true_value=False, initial_value=False, rj=False, continuous=False,
+                 n_increments=13, sample_phase=False):
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
         self._pdb = app.PDBFile(get_fun('toy.pdb'))
@@ -83,21 +83,14 @@ class ToyModel(object):
         torsions[:] = [1, 2, 3, 4]
         direction = None
         steps = None
-        self.scan_set = ScanSet.TorsionScanSet(self._positions.value_in_unit(units.nanometers), self._topology, self._struct,
-                                  torsions, direction, steps, self.synthetic_energy.value_in_unit(units.kilojoules_per_mole))
+        self.scan_set = ScanSet.QMDataBase(positions=self._positions.value_in_unit(units.nanometers),
+                                           topology=self._topology, structure=self._struct, torsions=torsions,
+                                           steps=steps, directions=direction,
+                                           qm_energies=self.synthetic_energy.value_in_unit(units.kilojoules_per_mole))
 
-        # create torsionfit.TorsionFitModel
-        if continuous:
-            self.model = Model.TorsionFitModelContinuousPhase(self._param,  self.scan_set,
-                                                              platform=self._platform, param_to_opt=[self._dih_type],
-                                                              decouple_n=decouple_n)
-        elif negative_K:
-            self.model = Model.TorsionFitModelEliminatePhase(param=self._param, frags=self.scan_set,
-                                                             platform=self._platform, param_to_opt=[self._dih_type],
-                                                             decouple_n=decouple_n)
-        else:
-            self.model = Model.TorsionFitModel(self._param, self.scan_set, platform=self._platform,
-                                               param_to_opt=[self._dih_type], decouple_n=decouple_n)
+        self.model = Model.TorsionFitModel(param=self._param, frags=self.scan_set, platform=self._platform,
+                                           param_to_opt=[self._dih_type], rj=rj, continuous_phase=continuous,
+                                           sample_phase=sample_phase)
 
     def _spher2cart(self, r, theta, phi):
         """convert spherical to cartesian coordinates

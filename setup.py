@@ -64,8 +64,8 @@ setup(
     url='https://github.com/choderalab/torsions',
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
     classifiers=CLASSIFIERS.splitlines(),
-    packages=['torsionfit', 'torsionfit.tests', 'torsionfit.qmscan'],
-    package_data={ '': package_files('torsionfit/tests/reference')},
+    packages=['torsionfit', 'torsionfit.tests', 'torsionfit.qmscan', 'torsionfit.backends', 'torsionfit.database'],
+    package_data={'': package_files('torsionfit/tests/reference')},
     zip_safe=False,
     install_requires=[
         'numpy',

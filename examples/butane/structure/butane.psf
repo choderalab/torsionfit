@@ -2,7 +2,7 @@ PSF EXT
 
        3 !NTITLE
  REMARKS original generated structure x-plor psf file
- REMARKS topology ../data/charmm_ff/top_all36_cgenff.rtf 
+ REMARKS topology ../data/charmm_ff/top_all36_cgenff.rtf
  REMARKS segment BUTA { first NONE; last NONE; auto angles dihedrals }
 
       14 !NATOM
@@ -69,4 +69,3 @@ PSF EXT
 
        1       0 !NGRP
          0         0         0
-
