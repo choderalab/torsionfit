@@ -5,6 +5,7 @@ Useful functions for manipulating parameters in a Parmed CharmmParameterSet.
 __author__ = 'Chaya D. Stern'
 
 from parmed.topologyobjects import DihedralType
+from torsionfit.utils import logger
 
 
 def add_missing(param_list, param, sample_n5=False):
@@ -58,7 +59,7 @@ def set_phase_0(param_list, param):
             param.dihedral_types[reverse_p][i].phase = 0
 
 
-def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=False, phase=False, n_5=True):
+def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=False, phase=False, n_5=True, continuous=False):
     """
     This function parameterizes sampled torsion with values of sample i in database or current value in pymc model.
     The modifications are in place.
@@ -81,7 +82,7 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
      n_5: bool
         Flag if multiplicity of 5 was sampled and also needs to be modified. Default is True.
     """
-
+    logger().debug('updating parameters')
     for t in param_list:
         torsion_name = t[0] + '_' + t[1] + '_' + t[2] + '_' + t[3]
         if rj:
@@ -95,6 +96,7 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
         reverse_t = tuple(reversed(t))
         for n in range(len(param.dihedral_types[t])):
             m = int(param.dihedral_types[t][n].per)
+            logger().debug('Working on {}'.format(m))
             multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
             if (multiplicity_bitstring & multiplicity_bitmask) or not rj:
                 if m == 5 and not n_5:
@@ -104,6 +106,7 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
                     sample = db.trace(k)[i]
                 if model is not None:
                     sample = model.pymc_parameters[k].value
+                logger().debug('K sample value {}'.format(sample))
                 param.dihedral_types[t][n].phi_k = sample
                 param.dihedral_types[reverse_t][n].phi_k = sample
                 if phase:
@@ -112,9 +115,15 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
                         sample = db.trace(p)[i]
                     if model is not None:
                         sample = model.pymc_parameters[p].value
+                    if not continuous:
+                        logger().debug('Not continuous')
+                        if sample == 1:
+                            sample = 180.0
+                    logger().debug('Phase sample value {}'.format(sample))
                     param.dihedral_types[t][n].phase = sample
                     param.dihedral_types[reverse_t][n].phase = sample
             else:
                 # This torsion periodicity is disabled.
+                logger().debug('Turning off {}'.format(m))
                 param.dihedral_types[t][n].phi_k = 0
                 param.dihedral_types[reverse_t][n].phi_k = 0
