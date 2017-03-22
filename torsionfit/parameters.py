@@ -83,6 +83,8 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
         Flag if multiplicity of 5 was sampled and also needs to be modified. Default is True.
     """
     logger().debug('updating parameters')
+    if type(param_list) is not list:
+        param_list = [param_list]
     for t in param_list:
         torsion_name = t[0] + '_' + t[1] + '_' + t[2] + '_' + t[3]
         if rj:
