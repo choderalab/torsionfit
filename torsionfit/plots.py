@@ -615,7 +615,7 @@ def marg_mult(model, db, samples, burn=0, filename=None, n5=False):
                 if 2**(l-1) & int(j):
                     histogram[m][i][k] = 1
 
-    plt.matshow(histogram.sum(1), cmap='jet',  extent=[0, 5, 0, 20]), plt.colorbar()
+    plt.matshow(histogram.sum(1), cmap='Blues',  extent=[0, 5, 0, 20]), plt.colorbar()
     plt.yticks([])
     plt.xlabel('multiplicity term')
     plt.ylabel('torsion')
