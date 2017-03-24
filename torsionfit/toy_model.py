@@ -11,7 +11,7 @@ import simtk.unit as units
 import mdtraj as md
 import numpy as np
 import torsionfit.database.qmdatabase as ScanSet
-import torsionfit.model as Model
+import torsionfit.model as model
 from torsionfit.tests.utils import get_fun
 import copy
 
@@ -93,7 +93,7 @@ class ToyModel(object):
                                            steps=steps, directions=direction,
                                            qm_energies=self.synthetic_energy.value_in_unit(units.kilojoules_per_mole))
 
-        self.model = Model.TorsionFitModel(param=self._param, frags=self.scan_set, platform=self._platform,
+        self.model = model.TorsionFitModel(param=self._param, frags=self.scan_set, platform=self._platform,
                                            param_to_opt=[self._dih_type], rj=rj, continuous_phase=continuous,
                                            sample_phase=sample_phase)
 
@@ -206,7 +206,7 @@ class ToyModel(object):
             return dih_param
 
     @staticmethod
-    def from_dih_params(filename, rj=False, continuous=False, n_increments=13, sample_phase=False):
+    def from_dih_params(filename=None, dih_params=None, rj=False, continuous=False, n_increments=13, sample_phase=False):
         """
 
         Parameters
@@ -227,8 +227,8 @@ class ToyModel(object):
         ToyModel with true and initial value from saved file.
 
         """
-
-        dih_params = np.load(filename)
+        if filename is not None:
+            dih_params = np.load(filename)
         dih_tlist_true = DihedralTypeList()
         dih_tlist_init = DihedralTypeList()
 
