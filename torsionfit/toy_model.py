@@ -49,11 +49,9 @@ class ToyModel(object):
         if true_value is not None:
             if type(true_value) == DihedralTypeList:
                 dih_tlist = true_value
-            else:
-                dih_tlist = DihedralTypeList
-                true_value = [true_value]
-                for dih in true_value:
-                    dih_tlist.append(dih)
+            elif type(true_value) == DihedralType:
+                dih_tlist = DihedralTypeList()
+                dih_tlist.append(true_value)
         else:
             dih_tlist = self._randomize_dih_param(return_dih=True)
         self.true_value = copy.deepcopy(dih_tlist)
@@ -70,13 +68,11 @@ class ToyModel(object):
         if initial_value is not None:
             if type(initial_value) == DihedralTypeList:
                 dih_tlist = initial_value
-            else:
-                dih_tlist = DihedralTypeList
-                initial_value = [initial_value]
-                for dih in initial_value:
-                    dih_tlist.append(dih)
-        elif initial_value == 'cgenff':
-            dih_tlist = original_torsion
+            if type(initial_value) == DihedralType:
+                dih_tlist = DihedralTypeList()
+                dih_tlist.append(initial_value)
+            elif initial_value == 'cgenff':
+                dih_tlist = original_torsion
         else:
             dih_tlist = self._randomize_dih_param(return_dih=True)
 
