@@ -33,7 +33,7 @@ class ToyModel(object):
 
     """
 
-    def __init__(self, true_value=None, initial_value=None, n_increments=13, rj=True, sample_phase=False,
+    def __init__(self, true_value=None, initial_value=None, n_increments=18, rj=True, sample_phase=False,
                  continuous=False):
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
@@ -223,6 +223,9 @@ class ToyModel(object):
         ToyModel with true and initial value from saved file.
 
         """
+        if filename is None and dih_params is None:
+            msg = 'You must provide either an npy file or a numpy array with true and initial values for the toy model'
+            raise Exception(msg)
         if filename is not None:
             dih_params = np.load(filename)
         dih_tlist_true = DihedralTypeList()
