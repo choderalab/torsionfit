@@ -11,7 +11,7 @@ import simtk.unit as units
 import mdtraj as md
 import numpy as np
 import torsionfit.database.qmdatabase as ScanSet
-import torsionfit.model as Model
+import torsionfit.model as model
 from torsionfit.tests.utils import get_fun
 import copy
 
@@ -33,8 +33,8 @@ class ToyModel(object):
 
     """
 
-    def __init__(self, true_value=False, initial_value=False, rj=False, continuous=False,
-                 n_increments=13, sample_phase=False):
+    def __init__(self, true_value=None, initial_value=None, n_increments=18, rj=True, sample_phase=False,
+                 continuous=False):
         self._param = CharmmParameterSet(get_fun('toy.str'))
         self._struct = CharmmPsfFile(get_fun('toy.psf'))
         self._pdb = app.PDBFile(get_fun('toy.pdb'))
@@ -46,17 +46,16 @@ class ToyModel(object):
         # Replace ('CG331', 'CG321', 'CG321', 'CG331') torsion with true_value
         self._dih_type = ('CG331', 'CG321', 'CG321', 'CG331')
         original_torsion = self._param.dihedral_types[self._dih_type]
-        if true_value:
-            dih_tlist = DihedralTypeList()
-            if type(true_value) != list:
-                true_value = [true_value]
-            for dih in true_value:
-                dih_tlist.append(dih)
-            self._param.dihedral_types[self._dih_type] = dih_tlist
-            self.true_value = self._param.dihedral_types[self._dih_type]
+        if true_value is not None:
+            if type(true_value) == DihedralTypeList:
+                dih_tlist = true_value
+            elif type(true_value) == DihedralType:
+                dih_tlist = DihedralTypeList()
+                dih_tlist.append(true_value)
         else:
-            self._randomize_dih_param()
-            self.true_value = self._param.dihedral_types[self._dih_type]
+            dih_tlist = self._randomize_dih_param(return_dih=True)
+        self.true_value = copy.deepcopy(dih_tlist)
+        self._param.dihedral_types[self._dih_type] = dih_tlist
 
         # parametrize toy
         self._struct.load_parameters(self._param, copy_parameters=False)
@@ -66,17 +65,19 @@ class ToyModel(object):
         self._torsion_scan(n_increments=n_increments)
 
         # initialize parameter
-        if not initial_value:
-            self.initial_value = copy.deepcopy(self._randomize_dih_param(return_dih=True))
-        elif type(initial_value) == DihedralType:
-            dih_tlist = DihedralTypeList()
-            dih_tlist.append(initial_value)
-            self._param.dihedral_types[self._dih_type] = dih_tlist
-            self.initial_value = copy.deepcopy(initial_value)
-        elif initial_value == 'cgenff':
-            # return original dihedral to param
-            self._param.dihedral_types[self._dih_type] = original_torsion
-            self.initial_value = copy.deepcopy(original_torsion)
+        if initial_value is not None:
+            if type(initial_value) == DihedralTypeList:
+                dih_tlist = initial_value
+            if type(initial_value) == DihedralType:
+                dih_tlist = DihedralTypeList()
+                dih_tlist.append(initial_value)
+            elif initial_value == 'cgenff':
+                dih_tlist = original_torsion
+        else:
+            dih_tlist = self._randomize_dih_param(return_dih=True)
+
+        self.initial_value = copy.deepcopy(dih_tlist)
+        self._param.dihedral_types[self._dih_type] = dih_tlist
 
         # create torsionfit.TorsionScanSet
         torsions = np.zeros((len(self._positions), 4))
@@ -88,7 +89,7 @@ class ToyModel(object):
                                            steps=steps, directions=direction,
                                            qm_energies=self.synthetic_energy.value_in_unit(units.kilojoules_per_mole))
 
-        self.model = Model.TorsionFitModel(param=self._param, frags=self.scan_set, platform=self._platform,
+        self.model = model.TorsionFitModel(param=self._param, frags=self.scan_set, platform=self._platform,
                                            param_to_opt=[self._dih_type], rj=rj, continuous_phase=continuous,
                                            sample_phase=sample_phase)
 
@@ -116,7 +117,7 @@ class ToyModel(object):
         """
         n_increments = n_increments
         n_atoms = 4
-        phis = np.arange(-np.pi/2, +np.pi/2, (np.pi/2)/n_increments)
+        phis = np.arange(-np.pi, +np.pi, np.pi/n_increments)
         positions = np.zeros((len(phis), n_atoms, 3))
 
         # Get bond length in nm
@@ -170,3 +171,79 @@ class ToyModel(object):
         if return_dih:
             _dih_tlist = copy.deepcopy(dih_tlist)
             return _dih_tlist
+
+    def save_torsion_values(self, filename=None):
+        """
+
+        Parameters
+        ----------
+        filename : str
+            file to save torsion values. Default is None. If None, return np.array
+
+        Returns
+        -------
+        dih_param: np.array
+            array containing torison parameters
+        """
+        dih_param = np.ones(shape=(2, 6, 3)) * np.nan
+        for i, dih in enumerate(self.true_value):
+            dih_param[0, i, 0] = dih.per
+            dih_param[0, i, 1] = dih.phi_k
+            dih_param[0, i, 2] = dih.phase
+
+        for j, dih in enumerate(self.initial_value):
+            dih_param[1, j, 0] = dih.per
+            dih_param[1, j, 1] = dih.phi_k
+            dih_param[1, j, 2] = dih.phase
+
+        if filename is not None:
+            np.save(filename, dih_param)
+        else:
+            return dih_param
+
+    @staticmethod
+    def from_dih_params(filename=None, dih_params=None, rj=False, continuous=False, n_increments=13, sample_phase=False):
+        """
+
+        Parameters
+        ----------
+        filename : str
+            name of file with serialized dihedral parameters
+        rj : bool
+            Flag if using reversible jump. Default it True
+        continuous : bool
+            Flag if sampling continuous phase. Default is False
+        n_increments : int
+            incermentation of torsion drive
+        sample_phase : bool
+            Flag if sampling phase. Default is False (K is allowed to go negative when sample_phase is False)
+
+        Returns
+        -------
+        ToyModel with true and initial value from saved file.
+
+        """
+        if filename is None and dih_params is None:
+            msg = 'You must provide either an npy file or a numpy array with true and initial values for the toy model'
+            raise Exception(msg)
+        if filename is not None:
+            dih_params = np.load(filename)
+        dih_tlist_true = DihedralTypeList()
+        dih_tlist_init = DihedralTypeList()
+
+        true = dih_params[0]
+        init = dih_params[1]
+
+        for dih in true:
+            if not np.isnan(dih[0]):
+                dih_tlist_true.append(DihedralType(per=dih[0], phi_k=dih[1], phase=dih[2]))
+
+        for dih in init:
+            if not np.isnan(dih[0]):
+                dih_tlist_init.append(DihedralType(per=dih[0], phi_k=dih[1], phase=dih[2]))
+
+        return ToyModel(true_value=dih_tlist_true, initial_value=dih_tlist_init, rj=rj, continuous=continuous,
+                        n_increments=n_increments, sample_phase=sample_phase)
+
+
+

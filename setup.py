@@ -69,10 +69,11 @@ setup(
     zip_safe=False,
     install_requires=[
         'numpy',
+        'mdtraj',
         'pymc',
         'pandas',
         'cclib',
-        'openmm>=6.3',
+        'openmm',
         'parmed',
         'netcdf4'
         ],
