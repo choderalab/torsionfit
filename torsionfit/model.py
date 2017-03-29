@@ -149,7 +149,7 @@ class TorsionFitModel(object):
             # randomize initial value
             for parameter in self.pymc_parameters:
                 self.pymc_parameters[parameter].random()
-                logger().debug('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
+                logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
 
 
         self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=3, value=np.log(0.01))
