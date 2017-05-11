@@ -25,7 +25,7 @@ class TorsionFitModel(object):
 
     """
     def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, rj=False, sample_n5=False,
-                 continuous_phase=False, sample_phase=False, init_random=True):
+                 continuous_phase=False, sample_phase=False, init_random=True, tau=1.0):
         """
 
         Parameters
@@ -50,6 +50,8 @@ class TorsionFitModel(object):
             sample 0 or 180
         init_random: bool
             Randomize starting condition. Default is True. If false, will resort to whatever value is in the parameter set.
+        tau: float
+            hyperparameter on Gaussian prior on K
 
 
         Returns
@@ -102,7 +104,7 @@ class TorsionFitModel(object):
             for m in multiplicities:
                 name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
                 if not self.sample_phase:
-                    k = pymc.Uniform(name, lower=-20, upper=20, value=0)
+                    k = pymc.Normal(name, mu=0, tau=tau, value=0)
                 else:
                     k = pymc.Uniform(name, lower=0, upper=20, value=0)
 
@@ -110,7 +112,7 @@ class TorsionFitModel(object):
                     if param.dihedral_types[p][i].per == m:
                         multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
                         if not self.sample_phase:
-                            k = pymc.Uniform(name, lower=-20, upper=20, value=param.dihedral_types[p][i].phi_k)
+                            k = pymc.Normal(name, mu=0, tau=tau, value=param.dihedral_types[p][i].phi_k)
                         else:
                             k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
                         break
