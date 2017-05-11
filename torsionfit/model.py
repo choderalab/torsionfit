@@ -6,6 +6,8 @@ from simtk.unit import kilojoules_per_mole
 import torsionfit.database.qmdatabase as TorsionScan
 import torsionfit.parameters as par
 import warnings
+from torsionfit.utils import logger
+
 
 
 class TorsionFitModel(object):
@@ -23,7 +25,7 @@ class TorsionFitModel(object):
 
     """
     def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, rj=False, sample_n5=False,
-                 continuous_phase=False, sample_phase=False):
+                 continuous_phase=False, sample_phase=False, init_random=True):
         """
 
         Parameters
@@ -46,6 +48,8 @@ class TorsionFitModel(object):
         continuous_phase : bool
             If True, will allow phases to take on any value between 0-180. If False, phase will be a discrete and only
             sample 0 or 180
+        init_random: bool
+            Randomize starting condition. Default is True. If false, will resort to whatever value is in the parameter set.
 
 
         Returns
@@ -140,6 +144,13 @@ class TorsionFitModel(object):
                 name = torsion_name + '_multiplicity_bitstring'
                 bitstring = pymc.DiscreteUniform(name, lower=0, upper=63, value=multiplicity_bitstrings[torsion_name])
                 self.pymc_parameters[name] = bitstring
+
+        if init_random:
+            # randomize initial value
+            for parameter in self.pymc_parameters:
+                self.pymc_parameters[parameter].random()
+                logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
+
 
         self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=3, value=np.log(0.01))
         self.pymc_parameters['sigma'] = pymc.Lambda('sigma',

@@ -22,7 +22,7 @@ logfiles = get_fun('MP2_torsion_scan/')
 frag = qmdb.parse_psi4_out(logfiles, structure)
 frag = frag.remove_nonoptimized()
 to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
-model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize)
+model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, init_random=False)
 
 
 class TestFitModel(unittest.TestCase):
