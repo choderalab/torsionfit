@@ -25,7 +25,7 @@ class TorsionFitModel(object):
 
     """
     def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, rj=False, sample_n5=False,
-                 continuous_phase=False, sample_phase=False, init_random=True, tau=1.0):
+                 continuous_phase=False, sample_phase=False, init_random=True):
         """
 
         Parameters
@@ -95,6 +95,14 @@ class TorsionFitModel(object):
             offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
 
+        self.pymc_parameters['log_sigma_k'] = pymc.Uniform('log_sigma_k', lower=-4.6052, upper=3.453, value=np.log(0.1))
+        self.pymc_parameters['sigma_k'] = pymc.Lambda('sigma_k',
+                                                    lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+                                                       log_sigma_k))
+        self.pymc_parameters['precision_k'] = pymc.Lambda('precision_k',
+                                                       lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+                                                            -2 * log_sigma_k))
+
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
@@ -104,7 +112,7 @@ class TorsionFitModel(object):
             for m in multiplicities:
                 name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
                 if not self.sample_phase:
-                    k = pymc.Normal(name, mu=0, tau=tau, value=0)
+                    k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k'], value=0)
                 else:
                     k = pymc.Uniform(name, lower=0, upper=20, value=0)
 
@@ -112,7 +120,7 @@ class TorsionFitModel(object):
                     if param.dihedral_types[p][i].per == m:
                         multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
                         if not self.sample_phase:
-                            k = pymc.Normal(name, mu=0, tau=tau, value=param.dihedral_types[p][i].phi_k)
+                            k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k'], value=param.dihedral_types[p][i].phi_k)
                         else:
                             k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
                         break
@@ -150,8 +158,9 @@ class TorsionFitModel(object):
         if init_random:
             # randomize initial value
             for parameter in self.pymc_parameters:
-                self.pymc_parameters[parameter].random()
-                logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
+                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda:
+                    self.pymc_parameters[parameter].random()
+                    logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
 
 
         self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=3, value=np.log(0.01))
