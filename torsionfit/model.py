@@ -95,7 +95,7 @@ class TorsionFitModel(object):
             offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
 
-        self.pymc_parameters['log_sigma_k'] = pymc.Uniform('log_sigma_k', lower=-4.6052, upper=3.453, value=np.log(0.1))
+        self.pymc_parameters['log_sigma_k'] = pymc.Uniform('log_sigma_k', lower=-4.6052, upper=3.453, value=np.log(0.01))
         self.pymc_parameters['sigma_k'] = pymc.Lambda('sigma_k',
                                                     lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
                                                        log_sigma_k))
@@ -158,7 +158,7 @@ class TorsionFitModel(object):
         if init_random:
             # randomize initial value
             for parameter in self.pymc_parameters:
-                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda:
+                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda and parameter != 'log_sigma_k':
                     self.pymc_parameters[parameter].random()
                     logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
 
