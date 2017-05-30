@@ -106,6 +106,15 @@ class TorsionFitModel(object):
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
+            self.pymc_parameters['log_sigma_k'] = pymc.Uniform('{}_log_sigma_k'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(0.01))
+            self.pymc_parameters['sigma_k'] = pymc.Lambda('{}_sigma_k'.format(torsion_name),
+                                                    lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+                                                       log_sigma_k))
+            self.pymc_parameters['precision_k'] = pymc.Lambda('{}_precision_k'.format(torsion_name),
+                                                       lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+                                                            -2 * log_sigma_k))
+
+
             if torsion_name not in multiplicity_bitstrings.keys():
                 multiplicity_bitstrings[torsion_name] = 0
 
