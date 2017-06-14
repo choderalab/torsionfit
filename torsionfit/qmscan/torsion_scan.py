@@ -26,7 +26,7 @@ def generate_torsions(mol, path, interval):
         list of torsions to drive
 
     """
-
+    filename = mol.split('/')[-1].split('.')[0]
     ifs = oechem.oemolistream(mol)
     inp_mol = oechem.OEMol()
     oechem.OEReadMolecule(ifs, inp_mol)
@@ -59,12 +59,12 @@ def generate_torsions(mol, path, interval):
         central_bonds[i][1] = tor[1].GetIdx()
         central_bonds[i][2] = tor[2].GetIdx()
 
-    grouped = central_bonds[central_bonds[:, 1].argsort()]
+    grouped = central_bonds[central_bonds[:, 2].argsort()]
     sorted_tors = [all_tors[i] for i in grouped[:, 0]]
 
     # Keep only one torsion per rotatable bond
     tors = []
-    best_tor = [all_tors[0][0], all_tors[0][0], all_tors[0][0], all_tors[0][0]]
+    best_tor = [sorted_tors[0][0], sorted_tors[0][0], sorted_tors[0][0], sorted_tors[0][0]]
     first_pass = True
     for tor in sorted_tors:
         logger().info("Idxs: {} {} {} {}".format(tor[0].GetIdx(), tor[1].GetIdx(), tor[2].GetIdx(), tor[3].GetIdx()))
@@ -97,33 +97,21 @@ def generate_torsions(mol, path, interval):
     conf.GetCoords(coords)
     mol.DeleteConfs()
 
-    # for tor in tors:
-    #     tor_name = str(tor[0].GetIdx()) + '_' + str(tor[1].GetIdx()) + '_' + str(tor[2].GetIdx()) + '_' + str(tor[3].GetIdx())
-    #     try:
-    #         os.makedirs(tor_name)
-    #     except FileExistsError:
-    #         print('Overwriting an existing directory')
-    #     for angle in range(0, 360, 10):
-    #         newconf = mol.NewConf(coords)
-    #         print(mol)
-    #         print(newconf)
-    #         oechem.OESetTorsion(newconf, tor[0], tor[1], tor[2], tor[3], radians(angle))
-    #         pdb = oechem.oemolostream('{}/{}_{}.pdb'.format(tor_name, tor_name,  angle))
-    #         oechem.OEWritePDBFile(pdb, newconf)
-
     for tor in tors:
         tor_name = str((tor[0].GetIdx())+1) + '_' + str((tor[1].GetIdx())+1) + '_' + str((tor[2].GetIdx())+1) + '_' + str((tor[3].GetIdx())+1)
         folder = os.path.join(path, tor_name)
-        print(folder)
         try:
             os.makedirs(folder)
         except FileExistsError:
             logger().info("Overwriting existing directory {}".format(tor_name))
         for angle in range(0, 360, interval):
+            angle_folder = os.path.join(folder, str(angle))
+            os.makedirs(angle_folder)
             newconf = mol.NewConf(coords)
             oechem.OESetTorsion(newconf, tor[0], tor[1], tor[2], tor[3], radians(angle))
-            pdb = oechem.oemolostream('{}/{}_{}.pdb'.format(folder, tor_name, angle))
+            pdb = oechem.oemolostream('{}/{}_{}_{}.pdb'.format(angle_folder, filename, tor_name, angle))
             oechem.OEWritePDBFile(pdb, newconf)
+
 
 def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symmetry=None, geom_opt=True,
                 sp_energy=False, fixed_dih=None, mem=None):
@@ -193,7 +181,7 @@ def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symm
     return input_string
 
 
-def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, charge=0, multiplicity=1, symmetry=None,
+def generate_scan_input(root, filetype, mol_name, method, basis_set, dihedral=None, charge=0, multiplicity=1, symmetry=None,
                         geom_opt=True, sp_energy=False, mem=None):
     """
     This function takes a directory and writes out psi4 input files for all files that match the filetype specified
@@ -224,7 +212,9 @@ def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, c
         memory allocation
 
     """
-
+    if not dihedral:
+        dihedral = list(filter(None, root.split('/')))[-1].split('_')
+        dihedral = dihedral[0] + ' ' + dihedral[1] + ' ' + dihedral[2] + ' ' + dihedral[3]
     input_files = []
     pattern = "*.{}".format(filetype)
     for path, subdir, files in os.walk(root):
@@ -249,11 +239,3 @@ def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, c
         psi4_input = open(filename, 'w')
         psi4_input.write(output)
         psi4_input.close()
-
-
-
-if __name__ == '__main__':
-    generate_torsions(mol = '../../structure/butane.pdb',
-                path = '/Users/sternc1/src/ChayaSt/torsionfit_examples/butane/torsion_scans/open_eye',
-                interval=10)
-
