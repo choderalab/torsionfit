@@ -19,11 +19,10 @@ def generate_torsions(mol, path, interval):
     ----------
     mol : str
         path to molecule file (pdb, mol2, sd, etc.)
-
-    Returns
-    -------
-    tor: list
-        list of torsions to drive
+    path: str
+        path to output files
+    interval: int
+        angle (in degrees) of interval for torsion drive
 
     """
     filename = mol.split('/')[-1].split('.')[0]
