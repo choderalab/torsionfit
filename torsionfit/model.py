@@ -120,7 +120,7 @@ class TorsionFitModel(object):
             for m in multiplicities:
                 name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
                 if not self.sample_phase:
-                    k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k'], value=0)
+                    k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)], value=0)
                 else:
                     k = pymc.Uniform(name, lower=0, upper=20, value=0)
 
@@ -128,7 +128,8 @@ class TorsionFitModel(object):
                     if param.dihedral_types[p][i].per == m:
                         multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
                         if not self.sample_phase:
-                            k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k'], value=param.dihedral_types[p][i].phi_k)
+                            k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)],
+                                            value=param.dihedral_types[p][i].phi_k)
                         else:
                             k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
                         break
