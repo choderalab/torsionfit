@@ -107,10 +107,10 @@ class TorsionFitModel(object):
 
             self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(0.01))
             self.pymc_parameters['sigma_k_{}'] = pymc.Lambda('sigma_k_{}'.format(torsion_name),
-                                                    lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+                                                    lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
                                                        log_sigma_k))
             self.pymc_parameters['precision_k_{}'] = pymc.Lambda('precision_k_{}'.format(torsion_name),
-                                                       lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+                                                       lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
                                                             -2 * log_sigma_k))
 
 
