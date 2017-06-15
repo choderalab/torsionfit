@@ -1,16 +1,17 @@
 """ Tests generating files for qm torsion scan """
 
 import unittest
-from torsionfit.tests.utils import get_fun
+from torsionfit.tests.utils import get_fun, has_openeye
 import torsionfit.qmscan.torsion_scan as qmscan
 import tempfile
 import os
 from fnmatch import fnmatch
 import shutil
 
+
 class TestQmscan(unittest.TestCase):
 
-
+    @unittest.skipUnless(has_openeye, 'Cannot test without openeye')
     def test_generat_torsions(self):
         """ Tests finding torsion to drive """
         mol = get_fun('butane.pdb')
