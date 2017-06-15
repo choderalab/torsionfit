@@ -9,7 +9,6 @@ import warnings
 from torsionfit.utils import logger
 
 
-
 class TorsionFitModel(object):
     """pymc model
 
@@ -95,22 +94,22 @@ class TorsionFitModel(object):
             offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
 
-        self.pymc_parameters['log_sigma_k'] = pymc.Uniform('log_sigma_k', lower=-4.6052, upper=3.453, value=np.log(0.01))
-        self.pymc_parameters['sigma_k'] = pymc.Lambda('sigma_k',
-                                                    lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
-                                                       log_sigma_k))
-        self.pymc_parameters['precision_k'] = pymc.Lambda('precision_k',
-                                                       lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
-                                                            -2 * log_sigma_k))
+        # self.pymc_parameters['log_sigma_k'] = pymc.Uniform('log_sigma_k', lower=-4.6052, upper=3.453, value=np.log(0.01))
+        # self.pymc_parameters['sigma_k'] = pymc.Lambda('sigma_k',
+        #                                             lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+        #                                                log_sigma_k))
+        # self.pymc_parameters['precision_k'] = pymc.Lambda('precision_k',
+        #                                                lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+        #                                                     -2 * log_sigma_k))
 
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
-            self.pymc_parameters['log_sigma_k'] = pymc.Uniform('{}_log_sigma_k'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(0.01))
-            self.pymc_parameters['sigma_k'] = pymc.Lambda('{}_sigma_k'.format(torsion_name),
+            self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(0.01))
+            self.pymc_parameters['sigma_k_{}'] = pymc.Lambda('sigma_k_{}'.format(torsion_name),
                                                     lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
                                                        log_sigma_k))
-            self.pymc_parameters['precision_k'] = pymc.Lambda('{}_precision_k'.format(torsion_name),
+            self.pymc_parameters['precision_k_{}'] = pymc.Lambda('precision_k_{}'.format(torsion_name),
                                                        lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
                                                             -2 * log_sigma_k))
 
