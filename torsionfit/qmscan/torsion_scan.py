@@ -3,6 +3,113 @@ __author__ = 'Chaya D. Stern'
 import mdtraj as md
 import os
 from fnmatch import fnmatch
+import sys
+from math import radians
+import openeye.oechem as oechem
+from torsionfit.utils import logger
+import warnings
+import numpy as np
+
+
+def generate_torsions(mol, path, interval):
+    """
+    This function takes a 3D molecule (pdf, mol2 or sd file) and generates structures for a torsion drive on all torsions
+    in the molecule. This function uses OpenEye
+    Parameters
+    ----------
+    mol : str
+        path to molecule file (pdb, mol2, sd, etc.)
+    path: str
+        path to output files
+    interval: int
+        angle (in degrees) of interval for torsion drive
+
+    """
+    filename = mol.split('/')[-1].split('.')[0]
+    ifs = oechem.oemolistream(mol)
+    inp_mol = oechem.OEMol()
+    oechem.OEReadMolecule(ifs, inp_mol)
+    ifs.close()
+
+    mid_tors = [[tor.a, tor.b, tor.c, tor.d ] for tor in oechem.OEGetTorsions(inp_mol)]
+
+    # This smarts should match terminal torsions such as -CH3, -NH2, -NH3+, -OH, and -SH
+    smarts = '[*]~[*]-[X2H1,X3H2,X4H3]-[#1]'
+    qmol=oechem.OEQMol()
+    if not oechem.OEParseSmarts(qmol, smarts):
+        warnings.warn('OEParseSmarts failed')
+    ss = oechem.OESubSearch(qmol)
+    mol = oechem.OEMol(inp_mol)
+    h_tors = []
+    oechem.OEPrepareSearch(mol, ss)
+    unique = True
+    for match in ss.Match(mol, unique):
+        tor = []
+        for ma in match.GetAtoms():
+            tor.append(ma.target)
+        h_tors.append(tor)
+
+    # Combine middle and terminal torsions
+    all_tors = mid_tors + h_tors
+    # Sort all_tors so that it's grouped by central bond
+    central_bonds = np.zeros((len(all_tors), 3), dtype=int)
+    for i, tor in enumerate(all_tors):
+        central_bonds[i][0] = i
+        central_bonds[i][1] = tor[1].GetIdx()
+        central_bonds[i][2] = tor[2].GetIdx()
+
+    grouped = central_bonds[central_bonds[:, 2].argsort()]
+    sorted_tors = [all_tors[i] for i in grouped[:, 0]]
+
+    # Keep only one torsion per rotatable bond
+    tors = []
+    best_tor = [sorted_tors[0][0], sorted_tors[0][0], sorted_tors[0][0], sorted_tors[0][0]]
+    first_pass = True
+    for tor in sorted_tors:
+        logger().info("Idxs: {} {} {} {}".format(tor[0].GetIdx(), tor[1].GetIdx(), tor[2].GetIdx(), tor[3].GetIdx()))
+        logger().info("Atom Numbers: {} {} {} {}".format(tor[0].GetAtomicNum(), tor[1].GetAtomicNum(), tor[2].GetAtomicNum(), tor[3].GetAtomicNum()))
+        if tor[1].GetIdx() != best_tor[1].GetIdx() or tor[2].GetIdx() != best_tor[2].GetIdx():
+            new_tor = True
+            if not first_pass:
+                logger().info("Adding to list: {} {} {} {}".format(best_tor[0].GetIdx(), best_tor[1].GetIdx(), best_tor[2].GetIdx(), best_tor[3].GetIdx()))
+                tors.append(best_tor)
+            first_pass = False
+            best_tor = tor
+            best_tor_order = tor[0].GetAtomicNum() + tor[3].GetAtomicNum()
+            logger().info("new_tor with central bond across atoms: {} {}".format(tor[1].GetIdx(), tor[2].GetIdx()))
+        else:
+            logger().info("Not a new_tor but now with end atoms: {} {}".format(tor[0].GetIdx(), tor[3].GetIdx()))
+            tor_order = tor[0].GetAtomicNum() + tor[3].GetAtomicNum()
+            if tor_order > best_tor_order:
+                best_tor = tor
+                best_tor_order = tor_order
+    logger().info("Adding to list: {} {} {} {}".format(best_tor[0].GetIdx(), best_tor[1].GetIdx(), best_tor[2].GetIdx(), best_tor[3].GetIdx()))
+    tors.append(best_tor)
+
+    logger().info("List of torsion to drive:")
+    for tor in tors:
+        logger().info("Idx: {} {} {} {}".format(tor[0].GetIdx(), tor[1].GetIdx(), tor[2].GetIdx(), tor[3].GetIdx()))
+        logger().info("Atom numbers: {} {} {} {}".format(tor[0].GetAtomicNum(), tor[1].GetAtomicNum(), tor[2].GetAtomicNum(), tor[3].GetAtomicNum()))
+
+    conf = mol.GetConfs().next()
+    coords = oechem.OEFloatArray(conf.GetMaxAtomIdx() * 3)
+    conf.GetCoords(coords)
+    mol.DeleteConfs()
+
+    for tor in tors:
+        tor_name = str((tor[0].GetIdx())+1) + '_' + str((tor[1].GetIdx())+1) + '_' + str((tor[2].GetIdx())+1) + '_' + str((tor[3].GetIdx())+1)
+        folder = os.path.join(path, tor_name)
+        try:
+            os.makedirs(folder)
+        except FileExistsError:
+            logger().info("Overwriting existing directory {}".format(tor_name))
+        for angle in range(0, 360, interval):
+            angle_folder = os.path.join(folder, str(angle))
+            os.makedirs(angle_folder)
+            newconf = mol.NewConf(coords)
+            oechem.OESetTorsion(newconf, tor[0], tor[1], tor[2], tor[3], radians(angle))
+            pdb = oechem.oemolostream('{}/{}_{}_{}.pdb'.format(angle_folder, filename, tor_name, angle))
+            oechem.OEWritePDBFile(pdb, newconf)
 
 
 def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symmetry=None, geom_opt=True,
@@ -73,7 +180,7 @@ def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symm
     return input_string
 
 
-def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, charge=0, multiplicity=1, symmetry=None,
+def generate_scan_input(root, filetype, mol_name, method, basis_set, dihedral=None, charge=0, multiplicity=1, symmetry=None,
                         geom_opt=True, sp_energy=False, mem=None):
     """
     This function takes a directory and writes out psi4 input files for all files that match the filetype specified
@@ -104,7 +211,9 @@ def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, c
         memory allocation
 
     """
-
+    if not dihedral:
+        dihedral = list(filter(None, root.split('/')))[-1].split('_')
+        dihedral = dihedral[0] + ' ' + dihedral[1] + ' ' + dihedral[2] + ' ' + dihedral[3]
     input_files = []
     pattern = "*.{}".format(filetype)
     for path, subdir, files in os.walk(root):
@@ -129,7 +238,3 @@ def generate_scan_input(root, filetype, mol_name, dihedral, method, basis_set, c
         psi4_input = open(filename, 'w')
         psi4_input.write(output)
         psi4_input.close()
-
-
-
-
