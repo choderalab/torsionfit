@@ -129,3 +129,92 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
                 logger().debug('Turning off {}'.format(m))
                 param.dihedral_types[t][n].phi_k = 0
                 param.dihedral_types[reverse_t][n].phi_k = 0
+
+
+def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False, urey_bradley=False, lj=False):
+    """
+    This function allows turning off all or specific parameters in a CharmmParameterSet.
+
+    Parameters
+    ----------
+    structure : Parmed.Charmm.CharmmPsfStructure
+    param : Parmed.Charmm.CharmmParameterSet
+    bonds : bool or list of tuples of strings (atom types)
+        if True, all bonds in structure will be turned off. If it's a list of atom type, it will only turn off those
+        bond types. If False, bonds will not be turned off. Default is False
+    angles : bool or list of tuples of strings (atom types)
+        if True, all angles in structure will be turned off. If it's a list of atom type, it will only turn off those
+        angle types. If False, angles will not be turned off. Default is False
+    dihedral : bool or list of tuples of strings (atom types)
+        if True, all dihedral in structure will be turned off. If it's a list of atom type, it will only turn off those
+        dihedral types. If False, dihedrals will not be turned off. Default is False
+    urey_bradley : bool or list of tuples of strings (atom types)
+        if True, all urey bradley in structure will be turned off. If it's a list of atom type, it will only turn off
+        those urey bradley types. If False, angles will not be turned off. Default is False
+    lj : bool or list of tuples of strings (atom types)
+        if True, all Lennard Jones in structure will be turned off. If it's a list of atom type, it will only turn off
+        those lj types. If False, lj will not be turned off. Default is False
+
+    Returns
+    -------
+
+    """
+    if bonds:
+        if bonds is True:
+            for bond_type in structure.bonds:
+                b = (bond_type.atom1.type, bond_type.atom2.type)
+                param.bond_types[b].k = 0
+        else:
+            for b in bonds:
+                param.bond_types[b].k = 0
+    if angles:
+        if angles is True:
+            # To use for UreyBradley terms
+            ubs = set()
+            for angle_type in structure.angles:
+                a = (angle_type.atom1.type, angle_type.atom2.type, angle_type.atom3.type)
+                param.angle_types[a].k = 0
+                ubs.add(a)
+        else:
+            for a in angles:
+                param.angle_types[a].k = 0
+
+    if urey_bradley:
+        if urey_bradley is True:
+            # Use angles
+            for ub in ubs:
+                param.urey_bradley_types[ub].k = 0
+        else:
+            for ub in urey_bradley:
+                param.urey_bradley_types[ub].k = 0
+
+    if dihedral:
+        if dihedral is True:
+            for dihedral_type in structure.dihedrals:
+                d = (dihedral_type.atom1.type, dihedral_type.atom2.type, dihedral_type.atom3.type,
+                     dihedral_type.atom4.type)
+                for n in range(len(param.dihedral_types[d])):
+                    param.dihedral_types[d][n].phi_k = 0
+        else:
+            for d in dihedral:
+                for t in param.dihedral_types[d]:
+                    t.phi_k = 0
+
+    if lj:
+        if lj is True:
+            for atom in structure.atoms:
+                t = atom.type
+                param.atom_types[t].sigma_14 = 1.0
+                param.atom_types[t].rmin = 1.0
+                param.atom_types[t].rmin_14 = 1.0
+                param.atom_types[t].epsilon_14 = 0
+                param.atom_types[t].sigma=1.0
+                param.atom_types[t].epsilon = 0.0
+        else:
+            for t in lj:
+                param.atom_types[t].sigma_14 = 1.0
+                param.atom_types[t].rmin = 1.0
+                param.atom_types[t].rmin_14 = 1.0
+                param.atom_types[t].epsilon_14 = 0
+                param.atom_types[t].sigma=1.0
+                param.atom_types[t].epsilon = 0.0

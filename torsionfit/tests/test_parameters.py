@@ -6,7 +6,10 @@ from torsionfit.tests.utils import get_fun
 from torsionfit.backends import sqlite_plus
 import torsionfit.parameters as par
 from parmed.charmm.parameters import CharmmParameterSet
+from parmed.charmm import CharmmPsfFile
+import torsionfit.database.qmdatabase as qmdb
 import unittest
+from simtk import unit
 
 
 class TestParameters(unittest.TestCase):
@@ -50,6 +53,20 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(param.dihedral_types[torsion][3].phi_k, -1.834546)
         self.assertEqual(param.dihedral_types[torsion][4].phi_k, -1.86807)
         self.assertEqual(param.dihedral_types[torsion][5].phi_k, -2.860622)
+
+    def test_turn_off_param(self):
+        """ Test turning off parameters """
+
+        structure = CharmmPsfFile(get_fun('butane_charge_off.psf'))
+        param = CharmmParameterSet(get_fun('par_all36_cgenff.prm'), get_fun('top_all36_cgenff.rtf'))
+
+        par.turn_off_params(structure, param, bonds=True, angles=True, dihedral=True, urey_bradley=True, lj=True)
+
+        scan = get_fun('MP2_torsion_scan/')
+        butane_scan = qmdb.parse_psi4_out(scan, get_fun('butane_charge_off.psf'))
+        butane_scan.compute_energy(param)
+
+        self.assertTrue((butane_scan.mm_energy.value_in_unit(unit.kilojoule_per_mole) == 0).all())
 
 
 
