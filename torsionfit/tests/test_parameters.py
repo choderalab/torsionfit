@@ -10,6 +10,8 @@ from parmed.charmm import CharmmPsfFile
 import torsionfit.database.qmdatabase as qmdb
 import unittest
 from simtk import unit
+import warnings
+warnings.filterwarnings('ignore')
 
 
 class TestParameters(unittest.TestCase):
