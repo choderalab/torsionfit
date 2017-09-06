@@ -1,0 +1,72 @@
+PSF EXT
+
+       3 !NTITLE
+ REMARKS original generated structure x-plor psf file
+ REMARKS topology ../data/charmm_ff/top_all36_cgenff.rtf 
+ REMARKS segment BUTA { first NONE; last NONE; auto angles dihedrals }
+
+      14 !NATOM
+         1 BUTA     1        BUTA     H11      HGA3     0.000000        1.0080           0
+         2 BUTA     1        BUTA     H12      HGA3     0.000000        1.0080           0
+         3 BUTA     1        BUTA     H13      HGA3     0.000000        1.0080           0
+         4 BUTA     1        BUTA     C1       CG331    0.000000       12.0110           0
+         5 BUTA     1        BUTA     H21      HGA2     0.000000        1.0080           0
+         6 BUTA     1        BUTA     H22      HGA2     0.000000        1.0080           0
+         7 BUTA     1        BUTA     C2       CG321    0.000000       12.0110           0
+         8 BUTA     1        BUTA     H31      HGA2     0.000000        1.0080           0
+         9 BUTA     1        BUTA     H32      HGA2     0.000000        1.0080           0
+        10 BUTA     1        BUTA     C3       CG321    0.000000       12.0110           0
+        11 BUTA     1        BUTA     H41      HGA3     0.000000        1.0080           0
+        12 BUTA     1        BUTA     H42      HGA3     0.000000        1.0080           0
+        13 BUTA     1        BUTA     H43      HGA3     0.000000        1.0080           0
+        14 BUTA     1        BUTA     C4       CG331    0.000000       12.0110           0
+
+      13 !NBOND: bonds
+         1         4         2         4         3         4         4         7
+         5         7         6         7         7        10         8        10
+         9        10        10        14        11        14        12        14
+        13        14
+
+      24 !NTHETA: angles
+         1         4         7         1         4         3         1         4         2
+         2         4         7         2         4         3         3         4         7
+         4         7        10         4         7         6         4         7         5
+         5         7        10         5         7         6         6         7        10
+         7        10        14         7        10         9         7        10         8
+         8        10        14         8        10         9         9        10        14
+        10        14        13        10        14        12        10        14        11
+        11        14        13        11        14        12        12        14        13
+
+      27 !NPHI: dihedrals
+         1         4         7         5         1         4         7         6
+         1         4         7        10         2         4         7         5
+         2         4         7         6         2         4         7        10
+         3         4         7         5         3         4         7         6
+         3         4         7        10         4         7        10         8
+         4         7        10         9         4         7        10        14
+         5         7        10         8         5         7        10         9
+         5         7        10        14         6         7        10         8
+         6         7        10         9         6         7        10        14
+         7        10        14        11         7        10        14        12
+         7        10        14        13         8        10        14        11
+         8        10        14        12         8        10        14        13
+         9        10        14        11         9        10        14        12
+         9        10        14        13
+
+       0 !NIMPHI: impropers
+
+
+       0 !NDON: donors
+
+
+       0 !NACC: acceptors
+
+
+       0 !NNB
+
+         0         0         0         0         0         0         0         0
+         0         0         0         0         0         0
+
+       1       0 !NGRP
+         0         0         0
+

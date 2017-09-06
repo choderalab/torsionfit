@@ -5,7 +5,10 @@ import os
 from fnmatch import fnmatch
 import sys
 from math import radians
-import openeye.oechem as oechem
+try:
+    import openeye.oechem as oechem
+except ImportError:
+    pass
 from torsionfit.utils import logger
 import warnings
 import numpy as np
