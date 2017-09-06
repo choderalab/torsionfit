@@ -6,6 +6,7 @@ __author__ = 'Chaya D. Stern'
 
 from parmed.topologyobjects import DihedralType
 from torsionfit.utils import logger
+from copy import copy as _copy
 
 
 def add_missing(param_list, param, sample_n5=False):
@@ -131,7 +132,7 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
                 param.dihedral_types[reverse_t][n].phi_k = 0
 
 
-def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False, urey_bradley=False, lj=False):
+def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False, urey_bradley=False, lj=False, copy=True):
     """
     This function allows turning off all or specific parameters in a CharmmParameterSet.
 
@@ -154,11 +155,18 @@ def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False,
     lj : bool or list of tuples of strings (atom types)
         if True, all Lennard Jones in structure will be turned off. If it's a list of atom type, it will only turn off
         those lj types. If False, lj will not be turned off. Default is False
+    copy: bool
+        If True, will return a modified parameterset while leaving the original paraemterset unchanged.
+        Default is True
 
     Returns
     -------
+    modified parameter set if copy is True. Otherwise parameterset is modified in place.
 
     """
+    if copy is True:
+        param = _copy(param)
+
     if bonds:
         if bonds is True:
             for bond_type in structure.bonds:
@@ -208,7 +216,7 @@ def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False,
                 param.atom_types[t].rmin = 1.0
                 param.atom_types[t].rmin_14 = 1.0
                 param.atom_types[t].epsilon_14 = 0
-                param.atom_types[t].sigma=1.0
+                param.atom_types[t].sigma = 1.0
                 param.atom_types[t].epsilon = 0.0
         else:
             for t in lj:
@@ -216,5 +224,8 @@ def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False,
                 param.atom_types[t].rmin = 1.0
                 param.atom_types[t].rmin_14 = 1.0
                 param.atom_types[t].epsilon_14 = 0
-                param.atom_types[t].sigma=1.0
+                param.atom_types[t].sigma = 1.0
                 param.atom_types[t].epsilon = 0.0
+
+    if copy is True:
+        return param

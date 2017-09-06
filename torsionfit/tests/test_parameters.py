@@ -62,7 +62,8 @@ class TestParameters(unittest.TestCase):
         structure = CharmmPsfFile(get_fun('butane_charge_off.psf'))
         param = CharmmParameterSet(get_fun('par_all36_cgenff.prm'), get_fun('top_all36_cgenff.rtf'))
 
-        par.turn_off_params(structure, param, bonds=True, angles=True, dihedral=True, urey_bradley=True, lj=True)
+        par.turn_off_params(structure, param, bonds=True, angles=True, dihedral=True, urey_bradley=True, lj=True,
+                            copy=False)
 
         scan = get_fun('MP2_torsion_scan/')
         butane_scan = qmdb.parse_psi4_out(scan, get_fun('butane_charge_off.psf'))
