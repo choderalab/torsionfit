@@ -571,13 +571,12 @@ class QMDataBase(DataBase):
 
     def build_phis(self, to_optimize=None):
         """
+        This function builds a dictionary of phis for specified dihedrals in the molecules for all frames in the qm db.
 
         Parameters
         ----------
-        to_optimize :
-
-        Returns
-        -------
+        to_optimize : list of dihedral types to calculate phis for
+            Default is None. When None, it will calculate phis for all dihedral types in molecule
 
         """
 
@@ -600,7 +599,7 @@ class QMDataBase(DataBase):
 
         # sanity check
         if len(self.structure.dihedrals) != sum(type_frequency.values()):
-            raise AssertionError("type frequency values don't sum up to number of dihedral")
+            warnings.warn("type frequency values don't sum up to number of dihedral")
 
         self.phis = {t_type: [[] for i in range(self.n_frames)] for t_type in type_frequency}
         for i in range(self.n_frames):
@@ -612,14 +611,46 @@ class QMDataBase(DataBase):
 
                 torsion_type = (atom.type, bond_atom.type, angle_atom.type, torsion_atom.type)
                 try:
-                    self.phis[torsion_type][i].append(self._cartesian_to_phi(atom, bond_atom, angle_atom, torsion_atom,
-                                                                             i))
+                    self._append_phi(i, torsion_type, atom, bond_atom, angle_atom, torsion_atom)
                 except KeyError:
-                    self.phis[tuple(reversed(torsion_type))][i].append(self._cartesian_to_phi(atom, bond_atom,
-                                                                       angle_atom, torsion_atom, i))
+                    warnings.warn("torsion {} is not in list of phis to precalculate but is in the structure. "
+                                  "Are you sure you did not want to fit it?".format(torsion_type))
+                # try:
+                #     self.phis[torsion_type][i].append(self._cartesian_to_phi(atom, bond_atom, angle_atom, torsion_atom,
+                #                                                              i))
+                # except KeyError:
+                #     self.phis[tuple(reversed(torsion_type))][i].append(self._cartesian_to_phi(atom, bond_atom,
+                #                                                        angle_atom, torsion_atom, i))
+
         # Convert to np.array
         for t in self.phis:
             self.phis[t] = np.array(self.phis[t])
+
+    def _append_phi(self, i, torsion_type, atom, bond_atom, angle_atom, torsion_atom):
+        """
+        Helper function to try to append a calculated phi angle to existing list for a torsion type
+
+        Parameters
+        ----------
+        i : int
+            frame for which phi is being calculated.
+        torsion_type : tuple of strings
+        atom : parmed atom type
+            first atom in dihedral
+        bond_atom : parmed atomtype
+            second atom in dihedral
+        angle_atom : parmed atomtype
+            third atom in dihedral
+        torsion_atom : parmed atomtype
+            fourth atom in dihedral
+
+        """
+        try:
+            self.phis[torsion_type][i].append(self._cartesian_to_phi(atom, bond_atom, angle_atom, torsion_atom,
+                                                                             i))
+        except KeyError:
+            self.phis[tuple(reversed(torsion_type))][i].append(self._cartesian_to_phi(atom, bond_atom,
+                                                                       angle_atom, torsion_atom, i))
 
     def _cartesian_to_phi(self, atom, bond_atom, angle_atom, torsion_atom, i):
         """
@@ -672,3 +703,4 @@ class QMDataBase(DataBase):
         return phi
 
 
+    #def Fourier_series(self, K, n, phase):
