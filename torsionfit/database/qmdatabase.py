@@ -132,13 +132,15 @@ def parse_psi4_log(logfiles, structure):
     return QMDataBase(positions, topology, structure, torsions, directions, angles, qm_energies)
 
 
-def parse_psi4_out(oufiles_dir, structure):
+def parse_psi4_out(oufiles_dir, structure, pattern="*.out"):
     """
     Parse psi4 out files from distributed torsion scan (there are many output files, one for each structure)
     :param oufiles_dir: str
         path to directory where the psi4 output files are
     :param structure: str
         path to psf file of structure
+    :param pattern: str
+        pattern for psi4 output file. Default is *.out
     :return: TorsionScanSet
 
     """
@@ -152,7 +154,7 @@ def parse_psi4_out(oufiles_dir, structure):
 
     out_files = []
     dih_angle = []
-    pattern = "*.out2"
+    #pattern = "*.out2"
     for path, subdir, files in os.walk(oufiles_dir):
         for name in files:
             if fnmatch(name, pattern):
@@ -308,6 +310,7 @@ class QMDataBase(DataBase):
         self.steps = steps
         self.angles = angles
         self.optimized = optimized
+        self.phis = {}
 
     def compute_energy(self, param, offset=None, platform=None):
         """ Computes energy for a given structure with a given parameter set
@@ -497,3 +500,207 @@ class QMDataBase(DataBase):
                                             ndmin=1, copy=True)
         return newtraj
 
+    # def combine(self, qmdabase, copy=True):
+    #     """
+    #     Add more QM configurations to database
+    #
+    #     Parameters
+    #     ----------
+    #     directory : path to directory of QM scan
+    #
+    #     Returns
+    #     -------
+    #     Updates database in place
+    #
+    #     """
+    #
+    #     xyz = self.xyz
+    #     time = self.time
+    #     torsions = self.torsion_index
+    #     if self.direction is not None:
+    #         direction = self.direction
+    #     if self.optimized is not None:
+    #         optimized = self.optimized
+    #     if self.steps is not None:
+    #         steps = self.steps
+    #     if self.angles is not None:
+    #         angles = self.angles
+    #     qm_energy = self.qm_energy
+    #     unitcell_lengths, unitcell_angles = None, None
+    #     if self.unitcell_angles is not None:
+    #         unitcell_angles = self.unitcell_angles
+    #     if self.unitcell_lengths is not None:
+    #         unitcell_lengths = self.unitcell_lengths
+    #
+    #     if copy:
+    #         xyz = xyz.copy()
+    #         time = time.copy()
+    #         topology = deepcopy(self._topology)
+    #         structure = deepcopy(self.structure)
+    #         torsions = torsions.copy()
+    #         qm_energy = qm_energy.copy()
+    #         if self.direction is not None:
+    #             direction = direction.copy()
+    #         else:
+    #             direction = self.direction
+    #         if self.optimized is not None:
+    #                 optimized = optimized.copy()
+    #         else:
+    #             optimized = self.optimized
+    #         if self.steps is not None:
+    #             steps = steps.copy()
+    #         else:
+    #             steps = self.steps
+    #         if self.angles is not None:
+    #             angles = angles.copy()
+    #         else:
+    #             angles = self.angles
+    #         if self.unitcell_angles is not None:
+    #             unitcell_angles = unitcell_angles.copy()
+    #         if self.unitcell_lengths is not None:
+    #             unitcell_lengths = unitcell_lengths.copy()
+    #
+    #     newtraj = self.__class__(
+    #         positions=xyz, topology=topology, structure=structure, torsions=torsions, directions=direction, steps=steps,
+    #         qm_energies=qm_energy, optimized=optimized, angles=angles, time=time)
+    #
+    #     if self._rmsd_traces is not None:
+    #         newtraj._rmsd_traces = np.array(self._rmsd_traces[key],
+    #                                         ndmin=1, copy=True)
+    #     return newtraj
+
+    def build_phis(self, to_optimize=None):
+        """
+        This function builds a dictionary of phis for specified dihedrals in the molecules for all frames in the qm db.
+
+        Parameters
+        ----------
+        to_optimize : list of dihedral types to calculate phis for
+            Default is None. When None, it will calculate phis for all dihedral types in molecule
+
+        """
+
+        type_list = to_optimize
+        if type_list is None:
+            type_list = []
+            for torsion_type in self.structure.dihedrals:
+                t = (torsion_type.atom1.type, torsion_type.atom2.type, torsion_type.atom3.type, torsion_type.atom4.type)
+                type_list.append(t)
+
+        type_frequency = {}
+        for t in type_list:
+            # If t is not a palindrome, reverse it.
+            if t[0] >= t[-1]:
+                t = tuple(reversed(t))
+            try:
+                type_frequency[t] += 1
+            except KeyError:
+                type_frequency[t] = 1
+
+        # sanity check
+        if len(self.structure.dihedrals) != sum(type_frequency.values()):
+            warnings.warn("type frequency values don't sum up to number of dihedral")
+
+        self.phis = {t_type: [[] for i in range(self.n_frames)] for t_type in type_frequency}
+        for i in range(self.n_frames):
+            for dihedral in self.structure.dihedrals:
+                atom = dihedral.atom1
+                bond_atom = dihedral.atom2
+                angle_atom = dihedral.atom3
+                torsion_atom = dihedral.atom4
+
+                torsion_type = (atom.type, bond_atom.type, angle_atom.type, torsion_atom.type)
+                try:
+                    self._append_phi(i, torsion_type, atom, bond_atom, angle_atom, torsion_atom)
+                except KeyError:
+                    warnings.warn("torsion {} is not in list of phis to precalculate but is in the structure. "
+                                  "Are you sure you did not want to fit it?".format(torsion_type))
+                # try:
+                #     self.phis[torsion_type][i].append(self._cartesian_to_phi(atom, bond_atom, angle_atom, torsion_atom,
+                #                                                              i))
+                # except KeyError:
+                #     self.phis[tuple(reversed(torsion_type))][i].append(self._cartesian_to_phi(atom, bond_atom,
+                #                                                        angle_atom, torsion_atom, i))
+
+        # Convert to np.array
+        for t in self.phis:
+            self.phis[t] = np.array(self.phis[t])
+
+    def _append_phi(self, i, torsion_type, atom, bond_atom, angle_atom, torsion_atom):
+        """
+        Helper function to try to append a calculated phi angle to existing list for a torsion type
+
+        Parameters
+        ----------
+        i : int
+            frame for which phi is being calculated.
+        torsion_type : tuple of strings
+        atom : parmed atom type
+            first atom in dihedral
+        bond_atom : parmed atomtype
+            second atom in dihedral
+        angle_atom : parmed atomtype
+            third atom in dihedral
+        torsion_atom : parmed atomtype
+            fourth atom in dihedral
+
+        """
+        try:
+            self.phis[torsion_type][i].append(self._cartesian_to_phi(atom, bond_atom, angle_atom, torsion_atom,
+                                                                             i))
+        except KeyError:
+            self.phis[tuple(reversed(torsion_type))][i].append(self._cartesian_to_phi(atom, bond_atom,
+                                                                       angle_atom, torsion_atom, i))
+
+    def _cartesian_to_phi(self, atom, bond_atom, angle_atom, torsion_atom, i):
+        """
+        measures torsion angle for a specific torsion
+
+        Parameters
+        ----------
+        atom : parmed atom
+        bond_atom : parmed atom
+        angle_atom : parmed atom
+        torsion_atom : parmed atom
+        i : int
+            index for configuration (frame)
+
+        Returns
+        -------
+        phi: float;
+            torsion angle in radians
+
+        """
+
+        atom1_coords = self.positions[i][atom.idx]
+        bond_coords = self.positions[i][bond_atom.idx]
+        angle_coords = self.positions[i][angle_atom.idx]
+        torsion_coords = self.positions[i][torsion_atom.idx]
+
+        a = atom1_coords - bond_coords
+        b = angle_coords - bond_coords
+        #3-4 bond
+        c = angle_coords - torsion_coords
+        a_u = a / np.linalg.norm(a)
+        b_u = b / np.linalg.norm(b)
+        c_u = c / np.linalg.norm(c)
+
+        plane1 = np.cross(a_u, b_u)
+        plane2 = np.cross(b_u, c_u)
+
+        cos_phi = np.dot(plane1, plane2) / (np.linalg.norm(plane1)*np.linalg.norm(plane2))
+        cos_phi = np.dot(plane1, plane2) / (np.linalg.norm(plane1)*np.linalg.norm(plane2))
+        if cos_phi < -1.0:
+            cos_phi = -1.0
+        elif cos_phi > 1.0:
+            cos_phi = 1.0
+
+        phi = np.arccos(cos_phi)
+
+        if np.dot(a, plane2) <= 0:
+            phi = -phi
+
+        return phi
+
+
+    #def Fourier_series(self, K, n, phase):
