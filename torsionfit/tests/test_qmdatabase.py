@@ -8,7 +8,7 @@ from numpy.testing import assert_equal, assert_almost_equal, assert_array_equal
 from parmed.charmm import CharmmParameterSet
 import unittest
 import numpy as np
-
+import warnings
 
 try:
     from simtk.openmm import app
@@ -20,6 +20,8 @@ except ImportError:
 
 # create scan set
 
+# silence warnings
+warnings.filterwarnings('ignore')
 
 def test_read_logfile():
     """Tests the logfile parser"""
@@ -69,7 +71,7 @@ class TestScanSet(unittest.TestCase):
         """ Tests psi4 outfile parser"""
         structure = get_fun('butane.psf')
         scan = get_fun('MP2_torsion_scan/')
-        butane_scan = qmdb.parse_psi4_out(scan, structure)
+        butane_scan = qmdb.parse_psi4_out(scan, structure, pattern="*.out2")
         butane_scan = butane_scan.remove_nonoptimized()
         self.assertEqual(butane_scan.n_atoms, 14)
         self.assertEqual(butane_scan.n_chains, 1)
@@ -85,7 +87,7 @@ class TestScanSet(unittest.TestCase):
         """ Test remove non_optimized structures """
         structure = get_fun('butane.psf')
         scan = get_fun('MP2_torsion_scan/')
-        test_scan = qmdb.parse_psi4_out(scan, structure)
+        test_scan = qmdb.parse_psi4_out(scan, structure, pattern="*.out2")
         self.assertEqual(test_scan.n_frames, 14)
         scan_opt = test_scan.remove_nonoptimized()
         self.assertEqual(scan_opt.n_frames, 13)
@@ -105,7 +107,7 @@ class TestScanSet(unittest.TestCase):
         """ Tests compute mm energy"""
         structure = get_fun('butane.psf')
         scan = get_fun('MP2_torsion_scan/')
-        test_scan = qmdb.parse_psi4_out(scan, structure)
+        test_scan = qmdb.parse_psi4_out(scan, structure, pattern="*.out2")
         param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
         self.assertFalse(test_scan._have_mm_energy)
         scan_opt = test_scan.remove_nonoptimized()
