@@ -104,9 +104,9 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
             if (multiplicity_bitstring & multiplicity_bitmask) or not rj:
                 if m == 5 and not n_5:
                     continue
-                k = torsion_name + '_' + str(m) + '_K'
+                k = torsion_name + '_K'
                 if db is not None:
-                    sample = db.trace(k)[i]
+                    sample = db.trace(k)[i][m-1]/4.184
                 if model is not None:
                     sample = model.pymc_parameters[k].value
                 logger().debug('K sample value {}'.format(sample))
