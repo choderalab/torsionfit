@@ -7,8 +7,6 @@ import torsionfit.database.qmdatabase as TorsionScan
 import torsionfit.parameters as par
 import warnings
 from torsionfit.utils import logger
-from collections import OrderedDict
-import itertools
 
 
 class TorsionFitModel(object):
@@ -96,22 +94,69 @@ class TorsionFitModel(object):
             offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
 
+        # self.pymc_parameters['log_sigma_k'] = pymc.Uniform('log_sigma_k', lower=-4.6052, upper=3.453, value=np.log(0.01))
+        # self.pymc_parameters['sigma_k'] = pymc.Lambda('sigma_k',
+        #                                             lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+        #                                                log_sigma_k))
+        # self.pymc_parameters['precision_k'] = pymc.Lambda('precision_k',
+        #                                                lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
+        #                                                     -2 * log_sigma_k))
+
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
-            self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(np.ones(6)*0.01))
+            self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(0.01))
             self.pymc_parameters['sigma_k_{}'.format(torsion_name)] = pymc.Lambda('sigma_k_{}'.format(torsion_name),
-                                                     lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
-                                                        log_sigma_k))
+                                                    lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
+                                                       log_sigma_k))
             self.pymc_parameters['precision_k_{}'.format(torsion_name)] = pymc.Lambda('precision_k_{}'.format(torsion_name),
-                                lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
+                                                       lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
                                                             -2 * log_sigma_k))
 
-            self.pymc_parameters['{}_K'.format(torsion_name)] = pymc.Normal('{}_K'.format(torsion_name), value=np.zeros(6), mu=0,
-                                                                            tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)])
 
             if torsion_name not in multiplicity_bitstrings.keys():
                 multiplicity_bitstrings[torsion_name] = 0
+
+            for m in multiplicities:
+                name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
+                if not self.sample_phase:
+                    k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)], value=0)
+                else:
+                    k = pymc.Uniform(name, lower=0, upper=20, value=0)
+
+                for i in range(len(param.dihedral_types[p])):
+                    if param.dihedral_types[p][i].per == m:
+                        multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
+                        if not self.sample_phase:
+                            k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)],
+                                            value=param.dihedral_types[p][i].phi_k)
+                        else:
+                            k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
+                        break
+
+                self.pymc_parameters[name] = k
+
+                if self.sample_phase:
+                    name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_Phase'
+                    for i in range(len(param.dihedral_types[p])):
+                        if param.dihedral_types[p][i].per == m:
+                            if self.continuous_phase:
+                                phase = pymc.Uniform(name, lower=0, upper=180.0, value=param.dihedral_types[p][i].phase)
+                            else:
+                                if param.dihedral_types[p][i].phase == 0:
+                                    phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
+                                    break
+
+                                if param.dihedral_types[p][i].phase == 180.0:
+                                    phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
+                                    break
+                        else:
+                            if self.continuous_phase:
+                                phase = pymc.Uniform(name, lower=0, upper=180.0, value=0)
+                            else:
+                                phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
+
+                    self.pymc_parameters[name] = phase
 
         if self.rj:
             for torsion_name in multiplicity_bitstrings.keys():
@@ -122,7 +167,7 @@ class TorsionFitModel(object):
         if init_random:
             # randomize initial value
             for parameter in self.pymc_parameters:
-                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda and parameter[:11] != 'log_sigma_k':
+                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda and parameter != 'log_sigma_k':
                     self.pymc_parameters[parameter].random()
                     logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
 
@@ -136,47 +181,27 @@ class TorsionFitModel(object):
                                                             -2 * log_sigma))
 
         # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
-        #par.add_missing(self.parameters_to_optimize, param, sample_n5=self.sample_n5)
-
-        # Precalculate phis
-        n = np.array([1., 2., 3., 4., 5., 6.])
-        self.bitmasks = []
-        for i in itertools.product((0,1), repeat=6):
-            self.bitmasks.append(i)
-
-        cosines = []
-        for i, frag in enumerate(frags):
-            cosines.append(OrderedDict())
-            for t in frag.phis:
-                cosines[i][t] = (1 + np.cos(frag.phis[t][:, np.newaxis]*n[:, np.newaxis])).sum(-1)
-        self.cosines = cosines
+        par.add_missing(self.parameters_to_optimize, param, sample_n5=self.sample_n5)
 
         @pymc.deterministic
-        def torsion_energy(pymc_parameters=self.pymc_parameters):
+        def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
             mm = np.ndarray(0)
-
-            for i, mol in enumerate(self.frags):
-                Fourier_sum = np.zeros((mol.n_frames))
-                for t in cosines[i]:
-                    name = t[0] + '_' + t[1] + '_' + t[2] + '_' + t[3]
-                    if self.rj:
-                        K = pymc_parameters['{}_K'.format(name)] * self.bitmasks[pymc_parameters['{}_multiplicity_bitstring'.format(name)]]
-                    else:
-                        K = pymc_parameters['{}_K'.format(name)]
-                    Fourier_sum += (K*cosines[i][t]).sum(1)
-                Fourier_sum_rel = Fourier_sum - min(Fourier_sum)
-                Fourier_sum_rel += pymc_parameters['{}_offset'.format(mol.topology._residues[0])]
-                mm = np.append(mm, Fourier_sum)
+            par.update_param_from_sample(self.parameters_to_optimize, param, model=self, rj=self.rj,
+                                         phase=self.sample_phase, n_5=self.sample_n5, continuous=self.continuous_phase)
+            for mol in self.frags:
+                mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
+                                   platform=self.platform)
+                mm = np.append(mm, mol.mm_energy / kilojoules_per_mole)
             return mm
 
         size = sum([len(i.qm_energy) for i in self.frags])
-        residual_energy = np.ndarray(0)
+        qm_energy = np.ndarray(0)
         for i in range(len(frags)):
-             residual_energy = np.append(residual_energy, frags[i].delta_energy)
+             qm_energy = np.append(qm_energy, frags[i].qm_energy)
         #diff_energy = np.ndarray(0)
         #for i in range(len(frags)):
         #    diff_energy = np.append(diff_energy, frags[i].delta_energy)
-        self.pymc_parameters['torsion_energy'] = torsion_energy
-        self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['torsion_energy'],
+        self.pymc_parameters['mm_energy'] = mm_energy
+        self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
-                                                     value=residual_energy)
+                                                     value=qm_energy)
