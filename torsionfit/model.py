@@ -25,8 +25,7 @@ class TorsionFitModel(object):
     platform: OpenMM platform to use for potential energy calculations
 
     """
-    def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, rj=False, sample_n5=False,
-                 continuous_phase=False, sample_phase=False, init_random=True):
+    def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, rj=False, init_random=True, tau='mult'):
         """
 
         Parameters
@@ -41,14 +40,6 @@ class TorsionFitModel(object):
             Default None.
         rj : bool
             If True, will use reversible jump to sample Fourier terms. If False, will sample all Ks. Default False
-        sample_n5 : bool
-            If True, will also sample n=5. Default False
-        eliminate_phase : bool
-            If True, will not sample phase. Instead, Ks will be able to take on negative values. Default True. If True,
-            make sure continuous_phase is also False.
-        continuous_phase : bool
-            If True, will allow phases to take on any value between 0-180. If False, phase will be a discrete and only
-            sample 0 or 180
         init_random: bool
             Randomize starting condition. Default is True. If false, will resort to whatever value is in the parameter set.
         tau: float
@@ -68,26 +59,11 @@ class TorsionFitModel(object):
         self.frags = frags
         self.platform = platform
         self.rj = rj
-        self.sample_n5 = sample_n5
-        self.continuous_phase = continuous_phase
-        self.sample_phase = sample_phase
         if param_to_opt:
             self.parameters_to_optimize = param_to_opt
         else:
             self.parameters_to_optimize = TorsionScan.to_optimize(param, stream)
 
-        # Check that options are reasonable
-        if not sample_phase and continuous_phase:
-            warnings.warn("You can't eliminate phase but have continuous phase. Changing continuous phase to False")
-            self.continuous_phase = False
-
-        # set all phases to 0 if eliminate phase is True
-        if not self.sample_phase:
-            par.set_phase_0(self.parameters_to_optimize, param)
-
-        multiplicities = [1, 2, 3, 4, 6]
-        if self.sample_n5:
-            multiplicities = [1, 2, 3, 4, 5, 6]
         multiplicity_bitstrings = dict()
 
         # offset
@@ -96,10 +72,16 @@ class TorsionFitModel(object):
             offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
 
+        if tau=='mult':
+            value = np.log(np.ones(6)*0.01)
+        else:
+            value = np.log(0.01)
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
-            self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(np.ones(6)*0.01))
+            self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name),
+                                                                                       lower=-4.6052, upper=3.453,
+                                                                                       value=value)
             self.pymc_parameters['sigma_k_{}'.format(torsion_name)] = pymc.Lambda('sigma_k_{}'.format(torsion_name),
                                                      lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
                                                         log_sigma_k))
@@ -126,7 +108,6 @@ class TorsionFitModel(object):
                     self.pymc_parameters[parameter].random()
                     logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
 
-
         self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=3, value=np.log(0.01))
         self.pymc_parameters['sigma'] = pymc.Lambda('sigma',
                                                     lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
@@ -134,9 +115,6 @@ class TorsionFitModel(object):
         self.pymc_parameters['precision'] = pymc.Lambda('precision',
                                                         lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                             -2 * log_sigma))
-
-        # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
-        #par.add_missing(self.parameters_to_optimize, param, sample_n5=self.sample_n5)
 
         # Precalculate phis
         n = np.array([1., 2., 3., 4., 5., 6.])
@@ -173,9 +151,7 @@ class TorsionFitModel(object):
         residual_energy = np.ndarray(0)
         for i in range(len(frags)):
              residual_energy = np.append(residual_energy, frags[i].delta_energy)
-        #diff_energy = np.ndarray(0)
-        #for i in range(len(frags)):
-        #    diff_energy = np.append(diff_energy, frags[i].delta_energy)
+
         self.pymc_parameters['torsion_energy'] = torsion_energy
         self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['torsion_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
