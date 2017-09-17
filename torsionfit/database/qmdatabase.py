@@ -17,6 +17,7 @@ from fnmatch import fnmatch
 import os
 import re
 import warnings
+import itertools
 
 
 def to_optimize(param, stream, penalty=10):
@@ -152,25 +153,35 @@ def parse_psi4_out(oufiles_dir, structure, pattern="*.out"):
     angles = np.ndarray(0, dtype=float)
     optimized = np.ndarray(0, dtype=bool)
 
-    out_files = []
-    dih_angle = []
-    #pattern = "*.out2"
+    out_files = {}
     for path, subdir, files in os.walk(oufiles_dir):
         for name in files:
             if fnmatch(name, pattern):
                 if name.startswith('timer'):
                     continue
-                dih_angle.append(int(name.split('_')[-1].split('.')[0]))
+                name_split = name.split('_')
+                torsion_angle = (name_split[1] + '_' + name_split[2] + '_' + name_split[3] + '_' + name_split[4])
+                try:
+                    out_files[torsion_angle]
+                except KeyError:
+                    out_files[torsion_angle] = []
                 path = os.path.join(os.getcwd(), path, name)
-                out_files.append(path)
-    # Sort files in increasing angles order
-    out_files = [out_file for (angle, out_file) in sorted(zip(dih_angle, out_files))]
-    dih_angle.sort()
+                out_files[torsion_angle].append(path)
+    # Sort files in increasing angles order for each torsion
+    sorted_files = []
+    dih_angles = []
+    for tor in out_files:
+        dih_angle = []
+        for file in out_files[tor]:
+            dih_angle.append(int(file.split('_')[-1].split('.')[0]))
+        sorted_files.append([out_file for (angle, out_file) in sorted(zip(dih_angle, out_files[tor]))])
+        dih_angle.sort()
+        dih_angles.append(dih_angle)
     if not out_files:
         raise Exception("There are no psi4 output files. Did you choose the right directory?")
 
     # Parse files
-    for f in out_files:
+    for f in itertools.chain.from_iterable(sorted_files):
         torsion = np.ndarray((1, 4), dtype=int)
         fi = open(f, 'r')
         for line in fi:
@@ -204,7 +215,7 @@ def parse_psi4_out(oufiles_dir, structure, pattern="*.out"):
 
     # Subtract lowest energy to find relative energies
     qm_energies = qm_energies - min(qm_energies)
-    angles = np.asarray(dih_angle)
+    angles = np.asarray(list(itertools.chain.from_iterable(dih_angles)))
     return QMDataBase(positions=positions, topology=topology, structure=structure, torsions=torsions, angles=angles,
                       qm_energies=qm_energies, optimized=optimized)
 
