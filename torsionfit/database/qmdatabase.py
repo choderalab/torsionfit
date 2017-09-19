@@ -160,7 +160,11 @@ def parse_psi4_out(oufiles_dir, structure, pattern="*.out"):
                 if name.startswith('timer'):
                     continue
                 name_split = name.split('_')
-                torsion_angle = (name_split[1] + '_' + name_split[2] + '_' + name_split[3] + '_' + name_split[4])
+                try:
+                    torsion_angle = (name_split[1] + '_' + name_split[2] + '_' + name_split[3] + '_' + name_split[4])
+                except IndexError:
+                    warnings.warn("Do you only have one torsion scan? The output files will be treated as one scan")
+                    torsion_angle = 'only_one_scan'
                 try:
                     out_files[torsion_angle]
                 except KeyError:
