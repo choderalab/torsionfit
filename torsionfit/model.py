@@ -42,9 +42,9 @@ class TorsionFitModel(object):
             If True, will use reversible jump to sample Fourier terms. If False, will sample all Ks. Default False
         init_random: bool
             Randomize starting condition. Default is True. If false, will resort to whatever value is in the parameter set.
-        tau: float
-            hyperparameter on Gaussian prior on K
-
+        tau: string.
+            options are mult or single. When mult, every element in K_m will have its own tau, when single, each K_m will
+             have one tau.
 
         Returns
         -------
