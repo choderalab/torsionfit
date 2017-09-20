@@ -111,18 +111,19 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
                     continue
                 if model_type == 'numpy':
                     k = torsion_name + '_K'
-                if model_type == 'openmm':
+                elif model_type == 'openmm':
                     k = torsion_name + '_' + str(m) + '_K'
-                if db is not None and model_type == 'numpy':
-                    sample = db.trace(k)[i][m-1]/4.184
-                if db is not None and model_type == 'openmm':
-                    sample = db.trace(k)[i]
-                if model is not None and model_type == 'numpy':
-                    sample = model.pymc_parameters[k].value[m-1]
-                if model is not None and model_type == 'openmm':
-                    sample = model.pymc_parameters[k].value
                 else:
                     warnings.warn('Only numpy and openmm model_types are allowed')
+
+                if db is not None and model_type == 'numpy':
+                    sample = db.trace(k)[i][m-1]/4.184
+                elif db is not None and model_type == 'openmm':
+                    sample = db.trace(k)[i]
+                elif model is not None and model_type == 'numpy':
+                    sample = model.pymc_parameters[k].value[m-1]/4.184
+                elif model is not None and model_type == 'openmm':
+                    sample = model.pymc_parameters[k].value
 
                 logger().debug('K sample value {}'.format(sample))
                 param.dihedral_types[t][n].phi_k = sample
