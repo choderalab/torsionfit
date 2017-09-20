@@ -2,7 +2,7 @@
 
 from torsionfit.tests.utils import get_fun
 import torsionfit.database.qmdatabase as qmdb
-from torsionfit.model import TorsionFitModel
+from torsionfit.model_omm import TorsionFitModel as TorsionFitModelOMM
 import torsionfit.parameters as par
 from pymc import MCMC
 import pymc
@@ -22,7 +22,7 @@ logfiles = get_fun('MP2_torsion_scan/')
 frag = qmdb.parse_psi4_out(logfiles, structure)
 frag = frag.remove_nonoptimized()
 to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
-model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, init_random=False)
+model = TorsionFitModelOMM(param=param, frags=frag, param_to_opt=to_optimize, init_random=False)
 
 
 class TestFitModel(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestFitModel(unittest.TestCase):
         """ Tests sampler """
 
         sampler = MCMC(model.pymc_parameters)
-        self.assert_(isinstance(model, TorsionFitModel))
+        self.assert_(isinstance(model, TorsionFitModelOMM))
         self.assert_(isinstance(sampler, pymc.MCMC))
 
         sampler.sample(iter=1)
@@ -47,8 +47,8 @@ class TestFitModel(unittest.TestCase):
         frag = frag.remove_nonoptimized()
         to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
 
-        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
-                                continuous_phase=True)
+        model = TorsionFitModelOMM(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
+                                   continuous_phase=True)
         torsion = model.parameters_to_optimize[0]
         torsion_reverse = tuple(reversed(torsion))
         self.assertEqual(param.dihedral_types[torsion], param.dihedral_types[torsion_reverse])
@@ -57,7 +57,7 @@ class TestFitModel(unittest.TestCase):
         """ Tests that update parameter updates the reverse dihedral too """
 
         par.update_param_from_sample(model.parameters_to_optimize, param, model=model, rj=model.rj,
-                                     phase=model.sample_phase, n_5=model.sample_n5)
+                                     phase=model.sample_phase, n_5=model.sample_n5, model_type='openmm')
         torsion = model.parameters_to_optimize[0]
         torsion_reverse = tuple(reversed(torsion))
         self.assertEqual(param.dihedral_types[torsion], param.dihedral_types[torsion_reverse])
@@ -66,7 +66,7 @@ class TestFitModel(unittest.TestCase):
         """ Tests that update parameter updates assigned parameters in the structure """
 
         par.update_param_from_sample(model.parameters_to_optimize, param, model=model, rj=model.rj,
-                                     phase=model.sample_phase, n_5=model.sample_n5)
+                                     phase=model.sample_phase, n_5=model.sample_n5, model_type='openmm')
         torsion = frag.structure.dihedrals[0]
         self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
                                                                torsion.atom3.type, torsion.atom4.type)])
@@ -80,10 +80,10 @@ class TestFitModel(unittest.TestCase):
         frag = frag.remove_nonoptimized()
         to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
 
-        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
+        model = TorsionFitModelOMM(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
                                 continuous_phase=True)
         par.update_param_from_sample(model.parameters_to_optimize, param, model=model, rj=model.rj,
-                                     phase=model.sample_phase, n_5=model.sample_n5)
+                                     phase=model.sample_phase, n_5=model.sample_n5, model_type='openmm')
         torsion = frag.structure.dihedrals[0]
         self.assertEqual(torsion.type, param.dihedral_types[(torsion.atom1.type, torsion.atom2.type,
                                                                torsion.atom3.type, torsion.atom4.type)])
@@ -108,7 +108,7 @@ class TestFitModel(unittest.TestCase):
         frag = frag.remove_nonoptimized()
         to_optimize = [('CG331', 'CG321', 'CG321', 'HGA2')]
 
-        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
+        model = TorsionFitModelOMM(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True,
                                 continuous_phase=True)
 
         par.add_missing(param_list=to_optimize, param=param)
@@ -128,7 +128,7 @@ class TestFitModel(unittest.TestCase):
     def test_rj_on(self):
         """Test reversible jump is on"""
 
-        model = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, rj=True)
+        model = TorsionFitModelOMM(param=param, frags=frag, param_to_opt=to_optimize, rj=True)
         self.assertTrue(model.rj)
         self.assertTrue(('CG331_CG321_CG321_CG331_multiplicity_bitstring' in model.pymc_parameters))
 
@@ -139,7 +139,7 @@ class TestFitModel(unittest.TestCase):
         self.assertFalse(model.sample_phase)
         self.assertFalse('CG331_CG321_CG321_CG331_1_Phase' in model.pymc_parameters)
 
-        model_phase = TorsionFitModel(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True)
+        model_phase = TorsionFitModelOMM(param=param, frags=frag, param_to_opt=to_optimize, sample_phase=True)
         self.assertTrue(model_phase.sample_phase)
         self.assertTrue('CG331_CG321_CG321_CG331_1_Phase' in model_phase.pymc_parameters)
 

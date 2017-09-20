@@ -7,6 +7,7 @@ __author__ = 'Chaya D. Stern'
 from parmed.topologyobjects import DihedralType
 from torsionfit.utils import logger
 from copy import copy as _copy
+import warnings
 
 
 def add_missing(param_list, param, sample_n5=False):
@@ -60,7 +61,8 @@ def set_phase_0(param_list, param):
             param.dihedral_types[reverse_p][i].phase = 0
 
 
-def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=False, phase=False, n_5=True, continuous=False):
+def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=False, phase=False, n_5=True, continuous=False,
+                             model_type='numpy'):
     """
     This function parameterizes sampled torsion with values of sample i in database or current value in pymc model.
     The modifications are in place.
@@ -82,6 +84,8 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
         Flag if phases were sampled. Default is False
      n_5: bool
         Flag if multiplicity of 5 was sampled and also needs to be modified. Default is True.
+    model: string
+        which torsionfit model was used
     """
     logger().debug('updating parameters')
     if type(param_list) is not list:
@@ -102,13 +106,24 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
             logger().debug('Working on {}'.format(m))
             multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
             if (multiplicity_bitstring & multiplicity_bitmask) or not rj:
+                sample = None
                 if m == 5 and not n_5:
                     continue
-                k = torsion_name + '_K'
-                if db is not None:
+                if model_type == 'numpy':
+                    k = torsion_name + '_K'
+                if model_type == 'openmm':
+                    k = torsion_name + '_' + str(m) + '_K'
+                if db is not None and model_type == 'numpy':
                     sample = db.trace(k)[i][m-1]/4.184
-                if model is not None:
+                if db is not None and model_type == 'openmm':
+                    sample = db.trace(k)[i]
+                if model is not None and model_type == 'numpy':
+                    sample = model.pymc_parameters[k].value[m-1]
+                if model is not None and model_type == 'openmm':
                     sample = model.pymc_parameters[k].value
+                else:
+                    warnings.warn('Only numpy and openmm model_types are allowed')
+
                 logger().debug('K sample value {}'.format(sample))
                 param.dihedral_types[t][n].phi_k = sample
                 param.dihedral_types[reverse_t][n].phi_k = sample

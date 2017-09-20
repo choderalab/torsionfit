@@ -48,7 +48,7 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(param.dihedral_types[torsion][4].phi_k, 0.0)
         self.assertEqual(param.dihedral_types[torsion][5].phi_k, 0.0)
 
-        par.update_param_from_sample(param_list=torsion, param=param, db=db, rj=False)
+        par.update_param_from_sample(param_list=torsion, param=param, db=db, rj=False, model_type='openmm')
         self.assertEqual(param.dihedral_types[torsion][0].phi_k, 0.086424)
         self.assertEqual(param.dihedral_types[torsion][1].phi_k, 0.019074)
         self.assertEqual(param.dihedral_types[torsion][2].phi_k, 0.0)
