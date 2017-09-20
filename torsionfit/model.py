@@ -150,7 +150,7 @@ class TorsionFitModel(object):
         size = sum([len(i.qm_energy) for i in self.frags])
         residual_energy = np.ndarray(0)
         for i in range(len(frags)):
-             residual_energy = np.append(residual_energy, frags[i].delta_energy)
+            residual_energy = np.append(residual_energy, frags[i].delta_energy)
 
         self.pymc_parameters['torsion_energy'] = torsion_energy
         self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['torsion_energy'],
