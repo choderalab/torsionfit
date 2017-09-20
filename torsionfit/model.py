@@ -74,8 +74,11 @@ class TorsionFitModel(object):
 
         if tau=='mult':
             value = np.log(np.ones(6)*0.01)
-        else:
+        elif tau == 'single':
             value = np.log(0.01)
+        else:
+            raise Warning('Only mult and single are allowed options for tau')
+
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
