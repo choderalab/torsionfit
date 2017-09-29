@@ -6,6 +6,8 @@ __author__ = 'Chaya D. Stern'
 
 from parmed.topologyobjects import DihedralType
 from torsionfit.utils import logger
+from copy import copy as _copy
+import warnings
 
 
 def add_missing(param_list, param, sample_n5=False):
@@ -59,7 +61,8 @@ def set_phase_0(param_list, param):
             param.dihedral_types[reverse_p][i].phase = 0
 
 
-def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=False, phase=False, n_5=True, continuous=False):
+def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=False, phase=False, n_5=True, continuous=False,
+                             model_type='numpy'):
     """
     This function parameterizes sampled torsion with values of sample i in database or current value in pymc model.
     The modifications are in place.
@@ -81,6 +84,8 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
         Flag if phases were sampled. Default is False
      n_5: bool
         Flag if multiplicity of 5 was sampled and also needs to be modified. Default is True.
+    model: string
+        which torsionfit model was used
     """
     logger().debug('updating parameters')
     if type(param_list) is not list:
@@ -101,13 +106,25 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
             logger().debug('Working on {}'.format(m))
             multiplicity_bitmask = 2 ** (m - 1)  # multiplicity bitmask
             if (multiplicity_bitstring & multiplicity_bitmask) or not rj:
+                sample = None
                 if m == 5 and not n_5:
                     continue
-                k = torsion_name + '_' + str(m) + '_K'
-                if db is not None:
+                if model_type == 'numpy':
+                    k = torsion_name + '_K'
+                elif model_type == 'openmm':
+                    k = torsion_name + '_' + str(m) + '_K'
+                else:
+                    warnings.warn('Only numpy and openmm model_types are allowed')
+
+                if db is not None and model_type == 'numpy':
+                    sample = db.trace(k)[i][m-1]/4.184
+                elif db is not None and model_type == 'openmm':
                     sample = db.trace(k)[i]
-                if model is not None:
+                elif model is not None and model_type == 'numpy':
+                    sample = model.pymc_parameters[k].value[m-1]/4.184
+                elif model is not None and model_type == 'openmm':
                     sample = model.pymc_parameters[k].value
+
                 logger().debug('K sample value {}'.format(sample))
                 param.dihedral_types[t][n].phi_k = sample
                 param.dihedral_types[reverse_t][n].phi_k = sample
@@ -131,7 +148,7 @@ def update_param_from_sample(param_list, param, db=None, model=None, i=-1, rj=Fa
                 param.dihedral_types[reverse_t][n].phi_k = 0
 
 
-def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False, urey_bradley=False, lj=False):
+def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False, urey_bradley=False, lj=False, copy=True):
     """
     This function allows turning off all or specific parameters in a CharmmParameterSet.
 
@@ -154,11 +171,18 @@ def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False,
     lj : bool or list of tuples of strings (atom types)
         if True, all Lennard Jones in structure will be turned off. If it's a list of atom type, it will only turn off
         those lj types. If False, lj will not be turned off. Default is False
+    copy: bool
+        If True, will return a modified parameterset while leaving the original paraemterset unchanged.
+        Default is True
 
     Returns
     -------
+    modified parameter set if copy is True. Otherwise parameterset is modified in place.
 
     """
+    if copy is True:
+        param = _copy(param)
+
     if bonds:
         if bonds is True:
             for bond_type in structure.bonds:
@@ -208,7 +232,7 @@ def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False,
                 param.atom_types[t].rmin = 1.0
                 param.atom_types[t].rmin_14 = 1.0
                 param.atom_types[t].epsilon_14 = 0
-                param.atom_types[t].sigma=1.0
+                param.atom_types[t].sigma = 1.0
                 param.atom_types[t].epsilon = 0.0
         else:
             for t in lj:
@@ -216,5 +240,8 @@ def turn_off_params(structure, param, bonds=False, angles=False, dihedral=False,
                 param.atom_types[t].rmin = 1.0
                 param.atom_types[t].rmin_14 = 1.0
                 param.atom_types[t].epsilon_14 = 0
-                param.atom_types[t].sigma=1.0
+                param.atom_types[t].sigma = 1.0
                 param.atom_types[t].epsilon = 0.0
+
+    if copy is True:
+        return param

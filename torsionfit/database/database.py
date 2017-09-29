@@ -133,7 +133,7 @@ class DataBase(Trajectory):
             state = self.context.getState(getEnergy=True)
             self.mm_energy[i] = state.getPotentialEnergy()
 
-    def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False, n_5=True):
+    def mm_from_param_sample(self, param, db, start=0, end=-1, decouple_n=False, phase=False, n_5=True, model_type='openmm'):
 
         """
         This function computes mm_energy for scan using sampled torsions
@@ -153,7 +153,8 @@ class DataBase(Trajectory):
         mm_energy = np.zeros((N, self.n_frames))
         param_list = db.get_sampled_torsions()
         for i in range(N):
-            par.update_param_from_sample(param_list, param, db=db,  i=i, rj=decouple_n, phase=phase, n_5=n_5)
+            par.update_param_from_sample(param_list, param, db=db,  i=i, rj=decouple_n, phase=phase, n_5=n_5,
+                                         model_type=model_type)
             self.compute_energy(param)
             mm_energy[i] = self.mm_energy._value
 

@@ -48,7 +48,7 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(param.dihedral_types[torsion][4].phi_k, 0.0)
         self.assertEqual(param.dihedral_types[torsion][5].phi_k, 0.0)
 
-        par.update_param_from_sample(param_list=torsion, param=param, db=db, rj=False)
+        par.update_param_from_sample(param_list=torsion, param=param, db=db, rj=False, model_type='openmm')
         self.assertEqual(param.dihedral_types[torsion][0].phi_k, 0.086424)
         self.assertEqual(param.dihedral_types[torsion][1].phi_k, 0.019074)
         self.assertEqual(param.dihedral_types[torsion][2].phi_k, 0.0)
@@ -62,7 +62,8 @@ class TestParameters(unittest.TestCase):
         structure = CharmmPsfFile(get_fun('butane_charge_off.psf'))
         param = CharmmParameterSet(get_fun('par_all36_cgenff.prm'), get_fun('top_all36_cgenff.rtf'))
 
-        par.turn_off_params(structure, param, bonds=True, angles=True, dihedral=True, urey_bradley=True, lj=True)
+        par.turn_off_params(structure, param, bonds=True, angles=True, dihedral=True, urey_bradley=True, lj=True,
+                            copy=False)
 
         scan = get_fun('MP2_torsion_scan/')
         butane_scan = qmdb.parse_psi4_out(scan, get_fun('butane_charge_off.psf'))

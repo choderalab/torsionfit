@@ -2,29 +2,27 @@ __author__ = 'Chaya D. Stern'
 
 import pymc
 import numpy as np
-from simtk.unit import kilojoules_per_mole
 import torsionfit.database.qmdatabase as TorsionScan
-import torsionfit.parameters as par
-import warnings
 from torsionfit.utils import logger
+from collections import OrderedDict
+import itertools
 
 
 class TorsionFitModel(object):
-    """pymc model
-
-    This model only allows a phase angle of 0 but allows force constants to flip signs. If the sign is negative, the
-    phase angle will be 180.
+    """pymc model for sampling torsion parameters.
+    This model provides the option to use reversible jump to sample over multiplicity terms
 
     Attributes:
     ----------
     pymc_parameters: dict() of pymc parameters
+    fags: list of QMDatabasees for fragments to fit torsions to
+    rj: bool. If True, model uses reversible jump to sample over multiplicity terms. If false, all terms are sampled.
     parameters_to_optimize: list of tuples (dihedrals to optimize)
-    fags: list of TorsionScanSet for fragments
-    platform: OpenMM platform to use for potential energy calculations
+    models: list of models to sample over.
+    inner_sum: list of precalculated inner sum. This is also the gradient.
 
     """
-    def __init__(self, param, frags, stream=None,  platform=None, param_to_opt=None, rj=False, sample_n5=False,
-                 continuous_phase=False, sample_phase=False, init_random=True):
+    def __init__(self, param, frags, stream=None,  param_to_opt=None, rj=False, init_random=True, tau='mult'):
         """
 
         Parameters
@@ -32,26 +30,19 @@ class TorsionFitModel(object):
         param : Parmed CharmmParameterSet
         frags : list of torsionfit.QMDataBase
         stream : str
-            Path to CHARMM stream file. Default None.
-        platform : openmm.Platform
-            Default None.
+            Path to CHARMM stream file. Default None. If None, param_to_opt list must be given. When a stream file is
+            specified, param_to_opt is generated if the penalty of the parameters are greater than a threshold.
         param_to_opt : list of tuples of torsions.
             Default None.
         rj : bool
             If True, will use reversible jump to sample Fourier terms. If False, will sample all Ks. Default False
-        sample_n5 : bool
-            If True, will also sample n=5. Default False
-        eliminate_phase : bool
-            If True, will not sample phase. Instead, Ks will be able to take on negative values. Default True. If True,
-            make sure continuous_phase is also False.
-        continuous_phase : bool
-            If True, will allow phases to take on any value between 0-180. If False, phase will be a discrete and only
-            sample 0 or 180
         init_random: bool
             Randomize starting condition. Default is True. If false, will resort to whatever value is in the parameter set.
-        tau: float
-            hyperparameter on Gaussian prior on K
-
+            Default True
+        tau: string.
+            options are 'mult' or 'single'. When 'mult', every element in K_m will have its own 'tau', when 'single',
+            each K_m will have one tau.
+            Default 'mult'
 
         Returns
         -------
@@ -64,28 +55,12 @@ class TorsionFitModel(object):
 
         self.pymc_parameters = dict()
         self.frags = frags
-        self.platform = platform
         self.rj = rj
-        self.sample_n5 = sample_n5
-        self.continuous_phase = continuous_phase
-        self.sample_phase = sample_phase
         if param_to_opt:
             self.parameters_to_optimize = param_to_opt
         else:
             self.parameters_to_optimize = TorsionScan.to_optimize(param, stream)
 
-        # Check that options are reasonable
-        if not sample_phase and continuous_phase:
-            warnings.warn("You can't eliminate phase but have continuous phase. Changing continuous phase to False")
-            self.continuous_phase = False
-
-        # set all phases to 0 if eliminate phase is True
-        if not self.sample_phase:
-            par.set_phase_0(self.parameters_to_optimize, param)
-
-        multiplicities = [1, 2, 3, 4, 6]
-        if self.sample_n5:
-            multiplicities = [1, 2, 3, 4, 5, 6]
         multiplicity_bitstrings = dict()
 
         # offset
@@ -94,69 +69,33 @@ class TorsionFitModel(object):
             offset = pymc.Uniform(name, lower=-50, upper=50, value=0)
             self.pymc_parameters[name] = offset
 
-        # self.pymc_parameters['log_sigma_k'] = pymc.Uniform('log_sigma_k', lower=-4.6052, upper=3.453, value=np.log(0.01))
-        # self.pymc_parameters['sigma_k'] = pymc.Lambda('sigma_k',
-        #                                             lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
-        #                                                log_sigma_k))
-        # self.pymc_parameters['precision_k'] = pymc.Lambda('precision_k',
-        #                                                lambda log_sigma_k=self.pymc_parameters['log_sigma_k']: np.exp(
-        #                                                     -2 * log_sigma_k))
+        if tau=='mult':
+            value = np.log(np.ones(6)*0.01)
+        elif tau == 'single':
+            value = np.log(0.01)
+        else:
+            raise Exception("Only 'mult' and 'single' are allowed options for tau")
 
         for p in self.parameters_to_optimize:
             torsion_name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3]
 
-            self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name), lower=-4.6052, upper=3.453, value=np.log(0.01))
+            # lower and upper for this distribution are based on empirical data that below this amount the prior is too
+            # biased and above the moves are usually rejected.
+            self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)] = pymc.Uniform('log_sigma_k_{}'.format(torsion_name),
+                                                                                       lower=-4.6052, upper=3.453,
+                                                                                       value=value)
             self.pymc_parameters['sigma_k_{}'.format(torsion_name)] = pymc.Lambda('sigma_k_{}'.format(torsion_name),
-                                                    lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
-                                                       log_sigma_k))
+                                                     lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
+                                                        log_sigma_k))
             self.pymc_parameters['precision_k_{}'.format(torsion_name)] = pymc.Lambda('precision_k_{}'.format(torsion_name),
-                                                       lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
+                                lambda log_sigma_k=self.pymc_parameters['log_sigma_k_{}'.format(torsion_name)]: np.exp(
                                                             -2 * log_sigma_k))
 
+            self.pymc_parameters['{}_K'.format(torsion_name)] = pymc.Normal('{}_K'.format(torsion_name), value=np.zeros(6), mu=0,
+                                                                            tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)])
 
             if torsion_name not in multiplicity_bitstrings.keys():
                 multiplicity_bitstrings[torsion_name] = 0
-
-            for m in multiplicities:
-                name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_K'
-                if not self.sample_phase:
-                    k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)], value=0)
-                else:
-                    k = pymc.Uniform(name, lower=0, upper=20, value=0)
-
-                for i in range(len(param.dihedral_types[p])):
-                    if param.dihedral_types[p][i].per == m:
-                        multiplicity_bitstrings[torsion_name] += 2 ** (m - 1)
-                        if not self.sample_phase:
-                            k = pymc.Normal(name, mu=0, tau=self.pymc_parameters['precision_k_{}'.format(torsion_name)],
-                                            value=param.dihedral_types[p][i].phi_k)
-                        else:
-                            k = pymc.Uniform(name, lower=0, upper=20, value=param.dihedral_types[p][i].phi_k)
-                        break
-
-                self.pymc_parameters[name] = k
-
-                if self.sample_phase:
-                    name = p[0] + '_' + p[1] + '_' + p[2] + '_' + p[3] + '_' + str(m) + '_Phase'
-                    for i in range(len(param.dihedral_types[p])):
-                        if param.dihedral_types[p][i].per == m:
-                            if self.continuous_phase:
-                                phase = pymc.Uniform(name, lower=0, upper=180.0, value=param.dihedral_types[p][i].phase)
-                            else:
-                                if param.dihedral_types[p][i].phase == 0:
-                                    phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
-                                    break
-
-                                if param.dihedral_types[p][i].phase == 180.0:
-                                    phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=1)
-                                    break
-                        else:
-                            if self.continuous_phase:
-                                phase = pymc.Uniform(name, lower=0, upper=180.0, value=0)
-                            else:
-                                phase = pymc.DiscreteUniform(name, lower=0, upper=1, value=0)
-
-                    self.pymc_parameters[name] = phase
 
         if self.rj:
             for torsion_name in multiplicity_bitstrings.keys():
@@ -167,10 +106,9 @@ class TorsionFitModel(object):
         if init_random:
             # randomize initial value
             for parameter in self.pymc_parameters:
-                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda and parameter != 'log_sigma_k':
+                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda and parameter[:11] != 'log_sigma_k':
                     self.pymc_parameters[parameter].random()
                     logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
-
 
         self.pymc_parameters['log_sigma'] = pymc.Uniform('log_sigma', lower=-10, upper=3, value=np.log(0.01))
         self.pymc_parameters['sigma'] = pymc.Lambda('sigma',
@@ -180,28 +118,43 @@ class TorsionFitModel(object):
                                                         lambda log_sigma=self.pymc_parameters['log_sigma']: np.exp(
                                                             -2 * log_sigma))
 
-        # add missing multiplicity terms to parameterSet so that the system has the same number of parameters
-        par.add_missing(self.parameters_to_optimize, param, sample_n5=self.sample_n5)
+        # Precalculate phis
+        n = np.array([1., 2., 3., 4., 5., 6.])
+        self.models = []
+        for i in itertools.product((0, 1), repeat=6):
+            self.models.append(i)
+
+        inner_sum = []
+        for i, frag in enumerate(frags):
+            inner_sum.append(OrderedDict())
+            for t in frag.phis:
+                inner_sum[i][t] = (1 + np.cos(frag.phis[t][:, np.newaxis]*n[:, np.newaxis])).sum(-1)
+        self.inner_sum = inner_sum
 
         @pymc.deterministic
-        def mm_energy(pymc_parameters=self.pymc_parameters, param=param):
+        def torsion_energy(pymc_parameters=self.pymc_parameters):
             mm = np.ndarray(0)
-            par.update_param_from_sample(self.parameters_to_optimize, param, model=self, rj=self.rj,
-                                         phase=self.sample_phase, n_5=self.sample_n5, continuous=self.continuous_phase)
-            for mol in self.frags:
-                mol.compute_energy(param, offset=self.pymc_parameters['%s_offset' % mol.topology._residues[0]],
-                                   platform=self.platform)
-                mm = np.append(mm, mol.mm_energy / kilojoules_per_mole)
+
+            for i, mol in enumerate(self.frags):
+                Fourier_sum = np.zeros((mol.n_frames))
+                for t in inner_sum[i]:
+                    name = t[0] + '_' + t[1] + '_' + t[2] + '_' + t[3]
+                    if self.rj:
+                        K = pymc_parameters['{}_K'.format(name)] * self.models[pymc_parameters['{}_multiplicity_bitstring'.format(name)]]
+                    else:
+                        K = pymc_parameters['{}_K'.format(name)]
+                    Fourier_sum += (K*inner_sum[i][t]).sum(1)
+                Fourier_sum_rel = Fourier_sum - min(Fourier_sum)
+                Fourier_sum_rel += pymc_parameters['{}_offset'.format(mol.topology._residues[0])]
+                mm = np.append(mm, Fourier_sum)
             return mm
 
         size = sum([len(i.qm_energy) for i in self.frags])
-        qm_energy = np.ndarray(0)
+        residual_energy = np.ndarray(0)
         for i in range(len(frags)):
-             qm_energy = np.append(qm_energy, frags[i].qm_energy)
-        #diff_energy = np.ndarray(0)
-        #for i in range(len(frags)):
-        #    diff_energy = np.append(diff_energy, frags[i].delta_energy)
-        self.pymc_parameters['mm_energy'] = mm_energy
-        self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['mm_energy'],
+            residual_energy = np.append(residual_energy, frags[i].delta_energy)
+
+        self.pymc_parameters['torsion_energy'] = torsion_energy
+        self.pymc_parameters['qm_fit'] = pymc.Normal('qm_fit', mu=self.pymc_parameters['torsion_energy'],
                                                      tau=self.pymc_parameters['precision'], size=size, observed=True,
-                                                     value=qm_energy)
+                                                     value=residual_energy)
