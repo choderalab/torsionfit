@@ -9,9 +9,9 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy ==1.10
+    - numpy
     - pymc
-    - cclib ==1.5
+    - cclib
     - openmm
     - parmed
     - pandas
@@ -22,9 +22,9 @@ requirements:
 
   run:
     - python
-    - numpy ==1.10
+    - numpy
     - pymc
-    - cclib ==1.5
+    - cclib
     - openmm
     - parmed
     - pandas
