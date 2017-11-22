@@ -12,6 +12,9 @@ except ImportError:
 from torsionfit.utils import logger
 import warnings
 import numpy as np
+from cclib.parser import Gaussian, Psi
+from cclib.parser.utils import convertor
+import re
 
 
 def generate_torsions(mol, path, interval):
@@ -115,8 +118,9 @@ def generate_torsions(mol, path, interval):
             oechem.OEWritePDBFile(pdb, newconf)
 
 
-def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symmetry=None, geom_opt=True,
-                sp_energy=False, fixed_dih=None, mem=None):
+def pdb_to_psi4(starting_geom, mol_name, method, basis_set, charge=0, multiplicity=1, symmetry='C1', geom_opt=True,
+                sp_energy=False, fixed_dih=None, mem=None, constrain='dihedral', dynamic_level=3,
+                consecutive_backsteps=None, geom_maxiter=250, xyz_traj=True):
     """
 
     :param pdb: str
@@ -139,6 +143,8 @@ def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symm
         Beware:
         ------
         Because of a bug in psi4, dihedral angle can't be exactly 0 (same would apply for 180) so use 0.001 instead
+    constrain: string. Either 'dihedral' or 'cartesian'
+    The kind of constrain to use
 
     :param mem: int
         memory allocation for calculation
@@ -155,24 +161,36 @@ def pdb_to_psi4(pdb, mol_name, method, basis_set, charge=0, multiplicity=1, symm
 
     input_string += "\nmolecule {}".format(mol_name)
     input_string += " {\n"
-    if symmetry is not None:
-        input_string += "  symmetry {}\n".format(symmetry)
+    input_string += "  symmetry {}\n".format(symmetry)
     input_string += "  {} {} \n".format(charge, multiplicity)
 
-    mol = md.load(pdb)
-    for i, atom in enumerate(mol.topology.atoms):
-        element = atom.element.symbol
-        # Convert to Angstroms
-        xyz = mol.xyz[0]*10
-        input_string += "  {}      {:05.3f}   {:05.3f}   {:05.3f}\n".format(element, xyz[i][0], xyz[i][1], xyz[i][2])
+    input_string += starting_geom
 
     input_string += "  units Angstrom\n"
     input_string += "}\n"
 
     if fixed_dih is not None:
-        input_string += '\ndih_string = "{}"'.format(fixed_dih)
-        # ToDo add string because that's the only thing that seems to work
-        input_string += '\nset optking fixed_dihedral = $dih_string\n'
+        if constrain == 'dihedral':
+            input_string += '\ndih_string = "{}"'.format(fixed_dih)
+            # ToDo add string because that's the only thing that seems to work
+            input_string += '\nset optking { fixed_dihedral = $dih_string\n'
+        elif constrain == 'cartesian':
+            input_string += '\n frozen_string = """ \n {} xyz \n {} xyz \n {} xyz \n {} xyz \n"""'.format(fixed_dih[0],
+                                                                                                          fixed_dih[2],
+                                                                                                          fixed_dih[4],
+                                                                                                          fixed_dih[6])
+            input_string += '\nset optking { opt_coordinates = cartesian\n    frozen_cartesian = $frozen_string\n'
+        else:
+            raise NameError('Only dihedral or cartesian constraints are valid')
+        if dynamic_level:
+            input_string += '    dynamic_level = {}\n'.format(dynamic_level)
+        if consecutive_backsteps:
+            input_string += '    consecutive_backsteps = {}\n'.format(consecutive_backsteps)
+        if geom_maxiter:
+            input_string += '    geom_maxiter = {}\n'.format(geom_maxiter)
+        if xyz_traj:
+            input_string += '    print_trajectory_xyz_file = True '
+        input_string += '}\n'
 
     if geom_opt:
         input_string += "\noptimize('{}/{}')\n".format(method[0], basis_set[0])
@@ -233,7 +251,15 @@ def generate_scan_input(root, filetype, mol_name, method, basis_set, dihedral=No
         if fixed_dih_angle == '360':
             fixed_dih_angle = '360.001'
         dihedral_string = dihedral + ' ' + fixed_dih_angle
-        output = pdb_to_psi4(pdb=f, mol_name=mol_name, method=method, basis_set=basis_set, charge=charge,
+        mol = md.load(f)
+        starting_gem = ""
+        for i, atom in enumerate(mol.topology.atoms):
+            element = atom.element.symbol
+            # Convert to Angstroms
+            xyz = mol.xyz[0]*10
+            starting_gem += "  {}      {:05.3f}   {:05.3f}   {:05.3f}\n".format(element, xyz[i][0], xyz[i][1], xyz[i][2])
+
+        output = pdb_to_psi4(starting_gem=starting_gem, mol_name=mol_name, method=method, basis_set=basis_set, charge=charge,
                              multiplicity=multiplicity, symmetry=symmetry, geom_opt=geom_opt, sp_energy=sp_energy,
                              fixed_dih=dihedral_string, mem=mem)
 
@@ -241,3 +267,45 @@ def generate_scan_input(root, filetype, mol_name, method, basis_set, dihedral=No
         psi4_input = open(filename, 'w')
         psi4_input.write(output)
         psi4_input.close()
+
+
+def from_psi4(filename, method=None, basis_set=None, dihedral=None, charge=None, multiplicity=None, symmetry=None,
+                        geom_opt=True, sp_energy=False, mem=None):
+    """
+    This function finds the configuration with lowest energy in psi4 output file and generates a new psi4 input file.
+    For arguments that are None, the argument will be taken from the psi4 output file.
+    Parameters
+    ----------
+    filename: str
+        path to psi4 output file
+    method:
+    basis_set
+    dihedral
+    charge
+    multiplicity
+    symmetry
+    geom_opt
+    sp_energy
+    mem
+
+    Returns
+    -------
+
+    """
+
+    # Load psi4 output file
+    log = Psi(filename)
+    data = log.parse()
+
+    index = np.where(data.mpenergies == data.mpenergies.min())[0]
+    starting_geom = data.writexyz(indices=index)
+
+    if method is None:
+        method = data.metadata['method'][index[0]]
+    if basis_set is None:
+        basis_set = data.metadata['basis_set']
+
+    #ToDo find fixed dihedral, angle, memory and other options from output file. Will have to do some parsing. 
+
+
+
