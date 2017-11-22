@@ -200,7 +200,7 @@ def IsAdjacentAtomBondSets(fragA, fragB):
                 return True
     return False
 
-def CountRotorsInFragment(fragment):
+def RotorsInFragment(fragment):
     return sum([bond.IsRotor() for bond in fragment.GetBonds()])
 
 def IsAdjacentAtomBondSetCombination(fraglist):
@@ -266,7 +266,7 @@ def GetFragmentAtomBondSetCombinations(mol, fraglist, MAX_ROTORS=3, MIN_ROTORS=0
     fragcombs = []
 
     nrfrags = len(fraglist)
-    for n in range(2, nrfrags):
+    for n in range(1, nrfrags):
 
         for fragcomb in combinations(fraglist, n):
 
