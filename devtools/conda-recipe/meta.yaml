@@ -9,7 +9,7 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy ==1.10
+    - numpy
     - pymc
     - cclib
     - openmm
@@ -22,7 +22,7 @@ requirements:
 
   run:
     - python
-    - numpy ==1.10 #1.11 in conflict with libgfortran 1.0.0
+    - numpy
     - pymc
     - cclib
     - openmm
