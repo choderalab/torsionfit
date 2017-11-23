@@ -19,7 +19,7 @@ install:
   - export CXX=g++
 
 script:
-  - conda config --add channels ${ORGNAME} --add chanels conda-forge
+  - conda config --add channels ${ORGNAME} --add channels conda-forge
   - conda update --yes conda
   - conda build devtools/conda-recipe
 
