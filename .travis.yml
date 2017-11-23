@@ -19,12 +19,14 @@ install:
   - export CXX=g++
 
 script:
-  - conda config --add channels ${ORGNAME}
+  - conda config --add channels ${ORGNAME} --add channels conda-forge
+  - conda update --yes conda
   - conda build devtools/conda-recipe
 
 env:
   matrix:
-    - python=3.4  CONDA_PY=34
+    - python=3.5  CONDA_PY=35
+    - python=3.6  CONDA_PY=36
 
   global:
     - PACKAGENAME="torsionfit"

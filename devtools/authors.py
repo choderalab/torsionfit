@@ -22,11 +22,9 @@ else:
 
 
 NAME_MAP = {
-    u('kyleabeauchamp'): u('Kyle A. Beauchamp'),
-    u('Kyle Beauchamp'): u('Kyle A. Beauchamp'),
-    u('leeping'): u('Lee-Ping Wang'),
-    u('Timothy Craig Moore'): u('Tim Moore'),
-    u('Robert McGibbon'): u('Robert T. McGibbon'),
+    u('ChayaSt'): u('Chaya D. Stern'),
+    u('Chaya Stern'): u('Chaya D. Stern'),
+    u('jchodera'): u('John D. Chodera'),
 }
 
 def main():
