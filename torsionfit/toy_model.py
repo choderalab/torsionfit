@@ -11,7 +11,7 @@ import simtk.unit as units
 import mdtraj as md
 import numpy as np
 import torsionfit.database.qmdatabase as ScanSet
-import torsionfit.model as model
+import torsionfit.model_omm as model
 from torsionfit.tests.utils import get_fun
 import copy
 

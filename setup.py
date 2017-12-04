@@ -74,8 +74,7 @@ setup(
         'pandas',
         'cclib',
         'openmm',
-        'parmed',
-        'netcdf4'
+        'parmed'
         ],
     )
 

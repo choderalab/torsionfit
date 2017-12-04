@@ -167,7 +167,7 @@ class TorsionFitModel(object):
         if init_random:
             # randomize initial value
             for parameter in self.pymc_parameters:
-                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda and parameter != 'log_sigma_k':
+                if type(self.pymc_parameters[parameter]) != pymc.CommonDeterministics.Lambda: # and parameter[:11] != 'log_sigma_k':
                     self.pymc_parameters[parameter].random()
                     logger().info('initial value for {} is {}'.format(parameter, self.pymc_parameters[parameter].value))
 
