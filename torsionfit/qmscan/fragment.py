@@ -20,6 +20,8 @@
 # Depicts connected fragment combinations
 #############################################################################
 
+
+
 import sys
 from itertools import combinations
 from openeye import oechem
@@ -27,49 +29,94 @@ from openeye import oedepict
 from openeye import oegrapheme
 from openeye import oemedchem
 
+import networkx as nx
+from openmoltools import openeye
 
-def main(argv=[__name__]):
 
-    itf = oechem.OEInterface(InterfaceData)
-    oedepict.OEConfigure2DMolDisplayOptions(itf)
-    oedepict.OEConfigureReportOptions(itf)
+# def main(argv=[__name__]):
+#
+#     itf = oechem.OEInterface(InterfaceData)
+#     oedepict.OEConfigure2DMolDisplayOptions(itf)
+#     oedepict.OEConfigureReportOptions(itf)
+#
+#     if not oechem.OEParseCommandLine(itf, argv):
+#         return 1
+#
+#     iname = itf.GetString("-in")
+#     oname = itf.GetString("-out")
+#
+#     max_rotors = itf.GetInt("-max_rotors")
+#     min_rotors = itf.GetInt("-min_rotors")
+#
+#     frags = itf.GetList("-frags")
+#
+#     pagebypage = itf.GetBool("-pagebypage")
+#
+#     # check input/output files
+#
+#     ifs = oechem.oemolistream()
+#     if not ifs.open(iname):
+#         oechem.OEThrow.Fatal("Cannot open input file!")
+#
+#     ext = oechem.OEGetFileExtension(oname)
+#     if not pagebypage and not oedepict.OEIsRegisteredMultiPageImageFile(ext):
+#         oechem.OEThrow.Warning("Report will be generated into separate pages!")
+#         pagebypage = True
+#
+#     # read a molecule
+#
+#     mol = oechem.OEGraphMol()
+#     if not oechem.OEReadMolecule(ifs, mol):
+#         oechem.OEThrow.Fatal("Cannot read input file!")
+#     oedepict.OEPrepareDepiction(mol)
+#
+#     # initialize fragmentation function
+#
+#     fragfunc = GetFragmentationFunction(itf)
+#
+#     # initialize multi-page report
+#
+#     ropts = oedepict.OEReportOptions()
+#     oedepict.OESetupReportOptions(ropts, itf)
+#     ropts.SetFooterHeight(25.0)
+#     ropts.SetHeaderHeight(ropts.GetPageHeight() / 4.0)
+#     report = oedepict.OEReport(ropts)
+#
+#     # setup depiction options
+#
+#     opts = oedepict.OE2DMolDisplayOptions()
+#     oedepict.OESetup2DMolDisplayOptions(opts, itf)
+#     cellwidth, cellheight = report.GetCellWidth(), report.GetCellHeight()
+#     opts.SetDimensions(cellwidth, cellheight, oedepict.OEScale_AutoScale)
+#     opts.SetTitleLocation(oedepict.OETitleLocation_Hidden)
+#     opts.SetAtomColorStyle(oedepict.OEAtomColorStyle_WhiteMonochrome)
+#     opts.SetAtomLabelFontScale(1.2)
+#
+#     # depict molecule with fragment combinations
+#
+#     DepictMoleculeWithFragmentCombinations(report, mol, frags, opts, max_rotors, min_rotors)
+#
+#     if pagebypage:
+#         oedepict.OEWriteReportPageByPage(oname, report)
+#     else:
+#         oedepict.OEWriteReport(oname, report)
+#
+#     return 0
+#
 
-    if not oechem.OEParseCommandLine(itf, argv):
-        return 1
+def ToPdf(mol, oname, frags, fragcombs):
+    """
+    Parameters
+    ----------
+    mol: charged OEMolGraph
+    oname: str
+        Output file name
+    Returns
+    -------
 
-    iname = itf.GetString("-in")
-    oname = itf.GetString("-out")
-
-    max_rotors = itf.GetInt("-max_rotors")
-    min_rotors = itf.GetInt("-min_rotors")
-
-    frags = itf.GetList("-frags")
-
-    pagebypage = itf.GetBool("-pagebypage")
-
-    # check input/output files
-
-    ifs = oechem.oemolistream()
-    if not ifs.open(iname):
-        oechem.OEThrow.Fatal("Cannot open input file!")
-
-    ext = oechem.OEGetFileExtension(oname)
-    if not pagebypage and not oedepict.OEIsRegisteredMultiPageImageFile(ext):
-        oechem.OEThrow.Warning("Report will be generated into separate pages!")
-        pagebypage = True
-
-    # read a molecule
-
-    mol = oechem.OEGraphMol()
-    if not oechem.OEReadMolecule(ifs, mol):
-        oechem.OEThrow.Fatal("Cannot read input file!")
+    """
+    itf = oechem.OEInterface()
     oedepict.OEPrepareDepiction(mol)
-
-    # initialize fragmentation function
-
-    fragfunc = GetFragmentationFunction(itf)
-
-    # initialize multi-page report
 
     ropts = oedepict.OEReportOptions()
     oedepict.OESetupReportOptions(ropts, itf)
@@ -77,8 +124,7 @@ def main(argv=[__name__]):
     ropts.SetHeaderHeight(ropts.GetPageHeight() / 4.0)
     report = oedepict.OEReport(ropts)
 
-    # setup depiction options
-
+    # setup decpiction options
     opts = oedepict.OE2DMolDisplayOptions()
     oedepict.OESetup2DMolDisplayOptions(opts, itf)
     cellwidth, cellheight = report.GetCellWidth(), report.GetCellHeight()
@@ -87,27 +133,120 @@ def main(argv=[__name__]):
     opts.SetAtomColorStyle(oedepict.OEAtomColorStyle_WhiteMonochrome)
     opts.SetAtomLabelFontScale(1.2)
 
-    # depict molecule with fragment combinations
+    DepictMoleculeWithFragmentCombinations(report, mol, frags, fragcombs, opts)
 
-    DepictMoleculeWithFragmentCombinations(report, mol, frags, opts, max_rotors, min_rotors)
-
-    if pagebypage:
-        oedepict.OEWriteReportPageByPage(oname, report)
-    else:
-        oedepict.OEWriteReport(oname, report)
+    oedepict.OEWriteReport(oname, report)
 
     return 0
 
 
-def DepictMoleculeWithFragmentCombinations(report, mol, frags, opts, max_rotors, min_rotors):
+def OeMolToGraph(oemol):
+    """
+    Convert charged molecule to networkX graph and add WiberBondOrder as edge weight
 
-    # fragment molecule
+    Parameters
+    ----------
+    mol: charged OEMolGraph
 
-    #frags = [f for f in fragfunc(mol)]
-    #if len(frags) <= 1:
-    #    print('only one fragment was found')
+    Returns
+    -------
+    G: NetworkX Graph of molecule
 
-    # assign fragment indexes
+    """
+    G = nx.Graph()
+    for atom in oemol.GetAtoms():
+        G.add_node(atom.GetIdx(), name=atom.GetName())
+    for bond in oemol.GetBonds():
+        G.add_edge(bond.GetBgnIdx(), bond.GetEndIdx(), weight=bond.GetData("WibergBondOrder"), index=bond.GetIdx())
+    return G
+
+
+def FragGraph(G, bondOrderThreshold=1.2):
+    """
+    Fragment all bonds with Wiberg Bond Order less than threshold
+
+    Parameters
+    ----------
+    G: NetworkX graph
+    bondOrderThreshold: int
+        thershold for fragmenting graph. Default 1.2
+
+    Returns
+    -------
+    subgraphs: list of subgraphs
+    """
+    ebunch = []
+    for node in G.edge:
+        if G.degree(node) <= 1:
+            continue
+        for node2 in G.edge[node]:
+            if G.edge[node][node2]['weight'] < bondOrderThreshold and G.degree(node2) >1:
+                ebunch.append((node, node2))
+    # Cut molecule
+    G.remove_edges_from(ebunch)
+    # Generate fragments
+    subgraphs = list(nx.connected_component_subgraphs(G))
+    return subgraphs
+
+
+def subgraphToAtomBondSet(graph, subgraph, oemol):
+    """
+    Build Openeye AtomBondSet from subrgaphs for enumerating fragments recipe
+
+    Parameters
+    ----------
+    graph: NetworkX graph
+    subgraph: NetworkX subgraph
+    oemol: Openeye OEMolGraph
+
+    Returns
+    ------
+    atomBondSet: Openeye oechem atomBondSet
+    """
+    # Build openeye atombondset from subgraphs
+    atomBondSet = oechem.OEAtomBondSet()
+    for node in subgraph.node:
+        atomBondSet.AddAtom(oemol.GetAtom(oechem.OEHasAtomIdx(node)))
+    for node1, node2 in subgraph.edges():
+        index = graph.edge[node1][node2]['index']
+        atomBondSet.AddBond(oemol.GetBond(oechem.OEHasBondIdx(index)))
+    return atomBondSet
+
+
+def SmilesToFragments(smiles, bondOrderThreshold=1.2, chargesMol=True):
+    """
+    Fragment molecule at bonds below Bond Order Threshold
+
+    Parameters
+    ----------
+    smiles: str
+        smiles string of molecule to fragment
+
+    Returns
+    -------
+    frags: list of OE AtomBondSets
+
+    """
+    # Charge molecule
+    mol = oechem.OEGraphMol()
+    oemol = openeye.smiles_to_oemol(smiles)
+    charged = openeye.get_charges(oemol, keep_confs=1)
+
+    # Generate fragments
+    G = OeMolToGraph(charged)
+    subraphs = FragGraph(G, bondOrderThreshold=bondOrderThreshold)
+
+    frags = []
+    for subraph in subraphs:
+        frags.append(subgraphToAtomBondSet(G, subraph, charged))
+
+    if chargesMol:
+        return frags, charged
+    else:
+        return frags
+
+
+def DepictMoleculeWithFragmentCombinations(report, mol, frags, fragcombs, opts):
 
     stag = "fragment idx"
     itag = oechem.OEGetTag(stag)
@@ -126,10 +265,6 @@ def DepictMoleculeWithFragmentCombinations(report, mol, frags, opts, max_rotors,
 
     lineWidthScale = 0.75
     fadehighlight = oedepict.OEHighlightByColor(oechem.OEGrey, lineWidthScale)
-
-    # generate adjacent fragment combination
-
-    fragcombs = GetFragmentAtomBondSetCombinations(mol, frags, max_rotors, min_rotors)
 
     # depict each fragment combinations
 
@@ -278,7 +413,22 @@ def CombineAndConnectAtomBondSets(fraglist):
     return combined
 
 
-def GetFragmentAtomBondSetCombinations(mol, fraglist, MAX_ROTORS=3, MIN_ROTORS=0):
+def GetFragmentAtomBondSetCombinations(fraglist, MAX_ROTORS=3, MIN_ROTORS=1):
+    """
+    Enumerate connected combinations from list of fragments
+    Parameters
+    ----------
+    mol: OEMolGraph
+    fraglist: list of OE AtomBondSet
+    MAX_ROTORS: int
+        min rotors in each fragment combination
+    MIN_ROTORS: int
+        max rotors in each fragment combination
+
+    Returns
+    -------
+    fragcombs: list of connected combinations (OE AtomBondSet)
+    """
 
     fragcombs = []
 
@@ -309,82 +459,82 @@ def GetFragmentationFunction(itf):
     return oemedchem.OEGetRingLinkerSideChainFragments
 
 
-InterfaceData = '''
-!CATEGORY "input/output options"
-    !PARAMETER -in
-      !ALIAS -i
-      !TYPE string
-      !REQUIRED true
-      !KEYLESS 1
-      !VISIBILITY simple
-      !BRIEF Input filename
-    !END
-
-    !PARAMETER -out
-      !ALIAS -o
-      !TYPE string
-      !REQUIRED true
-      !KEYLESS 2
-      !VISIBILITY simple
-      !BRIEF Output filename
-    !END
-!END
-
-!CATEGORY "fragmentation options"
-    !PARAMETER -fragtype
-      !ALIAS -ftype
-      !TYPE string
-      !REQUIRED false
-      !KEYLESS 3
-      !DEFAULT funcgroup
-      !LEGAL_VALUE funcgroup
-      !LEGAL_VALUE ring-chain
-      !LEGAL_VALUE ring-linker-sidechain
-      !LEGAL_VALUE bemis-murcko
-      !VISIBILITY simple
-      !BRIEF Fragmentation type
-    !END
-!END
-
-!CATEGORY "report options"
-
-    !PARAMETER -pagebypage
-      !ALIAS -p
-      !TYPE bool
-      !REQUIRED false
-      !DEFAULT false
-      !VISIBILITY simple
-      !BRIEF Write individual numbered separate pages
-    !END
-
-!CATEGORY "max rotors option"
-    !PARAMETER -max_rotors
-        !ALIAS -m
-        !TYPE int
-        !REQUIRED false
-        !DEFAULT 3
-        !BRIEF max rotatable bonds
-    !END
-
-!CATEGORY "min rotors option"
-    !PARAMETER -min_rotors
-        !ALIAS -n
-        !TYPE int
-        !REQUIRED false
-        !DEFAULT 0
-        !BRIEF max rotatable bonds
-    !END
-
-!CATEGORY "fragments"
-    !PARAMETER -frags
-        !ALIAS -f
-        !TYPE list
-        !REQUIRED true
-        !BRIEF fragments to rebuild
-    !END
-
-!END
-'''
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+# InterfaceData = '''
+# !CATEGORY "input/output options"
+#     !PARAMETER -in
+#       !ALIAS -i
+#       !TYPE string
+#       !REQUIRED true
+#       !KEYLESS 1
+#       !VISIBILITY simple
+#       !BRIEF Input filename
+#     !END
+#
+#     !PARAMETER -out
+#       !ALIAS -o
+#       !TYPE string
+#       !REQUIRED true
+#       !KEYLESS 2
+#       !VISIBILITY simple
+#       !BRIEF Output filename
+#     !END
+# !END
+#
+# !CATEGORY "fragmentation options"
+#     !PARAMETER -fragtype
+#       !ALIAS -ftype
+#       !TYPE string
+#       !REQUIRED false
+#       !KEYLESS 3
+#       !DEFAULT funcgroup
+#       !LEGAL_VALUE funcgroup
+#       !LEGAL_VALUE ring-chain
+#       !LEGAL_VALUE ring-linker-sidechain
+#       !LEGAL_VALUE bemis-murcko
+#       !VISIBILITY simple
+#       !BRIEF Fragmentation type
+#     !END
+# !END
+#
+# !CATEGORY "report options"
+#
+#     !PARAMETER -pagebypage
+#       !ALIAS -p
+#       !TYPE bool
+#       !REQUIRED false
+#       !DEFAULT false
+#       !VISIBILITY simple
+#       !BRIEF Write individual numbered separate pages
+#     !END
+#
+# !CATEGORY "max rotors option"
+#     !PARAMETER -max_rotors
+#         !ALIAS -m
+#         !TYPE int
+#         !REQUIRED false
+#         !DEFAULT 3
+#         !BRIEF max rotatable bonds
+#     !END
+#
+# !CATEGORY "min rotors option"
+#     !PARAMETER -min_rotors
+#         !ALIAS -n
+#         !TYPE int
+#         !REQUIRED false
+#         !DEFAULT 0
+#         !BRIEF max rotatable bonds
+#     !END
+#
+# !CATEGORY "fragments"
+#     !PARAMETER -frags
+#         !ALIAS -f
+#         !TYPE list
+#         !REQUIRED true
+#         !BRIEF fragments to rebuild
+#     !END
+#
+# !END
+# '''
+#
+# if __name__ == "__main__":
+#     sys.exit(main(sys.argv))
