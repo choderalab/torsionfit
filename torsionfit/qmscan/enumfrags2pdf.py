@@ -43,6 +43,8 @@ def main(argv=[__name__]):
     max_rotors = itf.GetInt("-max_rotors")
     min_rotors = itf.GetInt("-min_rotors")
 
+    frags = itf.GetList("-frags")
+
     pagebypage = itf.GetBool("-pagebypage")
 
     # check input/output files
@@ -87,7 +89,7 @@ def main(argv=[__name__]):
 
     # depict molecule with fragment combinations
 
-    DepictMoleculeWithFragmentCombinations(report, mol, fragfunc, opts, max_rotors, min_rotors)
+    DepictMoleculeWithFragmentCombinations(report, mol, frags, opts, max_rotors, min_rotors)
 
     if pagebypage:
         oedepict.OEWriteReportPageByPage(oname, report)
@@ -97,13 +99,13 @@ def main(argv=[__name__]):
     return 0
 
 
-def DepictMoleculeWithFragmentCombinations(report, mol, fragfunc, opts, max_rotors, min_rotors):
+def DepictMoleculeWithFragmentCombinations(report, mol, frags, opts, max_rotors, min_rotors):
 
     # fragment molecule
 
-    frags = [f for f in fragfunc(mol)]
-    if len(frags) <= 1:
-        print('only one fragment was found')
+    #frags = [f for f in fragfunc(mol)]
+    #if len(frags) <= 1:
+    #    print('only one fragment was found')
 
     # assign fragment indexes
 
@@ -152,6 +154,9 @@ def DepictMoleculeWithFragmentCombinations(report, mol, fragfunc, opts, max_roto
     cellwidth, cellheight = report.GetHeaderWidth(), report.GetHeaderHeight()
     opts.SetDimensions(cellwidth, cellheight, oedepict.OEScale_AutoScale)
     opts.SetAtomColorStyle(oedepict.OEAtomColorStyle_WhiteMonochrome)
+
+    bondlabel = LabelBondOrder()
+    opts.SetBondPropertyFunctor(bondlabel)
     disp = oedepict.OE2DMolDisplay(mol, opts)
     oegrapheme.OEAddGlyph(disp, bondglyph, oechem.IsTrueBond())
 
@@ -191,6 +196,18 @@ class ColorBondByFragmentIndex(oegrapheme.OEBondGlyphBase):
     def ColorBondByFragmentIndex(self):
         return ColorBondByFragmentIndex(self.colorlist, self.tag).__disown__()
 
+class LabelBondOrder(oedepict.OEDisplayBondPropBase):
+    def __init__(self):
+        oedepict.OEDisplayBondPropBase.__init__(self)
+
+    def __call__(self, bond):
+        bondOrder = bond.GetData('WibergBondOrder')
+        label = "{:.2f}".format(bondOrder)
+        return label
+
+    def CreateCopy(self):
+        copy = LabelBondOrder()
+        return copy.__disown__()
 
 def IsAdjacentAtomBondSets(fragA, fragB):
 
@@ -200,7 +217,7 @@ def IsAdjacentAtomBondSets(fragA, fragB):
                 return True
     return False
 
-def RotorsInFragment(fragment):
+def CountRotorsInFragment(fragment):
     return sum([bond.IsRotor() for bond in fragment.GetBonds()])
 
 def IsAdjacentAtomBondSetCombination(fraglist):
@@ -356,6 +373,14 @@ InterfaceData = '''
         !REQUIRED false
         !DEFAULT 0
         !BRIEF max rotatable bonds
+    !END
+
+!CATEGORY "fragments"
+    !PARAMETER -frags
+        !ALIAS -f
+        !TYPE list
+        !REQUIRED true
+        !BRIEF fragments to rebuild
     !END
 
 !END
