@@ -157,7 +157,8 @@ def OeMolToGraph(oemol):
     for atom in oemol.GetAtoms():
         G.add_node(atom.GetIdx(), name=atom.GetName())
     for bond in oemol.GetBonds():
-        G.add_edge(bond.GetBgnIdx(), bond.GetEndIdx(), weight=bond.GetData("WibergBondOrder"), index=bond.GetIdx())
+        G.add_edge(bond.GetBgnIdx(), bond.GetEndIdx(), weight=bond.GetData("WibergBondOrder"), index=bond.GetIdx(),
+                   aromatic=bond.IsAromatic())
     return G
 
 
@@ -180,7 +181,7 @@ def FragGraph(G, bondOrderThreshold=1.2):
         if G.degree(node) <= 1:
             continue
         for node2 in G.edge[node]:
-            if G.edge[node][node2]['weight'] < bondOrderThreshold and G.degree(node2) >1:
+            if G.edge[node][node2]['weight'] < bondOrderThreshold and G.degree(node2) >1 and not G.edge[node][node2]['aromatic']:
                 ebunch.append((node, node2))
     # Cut molecule
     G.remove_edges_from(ebunch)
