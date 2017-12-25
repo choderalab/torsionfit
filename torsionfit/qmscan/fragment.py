@@ -64,14 +64,15 @@ def tag_fgroups(mol, fgroups_smarts):
                 ma.target.SetData(tag, '{}_{}'.format(f_group, str(i)))
             fgroup_bonds = set()
             for ma in match.GetBonds():
-                print(ma.target)
                 fgroup_bonds.add(ma.target.GetIdx())
+                tag =oechem.OEGetTag('fgroup')
+                ma.target.SetData(tag, '{}_{}'.format(f_group, str(i)))
 
             fgroup_tagged['{}_{}'.format(f_group, str(i))] = (fgroup_atoms, fgroup_bonds)
     return fgroup_tagged
 
 
-def is_fgroup(atom, fgroup_tagged):
+def is_fgroup(fgroup_tagged, atom=None, bond=None):
     """
 
     Parameters
@@ -84,12 +85,20 @@ def is_fgroup(atom, fgroup_tagged):
     atoms, bonds: sets of atom and bond indices if the atom is tagged, False otherwise
 
     """
-    try:
-        fgroup = atom.GetData('fgroup')
-        atoms, bonds = fgroup_tagged[fgroup]
-        return atoms, bonds
-    except ValueError:
-        return False
+    if atom:
+        try:
+            fgroup = atom.GetData('fgroup')
+            atoms, bonds = fgroup_tagged[fgroup]
+            return atoms, bonds
+        except ValueError:
+            return False
+    if bond:
+        try:
+            fgroup = bond.GetData('fgroup')
+            atoms, bonds = fgroup_tagged[fgroup]
+            return atoms, bonds
+        except ValueError:
+            return False
 
 
 def is_hbond(bond):
@@ -112,7 +121,7 @@ def is_hbond(bond):
     return hbond
 
 
-def find_ring(a, ratoms_l = [], rbonds_l = [], rot_bond=None, next_bond=None):
+def find_ring(a, fgroup_tagged, ratoms_l = [], rbonds_l = [], rot_bond=None, next_bond=None):
     """
     This function finds the rest of the ring system that atom a is part of and returns the atom and bond indices of
     the ring atoms and bonds.
@@ -140,23 +149,10 @@ def find_ring(a, ratoms_l = [], rbonds_l = [], rot_bond=None, next_bond=None):
         ratoms_l.append(a.GetIdx())
     for bond in a.GetBonds():
         if bond.IsRotor():
-            # I should check for resonance here.
-            continue
-
-        if bond.IsInRing() or is_hbond(bond):
-            beg = bond.GetBgn()
-            end = bond.GetEnd()
-            beg_index = beg.GetIdx()
-            end_index = end.GetIdx()
-            if bond.GetIdx() not in rbonds_l:
-                rbonds_l.append(bond.GetIdx())
-            if beg_index not in ratoms_l:
-                ratoms_l.append(beg_index)
-                find_ring(beg, ratoms_l, rbonds_l, rot_bond, next_bond)
-            if end_index not in ratoms_l:
-                ratoms_l.append(end_index)
-                find_ring(end, ratoms_l, rbonds_l, rot_bond, next_bond)
-        elif rot_bond:
+            # Check for ortho and resonance. If ortho, check for functional group and keep all.
+            # If resoance, call build_fragment on bond
+            if bond.GetIdx() == rot_bond.GetIdx():
+                continue
             if is_ortho(bond, rot_bond, next_bond):
                 beg_idx = bond.GetBgn().GetIdx()
                 end_idx = bond.GetEnd().GetIdx()
@@ -166,7 +162,43 @@ def find_ring(a, ratoms_l = [], rbonds_l = [], rot_bond=None, next_bond=None):
                     ratoms_l.append(beg_idx)
                 if end_idx not in ratoms_l:
                     ratoms_l.append(end_idx)
+                # Check for functional group
+                fgroup = is_fgroup(fgroup_tagged, atom=bond.GetBgn())
+                if not fgroup:
+                    fgroup = is_fgroup(fgroup_tagged, atom=bond.GetEnd())
+                if fgroup:
+                    print(fgroup)
+                    for fa_idx in fgroup[0]:
+                        ratoms_l.append(fa_idx)
+                    for fb_idx in fgroup[-1]:
+                        rbonds_l.append(fb_idx)
+            # I should check for resonance here.
+            continue
+
+        if bond.IsInRing(): # or is_hbond(bond):
+            #print('in ring: {}'.format(bond))
+            beg = bond.GetBgn()
+            end = bond.GetEnd()
+            beg_index = beg.GetIdx()
+            end_index = end.GetIdx()
+            if bond.GetIdx() not in rbonds_l:
+                rbonds_l.append(bond.GetIdx())
+            if beg_index not in ratoms_l:
+                ratoms_l.append(beg_index)
+                find_ring(beg, fgroup_tagged, ratoms_l, rbonds_l, rot_bond, next_bond)
+            if end_index not in ratoms_l:
+                ratoms_l.append(end_index)
+                find_ring(end, fgroup_tagged, ratoms_l, rbonds_l, rot_bond, next_bond)
+       # elif rot_bond:
+
         elif not bond.IsRotor():
+            # check for functional group and keep it
+            fgroup = is_fgroup(fgroup_tagged, bond=bond)
+            if fgroup:
+                for fa_idx in fgroup[0]:
+                    ratoms_l.append(fa_idx)
+                for fb_idx in fgroup[-1]:
+                    rbonds_l.append(fb_idx)
             # Keep all constituents that are not rotatable (halogens, O, ch3..)
             beg_idx = bond.GetBgn().GetIdx()
             end_idx = bond.GetEnd().GetIdx()
@@ -220,14 +252,10 @@ def is_ortho(bond, rot_bond, next_bond):
 
     bond_attached = set()
     rot_attached = set()
-    next_attached = set()
-    # Check if theese bonds have a connecting bond that's in a ring
     beg_b = bond.GetBgn()
     end_b = bond.GetEnd()
     beg_r = rot_bond.GetBgn()
     end_r = rot_bond.GetEnd()
-    beg_n = next_bond.GetBgn()
-    end_n = next_bond.GetEnd()
     for b in beg_b.GetBonds():
         bond_attached.add(b.GetIdx())
     for b in end_b.GetBonds():
@@ -236,12 +264,17 @@ def is_ortho(bond, rot_bond, next_bond):
         rot_attached.add(b.GetIdx())
     for b in end_r.GetBonds():
         rot_attached.add(b.GetIdx())
-    for b in beg_n.GetBonds():
-        next_attached.add(b.GetIdx())
-    for b in end_n.GetBonds():
-        next_attached.add(b.GetIdx())
+    if not next_bond.IsInRing():
+        next_attached = set()
+        beg_n = next_bond.GetBgn()
+        end_n = next_bond.GetEnd()
+        for b in beg_n.GetBonds():
+            next_attached.add(b.GetIdx())
+        for b in end_n.GetBonds():
+            next_attached.add(b.GetIdx())
+
     intersection = (bond_attached & rot_attached)
-    if not bool(intersection):
+    if not bool(intersection) and not next_bond.IsInRing():
         # Check if it's ortho to next bond
         intersection = (bond_attached & next_attached)
     return bool(intersection)
@@ -307,17 +340,14 @@ def iterate_nbratom(atom, mol, fgroup_tagged, bond, s_idx, o_idx, atoms, bonds, 
         if nb_idx != bond.GetIdx() and nb_idx not in bonds:
             bonds.add(nb_idx)
             if a_idx != o_idx:
-                fgroup = is_fgroup(a, fgroup_tagged)
+                fgroup = is_fgroup(fgroup_tagged, atom=a)
                 if fgroup:
                     for fa_idx in fgroup[0]:
                         atoms.add(fa_idx)
                     for fb_idx in fgroup[-1]:
                         bonds.add(fb_idx)
                 if a.IsInRing():
-                    if check_ortho:
-                        r_atoms, r_bonds = find_ring(a, ratoms_l=[], rbonds_l=[], rot_bond=bond, next_bond=next_bond)
-                    else:
-                        r_atoms, r_bonds = find_ring(a, ratoms_l=[], rbonds_l=[])
+                    r_atoms, r_bonds = find_ring(a, fgroup_tagged, ratoms_l=[], rbonds_l=[], rot_bond=bond, next_bond=next_bond)
                     for ra_idx in r_atoms:
                         atoms.add(ra_idx)
                     for rb_idx in r_bonds:
@@ -332,7 +362,7 @@ def iterate_nbratom(atom, mol, fgroup_tagged, bond, s_idx, o_idx, atoms, bonds, 
                                 bonds.add(nn_bond.GetIdx())
                                 atoms.add(n_idx)
                                 i +=1
-                                build_frag(nn_bond, mol, atoms, bonds, i=i)
+                                build_frag(nn_bond, mol, fgroup_tagged, atoms, bonds, i=i)
 
 
 def frag_to_smiles(frags, mol):
@@ -348,7 +378,7 @@ def frag_to_smiles(frags, mol):
     smiles: list of smiles strings
 
     """
-    smiles = []
+    smiles = {}
     for frag in frags:
         fragatompred = oechem.OEIsAtomMember(frag.GetAtoms())
         fragbondpred = oechem.OEIsBondMember(frag.GetBonds())
@@ -356,8 +386,10 @@ def frag_to_smiles(frags, mol):
         fragment = oechem.OEGraphMol()
         adjustHCount = True
         oechem.OESubsetMol(fragment, mol, fragatompred, fragbondpred, adjustHCount)
-        smiles.append(oechem.OEMolToSmiles(fragment))
-        #print(OEMolToSmiles(fragment))
+        s = oechem.OEMolToSmiles(fragment)
+        if s not in smiles:
+            smiles[s] = []
+        smiles[s].append(frag)
     return smiles
 
 
@@ -432,7 +464,7 @@ def frag_to_smiles(frags, mol):
 #     return 0
 #
 
-def ToPdf(mol, oname, frags, fragcombs):
+def ToPdf(mol, oname, frags):#, fragcombs):
     """
     Parameters
     ----------
@@ -461,7 +493,7 @@ def ToPdf(mol, oname, frags, fragcombs):
     opts.SetAtomColorStyle(oedepict.OEAtomColorStyle_WhiteMonochrome)
     opts.SetAtomLabelFontScale(1.2)
 
-    DepictMoleculeWithFragmentCombinations(report, mol, frags, fragcombs, opts)
+    DepictMoleculeWithFragmentCombinations(report, mol, frags, opts)
 
     oedepict.OEWriteReport(oname, report)
 
@@ -485,8 +517,12 @@ def OeMolToGraph(oemol):
     for atom in oemol.GetAtoms():
         G.add_node(atom.GetIdx(), name=atom.GetName())
     for bond in oemol.GetBonds():
+        try:
+            fgroup = bond.GetData('fgroup')
+        except:
+            fgroup = False
         G.add_edge(bond.GetBgnIdx(), bond.GetEndIdx(), weight=bond.GetData("WibergBondOrder"), index=bond.GetIdx(),
-                   aromatic=bond.IsAromatic(), in_ring=bond.IsInRing())
+                   aromatic=bond.IsAromatic(), in_ring=bond.IsInRing(), fgroup=fgroup)
     return G
 
 
@@ -510,7 +546,8 @@ def FragGraph(G, bondOrderThreshold=1.2):
             continue
         for node2 in G.edge[node]:
             if G.edge[node][node2]['weight'] < bondOrderThreshold and G.degree(node2) >1 \
-                    and not G.edge[node][node2]['aromatic'] and not G.edge[node][node2]['in_ring']:
+                    and not G.edge[node][node2]['aromatic'] and not G.edge[node][node2]['in_ring']\
+                    and not G.edge[node][node2]['fgroup']:
                 ebunch.append((node, node2))
     # Cut molecule
     G.remove_edges_from(ebunch)
@@ -543,7 +580,7 @@ def subgraphToAtomBondSet(graph, subgraph, oemol):
     return atomBondSet
 
 
-def SmilesToFragments(smiles, bondOrderThreshold=1.2, chargesMol=True):
+def SmilesToFragments(smiles, fgroup_smarts, bondOrderThreshold=1.2, chargesMol=True):
     """
     Fragment molecule at bonds below Bond Order Threshold
 
@@ -562,6 +599,9 @@ def SmilesToFragments(smiles, bondOrderThreshold=1.2, chargesMol=True):
     oemol = openeye.smiles_to_oemol(smiles)
     charged = openeye.get_charges(oemol, keep_confs=1)
 
+    # Tag functional groups
+    tag_fgroups(charged, fgroups_smarts=fgroup_smarts)
+
     # Generate fragments
     G = OeMolToGraph(charged)
     subraphs = FragGraph(G, bondOrderThreshold=bondOrderThreshold)
@@ -576,12 +616,12 @@ def SmilesToFragments(smiles, bondOrderThreshold=1.2, chargesMol=True):
         return frags
 
 
-def DepictMoleculeWithFragmentCombinations(report, mol, frags, fragcombs, opts):
+def DepictMoleculeWithFragmentCombinations(report, mol, frags, opts): #fragcombs, opts):
 
     stag = "fragment idx"
     itag = oechem.OEGetTag(stag)
     for fidx, frag in enumerate(frags):
-        for bond in frag.GetBonds():
+        for bond in frags[frag].GetBonds():
             bond.SetData(itag, fidx)
 
     # setup depiction styles
@@ -598,19 +638,32 @@ def DepictMoleculeWithFragmentCombinations(report, mol, frags, fragcombs, opts):
 
     # depict each fragment combinations
 
-    for frag in fragcombs:
+    #for frag in fragcombs:
+    for frag in frags:
 
         cell = report.NewCell()
         disp = oedepict.OE2DMolDisplay(mol, opts)
 
-        fragatoms = oechem.OEIsAtomMember(frag.GetAtoms())
-        fragbonds = oechem.OEIsBondMember(frag.GetBonds())
+        fragatoms = oechem.OEIsAtomMember(frags[frag].GetAtoms())
+        fragbonds = oechem.OEIsBondMember(frags[frag].GetBonds())
 
         notfragatoms = oechem.OENotAtom(fragatoms)
         notfragbonds = oechem.OENotBond(fragbonds)
 
         oedepict.OEAddHighlighting(disp, fadehighlight, notfragatoms, notfragbonds)
-        oegrapheme.OEAddGlyph(disp, bondglyph, fragbonds)
+
+        bond = mol.GetBond(oechem.OEHasBondIdx(frag))
+
+        atomBondSet = oechem.OEAtomBondSet()
+        atomBondSet.AddBond(bond)
+        atomBondSet.AddAtom(bond.GetBgn())
+        atomBondSet.AddAtom(bond.GetEnd())
+
+        hstyle = oedepict.OEHighlightStyle_BallAndStick
+        hcolor = oechem.OEColor(oechem.OELightBlue)
+        oedepict.OEAddHighlighting(disp, hcolor, hstyle, atomBondSet)
+
+        #oegrapheme.OEAddGlyph(disp, bondglyph, fragbonds)
 
         oedepict.OERenderMolecule(cell, disp)
 
@@ -623,7 +676,7 @@ def DepictMoleculeWithFragmentCombinations(report, mol, frags, fragcombs, opts):
     bondlabel = LabelBondOrder()
     opts.SetBondPropertyFunctor(bondlabel)
     disp = oedepict.OE2DMolDisplay(mol, opts)
-    oegrapheme.OEAddGlyph(disp, bondglyph, oechem.IsTrueBond())
+    #oegrapheme.OEAddGlyph(disp, bondglyph, oechem.IsTrueBond())
 
     headerpen = oedepict.OEPen(oechem.OEWhite, oechem.OELightGrey, oedepict.OEFill_Off, 2.0)
     for header in report.GetHeaders():
