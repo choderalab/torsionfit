@@ -64,6 +64,7 @@ def tag_fgroups(mol, fgroups_smarts):
                 ma.target.SetData(tag, '{}_{}'.format(f_group, str(i)))
             fgroup_bonds = set()
             for ma in match.GetBonds():
+                #if not ma.target.IsInRing():
                 fgroup_bonds.add(ma.target.GetIdx())
                 tag =oechem.OEGetTag('fgroup')
                 ma.target.SetData(tag, '{}_{}'.format(f_group, str(i)))
@@ -121,7 +122,8 @@ def is_hbond(bond):
     return hbond
 
 
-def find_ring(a, fgroup_tagged, ratoms_l = [], rbonds_l = [], rot_bond=None, next_bond=None):
+def find_ring(a, mol, fgroup_tagged, ratoms_l = [], rbonds_l = [], rot_bond=None, next_bond=None, fg_ring=[],
+              ratoms=set(), rbonds=set()):
     """
     This function finds the rest of the ring system that atom a is part of and returns the atom and bond indices of
     the ring atoms and bonds.
@@ -147,68 +149,103 @@ def find_ring(a, fgroup_tagged, ratoms_l = [], rbonds_l = [], rot_bond=None, nex
     """
     if a.GetIdx() not in ratoms_l:
         ratoms_l.append(a.GetIdx())
+        ratoms.add(a.GetIdx())
     for bond in a.GetBonds():
-        if bond.IsRotor():
-            # Check for ortho and resonance. If ortho, check for functional group and keep all.
-            # If resoance, call build_fragment on bond
-            if bond.GetIdx() == rot_bond.GetIdx():
-                continue
-            if is_ortho(bond, rot_bond, next_bond):
-                beg_idx = bond.GetBgn().GetIdx()
-                end_idx = bond.GetEnd().GetIdx()
-                if bond.GetIdx() not in rbonds_l:
-                    rbonds_l.append(bond.GetIdx())
-                if beg_idx not in ratoms_l:
-                    ratoms_l.append(beg_idx)
-                if end_idx not in ratoms_l:
-                    ratoms_l.append(end_idx)
-                # Check for functional group
-                fgroup = is_fgroup(fgroup_tagged, atom=bond.GetBgn())
-                if not fgroup:
-                    fgroup = is_fgroup(fgroup_tagged, atom=bond.GetEnd())
-                if fgroup:
-                    print(fgroup)
-                    for fa_idx in fgroup[0]:
-                        ratoms_l.append(fa_idx)
-                    for fb_idx in fgroup[-1]:
-                        rbonds_l.append(fb_idx)
-            # I should check for resonance here.
-            continue
-
         if bond.IsInRing(): # or is_hbond(bond):
-            #print('in ring: {}'.format(bond))
+
+            print('in ring: {}'.format(bond))
             beg = bond.GetBgn()
             end = bond.GetEnd()
             beg_index = beg.GetIdx()
             end_index = end.GetIdx()
             if bond.GetIdx() not in rbonds_l:
                 rbonds_l.append(bond.GetIdx())
+                rbonds.add(bond.GetIdx())
             if beg_index not in ratoms_l:
                 ratoms_l.append(beg_index)
-                find_ring(beg, fgroup_tagged, ratoms_l, rbonds_l, rot_bond, next_bond)
+                ratoms.add(beg_index)
+                find_ring(beg, mol, fgroup_tagged, ratoms_l, rbonds_l, rot_bond, next_bond)
             if end_index not in ratoms_l:
                 ratoms_l.append(end_index)
-                find_ring(end, fgroup_tagged, ratoms_l, rbonds_l, rot_bond, next_bond)
-       # elif rot_bond:
+                ratoms.add(end_index)
+                find_ring(end, mol, fgroup_tagged, ratoms_l, rbonds_l, rot_bond, next_bond)
+        else:
+            # check for functional group
+            #fgroup = is_fgroup(fgroup_tagged, atom=bond.GetBgn())
+            #if not fgroup:
+            #    fgroup = is_fgroup(fgroup_tagged, atom=bond.GetEnd())
+            #if fgroup:
+            #    for fa_idx in fgroup[0]:
+            #        ratoms_l.append(fa_idx)
 
-        elif not bond.IsRotor():
-            # check for functional group and keep it
-            fgroup = is_fgroup(fgroup_tagged, bond=bond)
-            if fgroup:
-                for fa_idx in fgroup[0]:
-                    ratoms_l.append(fa_idx)
-                for fb_idx in fgroup[-1]:
-                    rbonds_l.append(fb_idx)
-            # Keep all constituents that are not rotatable (halogens, O, ch3..)
-            beg_idx = bond.GetBgn().GetIdx()
-            end_idx = bond.GetEnd().GetIdx()
-            if bond.GetIdx() not in rbonds_l:
-                rbonds_l.append(bond.GetIdx())
-            if beg_idx not in ratoms_l:
-                ratoms_l.append(beg_idx)
-            if end_idx not in ratoms_l:
-                ratoms_l.append(end_idx)
-    return ratoms_l, rbonds_l
+            #    for fb_idx in fgroup[-1]:
+            #        rbonds_l.append(fb_idx)
+            # Check if orhto
+            if is_ortho(bond, rot_bond, next_bond):
+                beg_idx = bond.GetBgn().GetIdx()
+                end_idx = bond.GetEnd().GetIdx()
+                if bond.GetIdx() not in rbonds_l:
+                    rbonds_l.append(bond.GetIdx())
+                    rbonds.add(bond.GetIdx())
+                if beg_idx not in ratoms_l:
+                    ratoms_l.append(beg_idx)
+                    ratoms.add(beg_idx)
+                if end_idx not in ratoms_l:
+                    ratoms_l.append(end_idx)
+                    ratoms.add(end_idx)
+                # Check for functional group
+                fgroup = is_fgroup(fgroup_tagged, atom=bond.GetBgn())
+                if not fgroup:
+                    fgroup = is_fgroup(fgroup_tagged, atom=bond.GetEnd())
+                if fgroup:
+                   # print(fgroup)
+                    for fa_idx in fgroup[0]:
+                        ratoms_l.append(fa_idx)
+                        ratoms.add(fa_idx)
+                        # Check if atom is in a ring. Add entire ring
+                        # fg_atom = mol.GetAtom(oechem.OEHasAtomIdx(fa_idx))
+                        # if fg_atom.IsInRing():
+                        #     print('fg atom in ring: {}'.format(fg_atom))
+                        #
+                        #     find_ring(fg_atom, mol, fgroup_tagged, ratoms_l, rbonds_l, rot_bond, next_bond)
+
+                    for fb_idx in fgroup[-1]:
+                        fg_bond = mol.GetBond(oechem.OEHasBondIdx(fb_idx))
+                        if fg_bond.IsInRing():
+                            print('fg bond in ring: {}'.format(fg_bond))
+                            print(fg_ring)
+                            beg = fg_bond.GetBgn()
+                            end = fg_bond.GetEnd()
+                            beg_index = beg.GetIdx()
+                            end_index = end.GetIdx()
+                            #if fg_bond.GetIdx() not in rbonds_l:
+                            #    rbonds_l.append(fg_bond.GetIdx())
+                            if beg_index not in fg_ring:
+                                fg_ring.append(beg_index)
+                                find_ring(beg, mol, fgroup_tagged, ratoms_l=[], rbonds_l=[], rot_bond=rot_bond, next_bond=next_bond, fg_ring=fg_ring)
+                            if end_index not in fg_ring:
+                                fg_ring.append(end_index)
+                                find_ring(end, mol, fgroup_tagged, ratoms_l=[], rbonds_l=[], rot_bond=rot_bond, next_bond=next_bond, fg_ring=fg_ring)
+                        else:
+                            rbonds_l.append(fb_idx)
+                            rbonds.add(fb_idx)
+
+            # Check if non rotatable
+            if not bond.IsRotor():
+                # Keep all constituents that are not rotatable (halogens, O, ch3..)
+                beg_idx = bond.GetBgn().GetIdx()
+                end_idx = bond.GetEnd().GetIdx()
+                if bond.GetIdx() not in rbonds_l:
+                    rbonds_l.append(bond.GetIdx())
+                    rbonds.add(bond.GetIdx())
+                if beg_idx not in ratoms_l:
+                    ratoms_l.append(beg_idx)
+                    ratoms.add(beg_idx)
+                if end_idx not in ratoms_l:
+                    ratoms_l.append(end_idx)
+                    ratoms.add(end_idx)
+
+    return ratoms, rbonds
 
 
 def to_AtomBondSet(mol, atoms, bonds):
@@ -305,9 +342,13 @@ def build_frag(bond, mol, fgroup_tagged, atoms=set(), bonds=set(), i=0):
     end_idx = end.GetIdx()
     #if beg_idx not in atoms:
     atoms.add(beg_idx)
+    print('beg atom: {}'.format(beg))
     iterate_nbratom(beg, mol, fgroup_tagged, bond, beg_idx, end_idx, atoms, bonds, i)
+    print('atoms after beg iteration: {}'.format(atoms))
     atoms.add(end_idx)
+    print('end atom: {}'.format(end))
     iterate_nbratom(end, mol, fgroup_tagged, bond, end_idx, beg_idx, atoms, bonds, i)
+    print('atoms after end iteration: {}'.format(atoms))
     return atoms, bonds
 
 
@@ -340,18 +381,35 @@ def iterate_nbratom(atom, mol, fgroup_tagged, bond, s_idx, o_idx, atoms, bonds, 
         if nb_idx != bond.GetIdx() and nb_idx not in bonds:
             bonds.add(nb_idx)
             if a_idx != o_idx:
-                fgroup = is_fgroup(fgroup_tagged, atom=a)
-                if fgroup:
-                    for fa_idx in fgroup[0]:
-                        atoms.add(fa_idx)
-                    for fb_idx in fgroup[-1]:
-                        bonds.add(fb_idx)
                 if a.IsInRing():
-                    r_atoms, r_bonds = find_ring(a, fgroup_tagged, ratoms_l=[], rbonds_l=[], rot_bond=bond, next_bond=next_bond)
+                    r_atoms, r_bonds = find_ring(a, mol, fgroup_tagged, ratoms_l=[], rbonds_l=[], rot_bond=bond,
+                                                 next_bond=next_bond, fg_ring=[], ratoms=set(), rbonds=set())
                     for ra_idx in r_atoms:
                         atoms.add(ra_idx)
                     for rb_idx in r_bonds:
                         bonds.add(rb_idx)
+                fgroup = is_fgroup(fgroup_tagged, atom=a)
+                if fgroup:
+                    for fa_idx in fgroup[0]:
+                        atoms.add(fa_idx)
+                        # Check if atom is in a ring. If it's in a ring, include the ring - we don't want to fragment rings
+                        fg_atom = mol.GetAtom(oechem.OEHasAtomIdx(fa_idx))
+                        if fg_atom.IsInRing():
+                            print('Atom in fg and ring: {}'.format(fa_idx))
+                            print('atoms before added ring: {}'.format(atoms))
+                            print('bonds before added ring: {}'.format(bonds))
+
+                            r_atoms, r_bonds = find_ring(a, mol, fgroup_tagged, ratoms_l=[], rbonds_l=[], rot_bond=bond,
+                                                         next_bond=next_bond, fg_ring=[], ratoms=set(), rbonds=set())
+                            for ra_idx in r_atoms:
+                                atoms.add(ra_idx)
+                            for rb_idx in r_bonds:
+                                bonds.add(rb_idx)
+                            print('atoms after added ring: {}'.format(atoms))
+                            print('bonds after added ring: {}'.format(bonds))
+
+                    for fb_idx in fgroup[-1]:
+                        bonds.add(fb_idx)
 
                 else:
                     for n_atom in a.GetAtoms():
