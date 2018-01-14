@@ -552,11 +552,9 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, a
         next_bond = mol.GetBond(a, atom)
         nb_idx = next_bond.GetIdx()
 
-        if i > 0:
-            wiberg = next_bond.GetData('WibergBondOrder')
-            if wiberg < 1.2:
-                continue
+
             # The previous bond was too double bond like to cut. So the only other bonds tha
+        print('adding atom: {}'.format(a))
         atoms_2.add(a_idx)
         if nb_idx in bonds_2:
             FGROUP_RING = False
@@ -578,8 +576,16 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, a
                 ratoms, rbonds = tagged_rings[ring_idx]
                 atoms_2 = atoms_2.union(ratoms)
                 bonds_2 = bonds_2.union(rbonds)
+                rs_atoms, rs_bonds = ring_substiuents(mol, next_bond, rotor_bond, tagged_rings, ring_idx, fgroup_tagged)
+                atoms_2 = atoms_2.union(rs_atoms)
+                bonds_2 = bonds_2.union(rs_bonds)
                 continue
 
+        if i > 0:
+            wiberg = next_bond.GetData('WibergBondOrder')
+            if wiberg < 1.2:
+                print('Leaving loop bec > 1 iteration and wbo < 1.2. bond: {}'.format(next_bond))
+                continue
                 # Add ring and then continue?
                # continue
 
@@ -612,6 +618,7 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, a
                 # print('alredy in list and not in ring: {}'.format(next_bond))
                 # continue
         bonds_2.add(nb_idx)
+        print('adding bond: {}'.format(next_bond))
         if a.IsInRing():
             print('In ring: {}'.format(a))
             ring_idx = a.GetData('ringsystem')
@@ -632,7 +639,14 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, a
         #else:
         for nb_a in a.GetAtoms():
             nn_bond = mol.GetBond(a, nb_a)
-            if nn_bond.GetData('WibergBondOrder') > 1.2:
+            if nn_bond.GetData('WibergBondOrder') > 1.2 and not nn_bond.IsInRing():
+                # Check the degree of the atoms in teh bond
+                deg_1 = a.GetDegree()
+                deg_2 = nb_a.GetDegree()
+                if deg_1 == 1 or deg_2 == 1:
+                    print('one atom is 1 degree: {}, {}, {}'.format(nn_bond, a, nb_a))
+                    continue
+
                 print('Next bond order > 1.2: {}'.format(nn_bond))
                 #print(next_bond)
                 atoms_2.add(nb_a.GetIdx())
