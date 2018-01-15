@@ -65,7 +65,7 @@ setup(
     platforms=['Linux', 'Mac OS-X', 'Unix', 'Windows'],
     classifiers=CLASSIFIERS.splitlines(),
     packages=['torsionfit', 'torsionfit.tests', 'torsionfit.qmscan', 'torsionfit.backends', 'torsionfit.database'],
-    package_data={'': package_files('torsionfit/tests/reference')},
+    package_data={'': package_files('torsionfit/tests/reference'), '': package_files('torsionfit/qmscan')},
     zip_safe=False,
     install_requires=[
         'numpy',
