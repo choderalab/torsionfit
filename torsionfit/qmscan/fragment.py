@@ -37,7 +37,36 @@ import copy
 import itertools
 
 
-def tag_fgroups(mol, fgroups_smarts=None):
+def generate_fragments(mol):
+    """
+    This function generates fragments from a molecule.
+
+    Parameters
+    ----------
+    mol: OEMol
+
+    Returns
+    -------
+    charged: charged OEMOl
+    frags: dict of AtomBondSet mapped to rotatable bond index the fragment was built up from.
+    """
+
+    charged = openeye.get_charges(mol, keep_confs=1)
+
+    tagged_rings, tagged_fgroups = tag_molecule(charged)
+
+    # Iterate over bonds
+    frags = {}
+    for bond in charged.GetBonds():
+        if bond.IsRotor():
+            atoms, bonds = _build_frag(bond=bond, mol=charged, tagged_fgroups=tagged_fgroups, tagged_rings=tagged_rings)
+            atom_bond_set = _to_AtomBondSet(charged, atoms, bonds)
+            frags[bond.GetIdx()] = atom_bond_set
+
+    return charged, frags
+
+
+def _tag_fgroups(mol, fgroups_smarts=None):
     """
     This function tags atoms and bonds of functional groups defined in fgroup_smarts. fgroup_smarts is a dictionary
     that maps functional groups to their smarts pattern. It can be user generated or from yaml file.
@@ -83,7 +112,7 @@ def tag_fgroups(mol, fgroups_smarts=None):
     return fgroup_tagged
 
 
-def tag_rings(mol):
+def _tag_rings(mol):
     """
     This function tags ring atom and bonds with ringsystem index
 
@@ -121,7 +150,7 @@ def tag_rings(mol):
     return tagged_rings
 
 
-def ring_fgroup_union(mol, tagged_rings, tagged_fgroups, wbo_threshold=1.2):
+def _ring_fgroup_union(mol, tagged_rings, tagged_fgroups, wbo_threshold=1.2):
     """
     This function combines rings and fgroups that are conjugated (the bond between them has a Wiberg bond order > 1.2)
 
@@ -180,8 +209,38 @@ def ring_fgroup_union(mol, tagged_rings, tagged_fgroups, wbo_threshold=1.2):
     return tagged_fgroups
 
 
-def is_fgroup(fgroup_tagged, element):
-    # ToDo combine atom and bond to element
+def tag_molecule(mol, func_group_smarts=None):
+    """
+    Tags atoms and molecules in functional groups and ring systems. The molecule gets tagged and the function returns
+    a 2 dictionaries that map
+    1) ring system indices to corresponding atoms and bonds indices in molecule
+    2) functional groups to corresponding atoms and bonds indices in molecule
+
+    Parameters
+    ----------
+    mol: OEMol
+    func_group_smarts: dict
+        dictionary mapping functional groups to SMARTS. Default is None and uses shipped yaml file.
+
+    Returns
+    -------
+    tagged_rings: dict
+        mapping of ring system index to corresponding atoms and bonds in molecule. Each index maps to 2 sets. First set
+        includes atom indices and second set includes bonds indices
+    tagged_func_group: dict
+        mapping of functional group to corresponding atoms and bonds in molecule. Each functional group maps to 2 sets.
+        The first set is atom indices, the second set is bond indices.
+
+    """
+    tagged_func_group = _tag_fgroups(mol, func_group_smarts)
+    tagged_rings = _tag_rings(mol)
+
+    tagged_func_group = _ring_fgroup_union(mol=mol, tagged_fgroups=tagged_func_group, tagged_rings=tagged_rings)
+
+    return tagged_rings, tagged_func_group
+
+
+def _is_fgroup(fgroup_tagged, element):
     """
     This function checks if an atom or a bond is part of a tagged fgroup.
 
@@ -202,27 +261,8 @@ def is_fgroup(fgroup_tagged, element):
     except ValueError:
         return False
 
-# def is_hbond(bond):
-#     """
-#     Checks if the bond involves a hydrogen
-#     Parameters
-#     ----------
-#     bond: Openeye Bond Base
-#
-#     Returns
-#     -------
-#     bond: Openeye Bond Base if bond involves hydrogen. False otherwise
-#
-#     """
-#     hbond = None
-#     beg = bond.GetBgn()
-#     end = bond.GetEnd()
-#     if beg.IsHydrogen() or end.IsHydrogen():
-#         hbond = bond
-#     return hbond
 
-
-def to_AtomBondSet(mol, atoms, bonds):
+def _to_AtomBondSet(mol, atoms, bonds):
     """
     Builds OpeneyeAtomBondet from atoms and bonds set of indices
     Parameters
@@ -244,7 +284,7 @@ def to_AtomBondSet(mol, atoms, bonds):
     return AtomBondSet
 
 
-def is_ortho(bond, rot_bond, next_bond):
+def _is_ortho(bond, rot_bond, next_bond):
     """
     This function checks if a bond is ortho to the rotatable bond
     Parameters
@@ -263,10 +303,6 @@ def is_ortho(bond, rot_bond, next_bond):
 
     bond_attached = set()
     rot_attached = set()
-    #beg_b = bond.GetBgn()
-    #end_b = bond.GetEnd()
-    #beg_r = rot_bond.GetBgn()
-    #end_r = rot_bond.GetEnd()
 
     for bon in [bond.GetBgn(), bond.GetEnd()]:
         for b in bon.GetBonds():
@@ -275,25 +311,11 @@ def is_ortho(bond, rot_bond, next_bond):
         for b in bon.GetBonds():
             rot_attached.add(b.GetIdx())
 
-    #for b in beg_b.GetBonds():
-    #    bond_attached.add(b.GetIdx())
-    #for b in end_b.GetBonds():
-    #    bond_attached.add(b.GetIdx())
-    #for b in beg_r.GetBonds():
-    #    rot_attached.add(b.GetIdx())
-    #for b in end_r.GetBonds():
-    #    rot_attached.add(b.GetIdx())
     if not next_bond.IsInRing():
         next_attached = set()
         for bon in [next_bond.GetBgn(), next_bond.GetEnd()]:
             for b in bon.GetBonds():
-             next_attached.add(b.GetIdx())
-        # beg_n = next_bond.GetBgn()
-        # end_n = next_bond.GetEnd()
-        # for b in beg_n.GetBonds():
-        #     next_attached.add(b.GetIdx())
-        # for b in end_n.GetBonds():
-        #     next_attached.add(b.GetIdx())
+                next_attached.add(b.GetIdx())
 
     intersection = (bond_attached & rot_attached)
     if not bool(intersection) and not next_bond.IsInRing():
@@ -302,7 +324,7 @@ def is_ortho(bond, rot_bond, next_bond):
     return bool(intersection)
 
 
-def build_frag(bond, mol, tagged_fgroups, tagged_rings):
+def _build_frag(bond, mol, tagged_fgroups, tagged_rings):
     """
     This functions builds a fragment around a rotatable bond. It grows out one bond in all directions
     If the next atoms is in a ring or functional group, it keeps that.
@@ -347,15 +369,6 @@ def build_frag(bond, mol, tagged_fgroups, tagged_rings):
     return atoms, bonds
 
 
-def query_tag(atom):
-    try:
-        r_idx = atom.GetData('ringsystem')
-        atom.GetData('fgroup')
-    except ValueError:
-        return False
-    return r_idx
-
-
 def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i=0):
     """
     This function iterates over neighboring atoms and checks if it's part of a functional group, ring, or if the next
@@ -380,33 +393,16 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i
     """
     def _iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, atoms_2, bonds_2, i=0):
 
-    #atoms_2 = set()
-    #bonds_2 = set()
+
         for a in atom.GetAtoms():
             if a.GetIdx() == pair.GetIdx():
                 continue
             a_idx = a.GetIdx()
-            #if a_idx in atoms_2:
-            #    continue
             next_bond = mol.GetBond(a, atom)
             nb_idx = next_bond.GetIdx()
-
-
-                # The previous bond was too double bond like to cut. So the only other bonds tha
             atoms_2.add(a_idx)
             if nb_idx in bonds_2:
                 FGROUP_RING = False
-                # Check Data for both atoms in bond.
-                # ring_idx =  query_tag(a)
-                # if ring_idx:
-                #     FGROUP_RING = True
-                # else:
-                #     ring_idx = query_tag(atom)
-                # or query_tag(atom):
-                #     FGROUP_RING = True
-                #
-                # else:
-                #     continue
                 try:
                     ring_idx = a.GetData('ringsystem')
                     fgroup = a.GetData('fgroup')
@@ -423,7 +419,7 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i
                     ratoms, rbonds = tagged_rings[ring_idx]
                     atoms_2 = atoms_2.union(ratoms)
                     bonds_2 = bonds_2.union(rbonds)
-                    rs_atoms, rs_bonds = ring_substiuents(mol=mol, bond=next_bond, rotor_bond=rotor_bond,
+                    rs_atoms, rs_bonds = _ring_substiuents(mol=mol, bond=next_bond, rotor_bond=rotor_bond,
                                                           tagged_rings=tagged_rings, ring_idx=ring_idx,
                                                           fgroup_tagged=fgroup_tagged)
                     atoms_2 = atoms_2.union(rs_atoms)
@@ -434,37 +430,7 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i
                 wiberg = next_bond.GetData('WibergBondOrder')
                 if wiberg < 1.2:
                     continue
-                    # Add ring and then continue?
-                   # continue
 
-
-                #print('Already in list: {}'.format(next_bond))
-                # if a.IsInRing() or atom.IsInRing():
-                #     print('one of the atoms are in a ring')
-                #     fgroup = is_fgroup(fgroup_tagged, atom=a)
-                #     if not fgroup:
-                #         fgroup = is_fgroup(fgroup_tagged, atom= a)
-                #     if fgroup:
-                #         print('one atom is in an fgroup')
-                #         # Check that it's not the same atom that's in the fgroup and ring. I should probably write a function
-                #         # That checks for one atom in bond is in a ring and another is in an fgroup and there's no resonance.
-                # # Check if one atom in bond is in a ring and the other in an fgroup. Then we need to add the ring.
-                # fgroup = is_fgroup(fgroup_tagged, bond=next_bond)
-                # if not next_bond.IsInRing() and not fgroup:
-                #     continue
-                #     # Check if it's also in fgroup
-                #
-                #     # if not fgroup:
-                    #     continue
-                    # #print('In list but not in ring: {}'.format(next_bond))
-                    #continue
-                    # ring_idx = next_bond.GetData('ringsystem')
-                    # ratoms, rbonds = tagged_rings[ring_idx]
-                    #
-                    # if nb_idx not in rbonds:
-                    # # add to new list?
-                    # print('alredy in list and not in ring: {}'.format(next_bond))
-                    # continue
             bonds_2.add(nb_idx)
             if a.IsInRing():
                 ring_idx = a.GetData('ringsystem')
@@ -472,18 +438,17 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i
                 atoms_2 = atoms_2.union(ratoms)
                 bonds_2 = bonds_2.union(rbonds)
                 # Find non-rotatable sustituents
-                rs_atoms, rs_bonds = ring_substiuents(mol=mol, bond=next_bond, rotor_bond=rotor_bond,
+                rs_atoms, rs_bonds = _ring_substiuents(mol=mol, bond=next_bond, rotor_bond=rotor_bond,
                                                       tagged_rings=tagged_rings, ring_idx=ring_idx,
                                                       fgroup_tagged=fgroup_tagged)
                 atoms_2 = atoms_2.union(rs_atoms)
                 bonds_2 = bonds_2.union(rs_bonds)
-            fgroup = is_fgroup(fgroup_tagged, element=a)
+            fgroup = _is_fgroup(fgroup_tagged, element=a)
             if fgroup: # and i < 1:
                 atoms_2 = atoms_2.union(fgroup[0])
                 bonds_2 = bonds_2.union(fgroup[-1])
                 # if something is in a ring - have a flag? Then use that to continue iterating and change the flag
-            #Check for resonance here? but only if not in ring and fgroup
-            #else:
+
             for nb_a in a.GetAtoms():
                 nn_bond = mol.GetBond(a, nb_a)
                 if (nn_bond.GetData('WibergBondOrder') > 1.2) and (not nn_bond.IsInRing()) and (not nn_bond.GetIdx() in bonds_2):
@@ -493,17 +458,15 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i
                     if deg_1 == 1 or deg_2 == 1:
                         continue
 
-                    #print(next_bond)
                     atoms_2.add(nb_a.GetIdx())
                     bonds_2.add(nn_bond.GetIdx())
                     i += 1
-                    #bonds_2.add(nn_bond.GetIdx())
                     _iterate_nbratoms(mol, nn_bond, nb_a, pair, fgroup_tagged, tagged_rings, atoms_2, bonds_2, i=i)
         return atoms_2, bonds_2
     return _iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, atoms_2=set(), bonds_2=set(), i=0)
 
 
-def ring_substiuents(mol, bond, rotor_bond, tagged_rings, ring_idx, fgroup_tagged):
+def _ring_substiuents(mol, bond, rotor_bond, tagged_rings, ring_idx, fgroup_tagged):
     """
     This function finds ring substituents that shouldn't be cut off
 
@@ -537,26 +500,17 @@ def ring_substiuents(mol, bond, rotor_bond, tagged_rings, ring_idx, fgroup_tagge
             fgroup = False
             rs_bond = mol.GetBond(atom, a)
             if not a.IsInRing():
-                #rs_bond = mol.GetBond(atom, a)
                 if not rs_bond.IsRotor():
                     rs_atoms.add(a.GetIdx())
-                    #bond = mol.GetBond(atom, a)
                     rs_bonds.add(rs_bond.GetIdx())
                     # Check for functional group
-                    fgroup = is_fgroup(fgroup_tagged, element=a)
-                elif is_ortho(rs_bond, rotor_bond, bond):
+                    fgroup = _is_fgroup(fgroup_tagged, element=a)
+                elif _is_ortho(rs_bond, rotor_bond, bond):
                     # Keep bond and attached atom.
                     rs_atoms.add(a.GetIdx())
                     rs_bonds.add(rs_bond.GetIdx())
-                    # Check if it's in a ring
-
-                    # if a.IsInRing():
-                    #     r_idx = a.GetData('ringsystem')
-                    #     r2_atoms, r2_bonds = tagged_rings[r_idx]
-                    #     rs_atoms = rs_atoms.union(r2_atoms)
-                    #     rs_bonds = rs_bonds.union(r2_bonds)
                     # Check for functional group
-                    fgroup = is_fgroup(fgroup_tagged, element=a)
+                    fgroup = _is_fgroup(fgroup_tagged, element=a)
                 if fgroup:
                     rs_atoms = rs_atoms.union(fgroup[0])
                     rs_bonds = rs_bonds.union(fgroup[-1])
@@ -564,20 +518,13 @@ def ring_substiuents(mol, bond, rotor_bond, tagged_rings, ring_idx, fgroup_tagge
                 # Check if they are in the same ring
                 r_idx2 = a.GetData('ringsystem')
                 if r_idx2 != ring_idx:
-                    #rs_bond = mol.GetBond(atom, a)
-                    if is_ortho(rs_bond, rotor_bond, bond):
+                    if _is_ortho(rs_bond, rotor_bond, bond):
                         # Add ring system
                         rs_bonds.add(rs_bond.GetIdx())
                         r2_atoms, r2_bonds = tagged_rings[r_idx2]
                         rs_atoms = rs_atoms.union(r2_atoms)
                         rs_bonds = rs_bonds.union(r2_bonds)
-               #print('functional_group: {}'.format(fgroup))
-                #print('ring idex: {}'.format(tagged_rings[ring_idx]))
-                    # Check if ortho
-                    #is
-                    #if bond.IsInRing():
-                        # bond is inside ring so we need to check rotor_bond
-                    #    bond = rotor_bond
+
     return rs_atoms, rs_bonds
 
 
