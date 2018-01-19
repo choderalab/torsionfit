@@ -252,14 +252,14 @@ def generate_scan_input(root, filetype, mol_name, method, basis_set, dihedral=No
             fixed_dih_angle = '360.001'
         dihedral_string = dihedral + ' ' + fixed_dih_angle
         mol = md.load(f)
-        starting_gem = ""
+        starting_geom = ""
         for i, atom in enumerate(mol.topology.atoms):
             element = atom.element.symbol
             # Convert to Angstroms
             xyz = mol.xyz[0]*10
-            starting_gem += "  {}      {:05.3f}   {:05.3f}   {:05.3f}\n".format(element, xyz[i][0], xyz[i][1], xyz[i][2])
+            starting_geom += "  {}      {:05.3f}   {:05.3f}   {:05.3f}\n".format(element, xyz[i][0], xyz[i][1], xyz[i][2])
 
-        output = pdb_to_psi4(starting_gem=starting_gem, mol_name=mol_name, method=method, basis_set=basis_set, charge=charge,
+        output = pdb_to_psi4(starting_geom=starting_geom, mol_name=mol_name, method=method, basis_set=basis_set, charge=charge,
                              multiplicity=multiplicity, symmetry=symmetry, geom_opt=geom_opt, sp_energy=sp_energy,
                              fixed_dih=dihedral_string, mem=mem)
 
