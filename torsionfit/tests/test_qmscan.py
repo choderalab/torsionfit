@@ -34,11 +34,11 @@ class TestQmscan(unittest.TestCase):
     def test_generate_input(self):
         """Test generate psi4 input files"""
         root = get_fun('torsion_scan/10_7_4_3')
-        qmscan.generate_scan_input(root, 'pdb', 'butane', ['MP2'], ['aug-cc-pvtz'])
+        qmscan.generate_scan_input(root, 'pdb', 'butane', ['MP2'], ['aug-cc-pvtz'], symmetry='C1')
 
         contents = open(get_fun('torsion_scan/10_7_4_3/0/butane_10_7_4_3_0.dat')).read()
-        compare_contenst = open(get_fun('butane_10_7_4_3_0.dat')).read()
-        self.assertEqual(contents, compare_contenst)
+        compare_content = open(get_fun('butane_10_7_4_3_0.dat')).read()
+        self.assertEqual(contents, compare_content)
 
 
 #
