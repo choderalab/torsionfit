@@ -379,6 +379,8 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i
     mol: Openeye OEMolGraph
     atom: Openeye AtomBase
         atom that will iterate over
+    paired: OpeneEye AtomBase
+        atom that's bonded to this atom in rotor_bond
     fgroup_tagged: dict
         map of functional group and atom and bond indices in mol
     tagged_rings: dict
