@@ -3,15 +3,13 @@
 __author__ = 'Chaya D. Stern'
 
 from torsionfit.tests.utils import get_fun, has_openeye
-from openmoltools.openeye import get_charges, smiles_to_oemol
 import unittest
 if has_openeye:
+    from openmoltools.openeye import get_charges, smiles_to_oemol
     import openeye.oechem as oechem
     from torsionfit.qmscan import fragment
-
-
-mol = smiles_to_oemol('CN(C)C/C=C/C(=O)NC1=C(C=C2C(=C1)C(=NC=N2)NC3=CC(=C(C=C3)F)Cl)O[C@H]4CCOC4')
-charged = get_charges(mol, keep_confs=1)
+    mol = smiles_to_oemol('CN(C)C/C=C/C(=O)NC1=C(C=C2C(=C1)C(=NC=N2)NC3=CC(=C(C=C3)F)Cl)O[C@H]4CCOC4')
+    charged = get_charges(mol, keep_confs=1)
 
 
 class TestFragments(unittest.TestCase):
