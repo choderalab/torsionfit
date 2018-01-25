@@ -19,6 +19,7 @@ requirements:
     - netcdf4
     - matplotlib
     - pymbar
+    - openmoltools
 
   run:
     - python
@@ -33,6 +34,7 @@ requirements:
     - matplotlib
     - pymbar
     - libgfortran ==1.0.0 [linux]
+    - openmoltools
 
 test:
   requires:
