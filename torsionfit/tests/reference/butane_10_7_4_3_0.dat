@@ -1,5 +1,6 @@
 
 molecule butane {
+  symmetry C1
   0 1 
   H      1.552   1.757   -8.117
   H      1.991   2.020   -9.788
@@ -19,6 +20,9 @@ molecule butane {
 }
 
 dih_string = "10 7 4 3 0.001"
-set optking fixed_dihedral = $dih_string
+set optking { fixed_dihedral = $dih_string
+    dynamic_level = 3
+    geom_maxiter = 250
+    print_trajectory_xyz_file = True }
 
 optimize('MP2/aug-cc-pvtz')

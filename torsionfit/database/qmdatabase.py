@@ -10,6 +10,7 @@ from cclib.parser.utils import convertor
 
 import mdtraj as md
 from parmed.charmm import CharmmPsfFile, CharmmParameterSet
+import parmed
 from torsionfit.database import DataBase
 
 from copy import deepcopy
@@ -139,14 +140,20 @@ def parse_psi4_out(oufiles_dir, structure, pattern="*.out"):
     :param oufiles_dir: str
         path to directory where the psi4 output files are
     :param structure: str
-        path to psf file of structure
+        path to psf, mol2 or pbd file of structure
     :param pattern: str
         pattern for psi4 output file. Default is *.out
     :return: TorsionScanSet
 
     """
-    topology = md.load_psf(structure)
-    structure = CharmmPsfFile(structure)
+    # Check extension of structure file
+    if structure.endswith('psf'):
+        topology = md.load_psf(structure)
+        structure = CharmmPsfFile(structure)
+    else:
+        topology = md.load(structure).topology
+        structure = parmed.load_file(structure)
+
     positions = np.ndarray((0, topology.n_atoms, 3))
     qm_energies = np.ndarray(0)
     torsions = np.ndarray((0, 4), dtype=int)
