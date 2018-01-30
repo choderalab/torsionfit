@@ -10,8 +10,8 @@ addons:
 
 branches:
   only:
-  - fragment
   - oe_license
+  - master
 
 before_install:
   - source devtools/travis-ci/install.sh
