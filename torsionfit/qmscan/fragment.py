@@ -27,7 +27,7 @@ from openeye import oedepict
 from openeye import oegrapheme
 from openeye import oemedchem
 
-import networkx as nx
+#import networkx as nx
 from openmoltools import openeye
 
 import yaml
@@ -678,6 +678,8 @@ def OeMolToGraph(oemol):
     G: NetworkX Graph of molecule
 
     """
+    import networkx as nx
+
     G = nx.Graph()
     for atom in oemol.GetAtoms():
         G.add_node(atom.GetIdx(), name=atom.GetName())
@@ -705,6 +707,8 @@ def FragGraph(G, bondOrderThreshold=1.2):
     -------
     subgraphs: list of subgraphs
     """
+    import networkx as nx
+
     ebunch = []
     for node in G.edge:
         if G.degree(node) <= 1:
