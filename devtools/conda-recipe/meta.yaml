@@ -20,6 +20,7 @@ requirements:
     - matplotlib
     - pymbar
     - openmoltools
+    - yaml
 
   run:
     - python
@@ -35,6 +36,8 @@ requirements:
     - pymbar
     - libgfortran ==1.0.0 [linux]
     - openmoltools
+    - yaml
+    - pyyaml
 
 test:
   requires:
@@ -42,8 +45,8 @@ test:
     - nose-timer
   imports:
     - torsionfit
-  commands:
-    - nosetests -vv --nocapture --with-timer torsionfit
+  #commands:
+  #  - nosetests -vv --nocapture --with-timer torsionfit
 
 about:
   home: http://github.com/choderalab/torsionfit
