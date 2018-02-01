@@ -8,29 +8,50 @@ addons:
     sources:
     - ubuntu-toolchain-r-test
 
-install:
-  - source devtools/travis-ci/install.sh
-  - export PYTHONUNBUFFERED=true
+branches:
+  only:
+  - master
 
-install:
+before_install:
   - source devtools/travis-ci/install.sh
   - export PYTHONUNBUFFERED=true
   - export CC=gcc
   - export CXX=g++
+  - if [ "$TRAVIS_SECURE_ENV_VARS" == true ]; then openssl aes-256-cbc -K $encrypted_634557e331db_key -iv $encrypted_634557e331db_iv -in oe_license.txt.enc -out $HOME/oe_license.txt -d; fi
+  - if [ "$TRAVIS_SECURE_ENV_VARS" == false ]; then echo "OpenEye license will not be installed in forks."; fi
+
+install:
 
 script:
+  # Create a test environment
+  - conda create --yes -n test python=$python
+  # Activate the test environment
+  - source activate test
   - conda config --add channels ${ORGNAME} --add channels conda-forge
-  - conda update --yes conda
+  # Add omnia dev channels
+  - conda config --add channels https://conda.anaconda.org/omnia/label/dev
+  # Install OpenEye toolkit
+  - conda install --yes --quiet pip
+  - pip install $OPENEYE_CHANNEL openeye-toolkits && python -c "import openeye; print(openeye.__version__)"
   - conda build devtools/conda-recipe
+  - conda install --yes --use-local ${PACKAGENAME}-dev
+  # Install testing dependencies
+  - conda install --yes --quiet nose nose-timer
+  # Test the package
+  - cd devtools && nosetests $PACKAGENAME --nocapture --verbosity=2 --with-timer -a '!slow' && cd ..
 
 env:
   matrix:
-    - python=3.5  CONDA_PY=35
-    - python=3.6  CONDA_PY=36
+    - python=3.5  CONDA_PY=35 OPENEYE_CHANNEL="-i https://pypi.anaconda.org/OpenEye/simple/"
+    - python=3.6  CONDA_PY=36 OPENEYE_CHANNEL="-i https://pypi.anaconda.org/OpenEye/simple/"
 
   global:
     - PACKAGENAME="torsionfit"
     - ORGNAME="omnia"
+    # The architecture to download for the OpenEye toolkits
+    - OE_ARCH="linux-x64"
+    # Location of decrypted OpenEye license file
+    - OE_LICENSE="$HOME/oe_license.txt"
     # encrypted BINSTAR_TOKEN for push of dev package to binstar
     - secure: "XeYowlJPu0iBHK81hfurJhDV+sw1WRHYxpv5Bqx8FI9kSk7PBN/IVBq0xM394qslV35r/kuSxvBl07PemdOhF/Zn/1I2es0ySYvuPsHQyUqbq406KPl/fIUXeKVqWcqkd9iJKQqaVY91okfsY8HcLO+rJ3zv3W+2ZHZWfq8qCFo="
 
