@@ -10,7 +10,6 @@ addons:
 
 branches:
   only:
-  - oe_license
   - master
 
 before_install:
