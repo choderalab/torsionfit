@@ -557,6 +557,30 @@ def frag_to_smiles(frags, mol):
     return smiles
 
 
+def smiles_with_combined(frags, mol, MAX_ROTORS=2):
+    """
+    Generates Smiles:frags mapping for fragments and fragment combinations with less than MAX_ROTORS rotatable bonds
+
+    Parameters
+    ----------
+    frags: dict of rot band mapped to AtomBondSet
+    mol: OpenEye Mol
+
+    Returns
+    -------
+    smiles: dict of smiles sting to fragment
+
+    """
+    frag_list = list(frags.values())
+    comb_list = GetFragmentAtomBondSetCombinations(frag_list, MAX_ROTORS=MAX_ROTORS)
+
+    combined_list = comb_list + frag_list
+
+    smiles = frag_to_smiles(combined_list, mol)
+
+    return smiles
+
+
 # def main(argv=[__name__]):
 #
 #     itf = oechem.OEInterface(InterfaceData)
@@ -963,7 +987,7 @@ def CombineAndConnectAtomBondSets(fraglist):
     return combined
 
 
-def GetFragmentAtomBondSetCombinations(fraglist, MAX_ROTORS=3, MIN_ROTORS=1):
+def GetFragmentAtomBondSetCombinations(fraglist, MAX_ROTORS=2, MIN_ROTORS=1):
     """
     Enumerate connected combinations from list of fragments
     Parameters
