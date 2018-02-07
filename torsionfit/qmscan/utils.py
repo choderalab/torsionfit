@@ -23,7 +23,8 @@ def to_smi(smiles, path, base):
     This function writes out an .smi file for a list of SMILES
     Parameters
     ----------
-    smiles: list of SMILES
+    smiles: list of SMILES.
+        The list can also contain strings that include name for SMILES separated by a space. ("SMILES Name")
     path: str
         path to output file
     base: str
