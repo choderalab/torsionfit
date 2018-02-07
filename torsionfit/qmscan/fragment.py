@@ -35,8 +35,51 @@ from pkg_resources import resource_filename
 import copy
 import itertools
 
+from torsionfit.qmscan import utils
 
-def generate_fragments(mol):
+
+def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_ROTORS=2):
+    """
+
+    Parameters
+    ----------
+    inputf:
+    output_dir:
+    pdf:
+    combinatorial:
+    MAX_ROTORS:
+
+    Returns
+    -------
+
+    """
+    ifs = oechem.oemolistream()
+
+    fragments = {}
+    smiles_unique = set()
+
+    if ifs.open(inputf):
+        for mol in ifs.GetOEGraphMols():
+            print('fragmenting {}...'.format(mol.GetTitle()))
+            charged, frags = _generate_fragments(mol)
+            if combinatorial:
+                smiles = smiles_with_combined(frags, charged, MAX_ROTORS=MAX_ROTORS)
+            else:
+                smiles = frag_to_smiles(frags, charged)
+
+            smiles_unique.update(list(smiles.keys()))
+            if pdf:
+                oname = '{}.pdf'.format(mol.GetTitle())
+                ToPdf(charged, oname, frags)
+            fragments[mol.GetTitle()] = smiles
+
+    # Generate oedatabase for all fragments
+    base, ext = inputf.split('.')
+    ofname = base + '_frags'
+    utils.to_smi(list(smiles_unique), output_dir, ofname)
+
+
+def _generate_fragments(mol):
     """
     This function generates fragments from a molecule.
 
