@@ -2,8 +2,10 @@
 
 __author__ = 'Chaya D. Stern'
 
-from torsionfit.tests.utils import get_fun, has_openeye
+from torsionfit.tests.utils import get_fn, has_openeye, FileIOTestCase
 import unittest
+
+# TODO should I move this to SetUp?
 if has_openeye:
     from openmoltools.openeye import get_charges, smiles_to_oemol
     import openeye.oechem as oechem
@@ -12,7 +14,7 @@ if has_openeye:
     charged = get_charges(mol, keep_confs=1)
 
 
-class TestFragments(unittest.TestCase):
+class TestFragments(FileIOTestCase):
 
     @unittest.skipUnless(has_openeye, "Cannot test without OpenEye")
     def test_tag_funcgroup(self):
@@ -116,6 +118,30 @@ class TestFragments(unittest.TestCase):
         rs_atoms, rs_bonds = fragment._ring_substiuents(charged, next_bond, bond, tagged_rings, ring_idx, tagged_funcgroup)
         self.assertEquals(rs_atoms, {5, 6, 7, 8, 10, 28, 29, 46, 47, 48})
         self.assertEquals(rs_bonds, {5, 6, 7, 8, 30, 31, 49, 50, 51})
+
+    @unittest.skipUnless(has_openeye, "Cannot test without OpenEye")
+    def test_sort_nrotors(self):
+        """Tests sorting fragments by nrotors"""
+        ifs = get_fn('frags.smi')
+        out_dir = self.get_writes_dir()
+        fragment._sort_by_rotbond(ifs, outdir=out_dir)
+
+        mol = oechem.OEGraphMol()
+        for n in range(1, 6):
+            db = get_fn('nrotor_{}.smi'.format(n), written=True)
+            moldb = oechem.OEMolDatabase(db)
+            for idx in range(moldb.GetMaxMolIdx()):
+                if moldb.GetMolecule(mol, idx):
+                    nrotor = sum([bond.IsRotor() for bond in mol.GetBonds()])
+                    self.assertEquals(n, nrotor)
+
+    @unittest.skipUnless(has_openeye, "Cannot test without OpenEye")
+    def test_generate_fragments(self):
+        """Test wrapper generate fragment function"""
+        out_dir = self.get_writes_dir()
+        print(out_dir)
+        fragment.generate_fragments(inputf=get_fn('kinase_inhibitors.smi'), output_dir=out_dir)
+
 
 
 
