@@ -10,7 +10,7 @@ from pymc import MCMC
 import pymc
 import pymc.database
 from torsionfit.backends import netcdf4, sqlite_plus
-from torsionfit.tests.utils import get_fun
+from torsionfit.tests.utils import get_fn
 
 from pymc.tests.test_database import TestPickle, TestSqlite
 import numpy as np
@@ -93,13 +93,13 @@ class TestSqlitPlusDB(unittest.TestCase):
                       ('HGA3', 'CG331', 'CG321', 'CG321'),
                       ('HGA2', 'CG321', 'CG321', 'HGA2'),
                       ('CG331', 'CG321', 'CG321', 'HGA2')]
-        db = sqlite_plus.load(get_fun('butane.db'))
+        db = sqlite_plus.load(get_fn('butane.db'))
         param_list = db.get_sampled_torsions()
         self.assertEqual(set(param_list), set(param_to_opt))
 
     def test_get_multiplicity_traces(self):
         """Tests turing multiplicity bitstring into multiplicity traces"""
-        db = sqlite_plus.load(get_fun('butane.db'))
+        db = sqlite_plus.load(get_fn('butane.db'))
         param_list = db.get_sampled_torsions()
         mult = db.get_multiplicity_trace(param_list[0], n5=True)
         keys = ['1', '2', '3', '4', '5', '6']
