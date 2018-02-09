@@ -18,7 +18,7 @@ def write_oedatabase(moldb, ofs, mlist, size):
         moldb.WriteMolecule(ofs, molidx)
 
 
-def to_smi(smiles, path, base):
+def to_smi(smiles, path, base, return_fname=False):
     """
     This function writes out an .smi file for a list of SMILES
     Parameters
@@ -36,6 +36,8 @@ def to_smi(smiles, path, base):
     smiles_list = map(lambda x: x+"\n", list(smiles))
     outf.writelines(smiles_list)
     outf.close()
+    if return_fname:
+        return fname
 
 
 def create_oedatabase_idxfile(ifname):

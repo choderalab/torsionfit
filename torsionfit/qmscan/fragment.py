@@ -79,8 +79,10 @@ def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_RO
             del charged, frags
 
     # Generate oedatabase for all fragments
-    base, ext = inputf.split('.')
-    base = base.split('/')[-1]
+    split_fname = inputf.split('.')
+    base = split_fname[-2].split('/')[-1]
+    #base, ext = inputf.split('.')
+    #base = base.split('/')[-1]
     ofname = base + '_frags'
     utils.to_smi(list(smiles_unique), output_dir, ofname)
     ofname_ext = ofname + '.smi'
@@ -609,7 +611,7 @@ def frag_to_smiles(frags, mol):
     return smiles
 
 
-def _sort_by_rotbond(ifs, outdir=None):
+def _sort_by_rotbond(ifs, outdir):
     """
 
     Parameters
@@ -617,8 +619,7 @@ def _sort_by_rotbond(ifs, outdir=None):
     ifs: str
         absolute path to molecule database
     outdir: str
-        absolute path to where output files should be written. Optional
-        default: None. The files will be written to the same directory the molecule database is in.
+        absolute path to where output files should be written.
     """
 
     nrotors_map = {}
@@ -633,10 +634,7 @@ def _sort_by_rotbond(ifs, outdir=None):
     # Write out a separate database for each num rotors
     for nrotor in nrotors_map:
         size = len(nrotors_map[nrotor])
-        if outdir:
-            ofname = os.path.join(outdir, 'nrotor_{}.smi'.format(nrotor))
-        else:
-            ofname = 'nrotor_{}.smi'.format(nrotor)
+        ofname = os.path.join(outdir, 'nrotor_{}.smi'.format(nrotor))
         ofs = utils.new_output_stream(ofname)
         utils.write_oedatabase(moldb, ofs, nrotors_map[nrotor], size)
 

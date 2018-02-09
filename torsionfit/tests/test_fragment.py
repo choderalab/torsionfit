@@ -139,7 +139,6 @@ class TestFragments(FileIOTestCase):
     def test_generate_fragments(self):
         """Test wrapper generate fragment function"""
         out_dir = self.get_writes_dir()
-        print(out_dir)
         fragment.generate_fragments(inputf=get_fn('kinase_inhibitors.smi'), output_dir=out_dir)
 
 
