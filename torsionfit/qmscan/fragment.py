@@ -35,8 +35,63 @@ from pkg_resources import resource_filename
 import copy
 import itertools
 
+from torsionfit.qmscan import utils
 
-def generate_fragments(mol):
+
+def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_ROTORS=2):
+    """
+    This function generates fragment SMILES files sorted by rotatable bonds from an input molecule file.
+    The output .smi files are written out to `output_dir` and named `nrotor_n.smi` where n corresponds to the number
+    of rotatable bonds for all fragments in the file.
+    Parameters
+    ----------
+    inputf: str
+        absolute path to input molecule file
+    output_dir: str
+        absolute path to output directory
+    pdf: bool
+        If true, visualization of the fragments will be written to pdf files. The pdf will be writtten in the directory
+        where this function is run from.
+    combinatorial: bool
+        If true, find all connected fragments from fragments and add all new fragments that have less than MAX_ROTORS
+    MAX_ROTORS: int
+        rotor threshold for combinatorial
+
+    """
+    ifs = oechem.oemolistream()
+    smiles_unique = set()
+
+    mol = oechem.OEMol()
+    if ifs.open(inputf):
+        while oechem.OEReadMolecule(ifs, mol):
+            openeye.normalize_molecule(mol)
+            print('fragmenting {}...'.format(mol.GetTitle()))
+            charged, frags = _generate_fragments(mol)
+            if combinatorial:
+                smiles = smiles_with_combined(frags, charged, MAX_ROTORS=MAX_ROTORS)
+            else:
+                smiles = frag_to_smiles(frags, charged)
+
+            smiles_unique.update(list(smiles.keys()))
+            if pdf:
+                oname = '{}.pdf'.format(mol.GetTitle())
+                ToPdf(charged, oname, frags)
+            del charged, frags
+
+    # Generate oedatabase for all fragments
+    split_fname = inputf.split('.')
+    base = split_fname[-2].split('/')[-1]
+    #base, ext = inputf.split('.')
+    #base = base.split('/')[-1]
+    ofname = base + '_frags'
+    utils.to_smi(list(smiles_unique), output_dir, ofname)
+    ofname_ext = ofname + '.smi'
+    oedb_name = os.path.join(output_dir, ofname_ext)
+    utils.create_oedatabase_idxfile(oedb_name)
+    _sort_by_rotbond(oedb_name, outdir=output_dir)
+
+
+def _generate_fragments(mol):
     """
     This function generates fragments from a molecule.
 
@@ -394,7 +449,6 @@ def iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, i
     """
     def _iterate_nbratoms(mol, rotor_bond, atom, pair, fgroup_tagged, tagged_rings, atoms_2, bonds_2, i=0):
 
-
         for a in atom.GetAtoms():
             if a.GetIdx() == pair.GetIdx():
                 continue
@@ -554,6 +608,58 @@ def frag_to_smiles(frags, mol):
         if s not in smiles:
             smiles[s] = []
         smiles[s].append(frag)
+    return smiles
+
+
+def _sort_by_rotbond(ifs, outdir):
+    """
+
+    Parameters
+    ----------
+    ifs: str
+        absolute path to molecule database
+    outdir: str
+        absolute path to where output files should be written.
+    """
+
+    nrotors_map = {}
+    moldb = oechem.OEMolDatabase(ifs)
+    mol = oechem.OEGraphMol()
+    for idx in range(moldb.GetMaxMolIdx()):
+        if moldb.GetMolecule(mol, idx):
+            nrotors = sum([bond.IsRotor() for bond in mol.GetBonds()])
+            if nrotors not in nrotors_map:
+                nrotors_map[nrotors] = []
+            nrotors_map[nrotors].append(idx)
+    # Write out a separate database for each num rotors
+    for nrotor in nrotors_map:
+        size = len(nrotors_map[nrotor])
+        ofname = os.path.join(outdir, 'nrotor_{}.smi'.format(nrotor))
+        ofs = utils.new_output_stream(ofname)
+        utils.write_oedatabase(moldb, ofs, nrotors_map[nrotor], size)
+
+
+def smiles_with_combined(frags, mol, MAX_ROTORS=2):
+    """
+    Generates Smiles:frags mapping for fragments and fragment combinations with less than MAX_ROTORS rotatable bonds
+
+    Parameters
+    ----------
+    frags: dict of rot band mapped to AtomBondSet
+    mol: OpenEye Mol
+
+    Returns
+    -------
+    smiles: dict of smiles sting to fragment
+
+    """
+    frag_list = list(frags.values())
+    comb_list = GetFragmentAtomBondSetCombinations(frag_list, MAX_ROTORS=MAX_ROTORS)
+
+    combined_list = comb_list + frag_list
+
+    smiles = frag_to_smiles(combined_list, mol)
+
     return smiles
 
 
@@ -963,7 +1069,7 @@ def CombineAndConnectAtomBondSets(fraglist):
     return combined
 
 
-def GetFragmentAtomBondSetCombinations(fraglist, MAX_ROTORS=3, MIN_ROTORS=1):
+def GetFragmentAtomBondSetCombinations(fraglist, MAX_ROTORS=2, MIN_ROTORS=1):
     """
     Enumerate connected combinations from list of fragments
     Parameters

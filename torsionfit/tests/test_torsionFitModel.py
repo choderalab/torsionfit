@@ -1,6 +1,6 @@
 """Test TorsionFitModel"""
 
-from torsionfit.tests.utils import get_fun
+from torsionfit.tests.utils import get_fn
 import torsionfit.database.qmdatabase as qmdb
 from torsionfit.model_omm import TorsionFitModel as TorsionFitModelOMM
 from torsionfit.model import TorsionFitModel
@@ -19,9 +19,9 @@ try:
 except ImportError:
     HAVE_OPENMM = False
 
-param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-structure = get_fun('butane.psf')
-logfiles = get_fun('MP2_torsion_scan/')
+param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
+structure = get_fn('butane.psf')
+logfiles = get_fn('MP2_torsion_scan/')
 frag = qmdb.parse_psi4_out(logfiles, structure)
 frag = frag.remove_nonoptimized()
 to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
@@ -43,9 +43,9 @@ class TestFitModel(unittest.TestCase):
     def test_update_param_continuous(self):
         """ Tests that update parameter updates the reverse dihedral too in continuous  """
 
-        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-        structure = get_fun('butane.psf')
-        logfiles = get_fun('MP2_torsion_scan/')
+        param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
+        structure = get_fn('butane.psf')
+        logfiles = get_fn('MP2_torsion_scan/')
         frag = qmdb.parse_psi4_out(logfiles, structure)
         frag = frag.remove_nonoptimized()
         to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
@@ -76,9 +76,9 @@ class TestFitModel(unittest.TestCase):
 
     def test_update_param_struct_cont(self):
         """ Tests that update parameter updates assigned parameters in the structure """
-        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-        structure = get_fun('butane.psf')
-        logfiles = get_fun('MP2_torsion_scan/')
+        param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
+        structure = get_fn('butane.psf')
+        logfiles = get_fn('MP2_torsion_scan/')
         frag = qmdb.parse_psi4_out(logfiles, structure)
         frag = frag.remove_nonoptimized()
         to_optimize = [('CG331', 'CG321', 'CG321', 'CG331')]
@@ -104,9 +104,9 @@ class TestFitModel(unittest.TestCase):
     def test_add_missing_cond(self):
         """ Tests that add_missing adds missing terms to parameters_to_optimize """
 
-        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-        structure = get_fun('butane.psf')
-        logfiles = get_fun('MP2_torsion_scan/')
+        param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
+        structure = get_fn('butane.psf')
+        logfiles = get_fn('MP2_torsion_scan/')
         frag = qmdb.parse_psi4_out(logfiles, structure)
         frag = frag.remove_nonoptimized()
         to_optimize = [('CG331', 'CG321', 'CG321', 'HGA2')]
@@ -149,7 +149,7 @@ class TestFitModel(unittest.TestCase):
     def test_residual_energy(self):
         """ Tests that total energy is resonable.
         """
-        db = sqlite_plus.load(get_fun('butane_np.sqlite'))
+        db = sqlite_plus.load(get_fn('butane_np.sqlite'))
 
         dih_list = [('CG331', 'CG321', 'CG321', 'CG331'),
                     ('HGA2', 'CG321', 'CG321', 'HGA2'),

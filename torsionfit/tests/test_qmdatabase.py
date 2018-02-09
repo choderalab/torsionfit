@@ -1,6 +1,6 @@
 """ Test TorsionScanSet """
 
-from torsionfit.tests.utils import get_fun
+from torsionfit.tests.utils import get_fn
 import torsionfit.database.qmdatabase as qmdb
 from cclib.parser import Gaussian
 from cclib.parser.utils import convertor
@@ -25,8 +25,8 @@ warnings.filterwarnings('ignore')
 
 def test_read_logfile():
     """Tests the logfile parser"""
-    structure = get_fun('PRL.psf')
-    logfiles = [get_fun('PRL.scan2.neg.log'), get_fun('PRL.scan2.pos.log')]
+    structure = get_fn('PRL.psf')
+    logfiles = [get_fn('PRL.scan2.neg.log'), get_fn('PRL.scan2.pos.log')]
     scan = qmdb.parse_gauss(logfiles, structure)
     scan1 = Gaussian(logfiles[0])
     scan2 = Gaussian(logfiles[1])
@@ -38,9 +38,9 @@ def test_read_logfile():
 
 def test_converged_structures():
     """Tests that non converged coordinates in Gaussian log files are discarded"""
-    structure = get_fun('MPR.psf')
-    scan = qmdb.parse_gauss(get_fun('MPR.scan1.pos.log'), structure)
-    log = Gaussian(get_fun('MPR.scan1.pos.log'))
+    structure = get_fn('MPR.psf')
+    scan = qmdb.parse_gauss(get_fn('MPR.scan1.pos.log'), structure)
+    log = Gaussian(get_fn('MPR.scan1.pos.log'))
     data = log.parse()
     assert_array_equal(data.atomcoords.shape, scan.xyz.shape)
     converted = convertor(data.scfenergies, "eV", "kJmol-1") - \
@@ -50,8 +50,8 @@ def test_converged_structures():
 
 def test_extract_geom_opt():
     """Tests extraction of optimized geometry"""
-    structure = get_fun('MPR.psf')
-    scan = qmdb.parse_gauss([get_fun('MPR.scan1.pos.log'), get_fun('MPR.scan1.neg.log')], structure)
+    structure = get_fn('MPR.psf')
+    scan = qmdb.parse_gauss([get_fn('MPR.scan1.pos.log'), get_fn('MPR.scan1.neg.log')], structure)
     scan.extract_geom_opt()
 
 
@@ -60,8 +60,8 @@ class TestScanSet(unittest.TestCase):
 
     def test_to_optimize(self):
         """Tests generate to_optimize list"""
-        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
-        stream = (get_fun('PRL.str'))
+        param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
+        stream = (get_fn('PRL.str'))
         to_optimize = qmdb.to_optimize(param, stream)
         self.assert_(len(to_optimize) == 19)
         reverse = tuple(reversed(to_optimize[0]))
@@ -69,8 +69,8 @@ class TestScanSet(unittest.TestCase):
 
     def test_parse_psi4_out(self):
         """ Tests psi4 outfile parser"""
-        structure = get_fun('butane.psf')
-        scan = get_fun('MP2_torsion_scan/')
+        structure = get_fn('butane.psf')
+        scan = get_fn('MP2_torsion_scan/')
         butane_scan = qmdb.parse_psi4_out(scan, structure, pattern="*.out2")
         butane_scan = butane_scan.remove_nonoptimized()
         self.assertEqual(butane_scan.n_atoms, 14)
@@ -85,8 +85,8 @@ class TestScanSet(unittest.TestCase):
 
     def test_remove_nonoptimized(self):
         """ Test remove non_optimized structures """
-        structure = get_fun('butane.psf')
-        scan = get_fun('MP2_torsion_scan/')
+        structure = get_fn('butane.psf')
+        scan = get_fn('MP2_torsion_scan/')
         test_scan = qmdb.parse_psi4_out(scan, structure, pattern="*.out2")
         self.assertEqual(test_scan.n_frames, 14)
         scan_opt = test_scan.remove_nonoptimized()
@@ -94,21 +94,21 @@ class TestScanSet(unittest.TestCase):
 
     def test_to_dataframe(self):
         """ Tests to dataframe """
-        structure = get_fun('butane.psf')
-        scan = get_fun('MP2_torsion_scan/')
+        structure = get_fn('butane.psf')
+        scan = get_fn('MP2_torsion_scan/')
         test_scan = qmdb.parse_psi4_out(scan, structure)
         test_scan.to_dataframe()
-        structure = get_fun('MPR.psf')
-        scan = qmdb.parse_gauss([get_fun('MPR.scan1.pos.log'), get_fun('MPR.scan1.neg.log')], structure)
+        structure = get_fn('MPR.psf')
+        scan = qmdb.parse_gauss([get_fn('MPR.scan1.pos.log'), get_fn('MPR.scan1.neg.log')], structure)
         scan.extract_geom_opt()
         scan.to_dataframe(psi4=False)
 
     def test_compute_energy(self):
         """ Tests compute mm energy"""
-        structure = get_fun('butane.psf')
-        scan = get_fun('MP2_torsion_scan/')
+        structure = get_fn('butane.psf')
+        scan = get_fn('MP2_torsion_scan/')
         test_scan = qmdb.parse_psi4_out(scan, structure, pattern="*.out2")
-        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
+        param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
         self.assertFalse(test_scan._have_mm_energy)
         scan_opt = test_scan.remove_nonoptimized()
         scan_opt.compute_energy(param)
@@ -120,19 +120,19 @@ class TestScanSet(unittest.TestCase):
 
     def test_create_context(self):
         """ Test create context """
-        structure = get_fun('butane.psf')
-        scan = get_fun('MP2_torsion_scan/')
+        structure = get_fn('butane.psf')
+        scan = get_fn('MP2_torsion_scan/')
         test_scan = qmdb.parse_psi4_out(scan, structure)
-        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
+        param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
         test_scan.integrator = mm.VerletIntegrator(0.004*u.picoseconds)
         test_scan.create_context(param)
 
     def test_copy_torsions(self):
         """ Test copy torsions"""
-        structure = get_fun('butane.psf')
-        scan = get_fun('MP2_torsion_scan/')
+        structure = get_fn('butane.psf')
+        scan = get_fn('MP2_torsion_scan/')
         test_scan = qmdb.parse_psi4_out(scan, structure)
-        param = CharmmParameterSet(get_fun('top_all36_cgenff.rtf'), get_fun('par_all36_cgenff.prm'))
+        param = CharmmParameterSet(get_fn('top_all36_cgenff.rtf'), get_fn('par_all36_cgenff.prm'))
         test_scan.compute_energy(param)
         test_scan.copy_torsions()
 
