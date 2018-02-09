@@ -1,4 +1,4 @@
-from openeye import oechem
+from openeye import oechem, oeiupac, oedepict
 import os
 
 
@@ -80,3 +80,98 @@ def new_output_stream(outname):
     if not ofs.open(outname):
         oechem.OEThrow.Fatal("Unable to open {} for writing".format(outname))
     return ofs
+
+
+def to_oemol(filename, title=None):
+    """Create OEMol from file. If more than one mol in file, return list of OEMols.
+
+    Parameters
+    ----------
+    filename: str
+        absolute path to
+    title: str
+        title for molecule. If None, IUPAC name will be given as title.
+
+    Returns
+    -------
+    mollist: list
+        list of OEMol for multiple molecules. OEMol if file only has one molecule.
+    """
+    ifs = oechem.oemolistream(filename)
+    moldb = oechem.OEMolDatabase(ifs)
+    mollist = []
+
+    for mol in moldb.GetOEMols():
+        molecule = oechem.OEMol(mol)
+        mollist.append(normalize_molecule(molecule, title))
+
+    if len(mollist) <= 1:
+        mollist = mollist[0]
+
+    ifs.close()
+
+    return mollist
+
+
+def normalize_molecule(molecule, title=None):
+    """Normalize a copy of the molecule by checking aromaticity, adding explicit hydrogens and renaming by IUPAC name
+    or given title
+
+    Parameters
+    ----------
+    molecule: OEMol
+        The molecule to be normalized:
+    title: str
+        Name of molecule. If none, will use IUPAC name
+
+    Returns
+    -------
+    molcopy: OEMol
+        A (copied) version of the normalized molecule
+
+    """
+    molcopy = oechem.OEMol(molecule)
+
+    # Assign aromaticity.
+    oechem.OEAssignAromaticFlags(molcopy, oechem.OEAroModelOpenEye)
+
+    # Add hydrogens.
+    oechem.OEAddExplicitHydrogens(molcopy)
+
+    # Set title to IUPAC name.
+    name = title
+    if not name:
+        name = oeiupac.OECreateIUPACName(molcopy)
+    molcopy.SetTitle(name)
+
+    # Check for any missing atom names, if found reassign all of them.
+    if any([atom.GetName() == '' for atom in molcopy.GetAtoms()]):
+        oechem.OETriposAtomNames(molcopy)
+
+    return molcopy
+
+
+def png_atoms_labeled(smiles, fname):
+    """Write out png file of molecule with atoms labeled with their index.
+
+    Parameters
+    ----------
+    smiles: str
+        SMILES
+    fname: str
+        absolute path and filename for png
+
+    """
+
+    mol = oechem.OEGraphMol()
+    oechem.OESmilesToMol(mol, smiles)
+    oedepict.OEPrepareDepiction(mol)
+
+    width, height = 300, 200
+
+    opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
+    opts.SetAtomPropertyFunctor(oedepict.OEDisplayAtomIdx())
+    opts.SetAtomPropLabelFont(oedepict.OEFont(oechem.OEDarkGreen))
+
+    disp = oedepict.OE2DMolDisplay(mol, opts)
+    return oedepict.OERenderMolecule(fname, disp)
