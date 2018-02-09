@@ -36,6 +36,7 @@ import copy
 import itertools
 
 from torsionfit.qmscan import utils
+from torsionfit.utils import logger
 
 
 def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_ROTORS=2):
@@ -65,7 +66,7 @@ def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_RO
     if ifs.open(inputf):
         while oechem.OEReadMolecule(ifs, mol):
             openeye.normalize_molecule(mol)
-            print('fragmenting {}...'.format(mol.GetTitle()))
+            logger().info('fragmenting {}...'.format(mol.GetTitle()))
             charged, frags = _generate_fragments(mol)
             if combinatorial:
                 smiles = smiles_with_combined(frags, charged, MAX_ROTORS=MAX_ROTORS)
@@ -81,8 +82,6 @@ def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_RO
     # Generate oedatabase for all fragments
     split_fname = inputf.split('.')
     base = split_fname[-2].split('/')[-1]
-    #base, ext = inputf.split('.')
-    #base = base.split('/')[-1]
     ofname = base + '_frags'
     utils.to_smi(list(smiles_unique), output_dir, ofname)
     ofname_ext = ofname + '.smi'
@@ -397,7 +396,6 @@ def _build_frag(bond, mol, tagged_fgroups, tagged_rings):
     -------
     atoms, bonds: sets of atom and bond indices for fragment
     """
-
 
     atoms = set()
     bonds = set()
