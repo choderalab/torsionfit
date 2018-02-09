@@ -10,6 +10,7 @@ try:
 except ImportError:
     pass
 from torsionfit.utils import logger
+from openmoltools.openeye import generate_conformers
 import warnings
 import numpy as np
 from cclib.parser import Gaussian, Psi
@@ -17,25 +18,24 @@ from cclib.parser.utils import convertor
 import re
 
 
-def generate_torsions(mol, path, interval):
+def generate_torsions(inp_mol, output_path, interval, base_name=None):
     """
     This function takes a 3D molecule (pdf, mol2 or sd file) and generates structures for a torsion drive on all torsions
     in the molecule. This function uses OpenEye
     Parameters
     ----------
-    mol : str
-        path to molecule file (pdb, mol2, sd, etc.)
-    path: str
-        path to output files
+    mol : OEMol
+        molecule to generate 1D torsion scans
+    output_path: str
+        path to output file directory
     interval: int
         angle (in degrees) of interval for torsion drive
+    base_name: str
+        base name for file. Default is None. If default, use title in OEMol for base name
 
     """
-    filename = mol.split('/')[-1].split('.')[0]
-    ifs = oechem.oemolistream(mol)
-    inp_mol = oechem.OEMol()
-    oechem.OEReadMolecule(ifs, inp_mol)
-    ifs.close()
+    if not base_name:
+        base_name = inp_mol.GetTitle()
 
     mid_tors = [[tor.a, tor.b, tor.c, tor.d ] for tor in oechem.OEGetTorsions(inp_mol)]
 
@@ -100,21 +100,33 @@ def generate_torsions(mol, path, interval):
     conf = mol.GetConfs().next()
     coords = oechem.OEFloatArray(conf.GetMaxAtomIdx() * 3)
     conf.GetCoords(coords)
+    # Check if coordinates are not zero
+    values = np.asarray([coords.__getitem__(i) == 0 for i in range(coords.__len__())])
+    if values.all():
+        # Generate new coordinates.
+        mol2 = generate_conformers(mol, max_confs=1)
+        conf = mol2.GetConfs().next()
+        coords = oechem.OEFloatArray(conf.GetMaxAtomIdx() * 3)
+        conf.GetCoords(coords)
+        mol2.DeleteConfs()
     mol.DeleteConfs()
 
     for tor in tors:
         tor_name = str((tor[0].GetIdx())+1) + '_' + str((tor[1].GetIdx())+1) + '_' + str((tor[2].GetIdx())+1) + '_' + str((tor[3].GetIdx())+1)
-        folder = os.path.join(path, tor_name)
+        folder = os.path.join(output_path, tor_name)
         try:
             os.makedirs(folder)
         except FileExistsError:
             logger().info("Overwriting existing directory {}".format(tor_name))
         for angle in range(0, 360, interval):
             angle_folder = os.path.join(folder, str(angle))
-            os.makedirs(angle_folder)
+            try:
+                os.mkdir(angle_folder)
+            except FileExistsError:
+                logger().info("Overwriting existing directory {}".format(tor_name))
             newconf = mol.NewConf(coords)
             oechem.OESetTorsion(newconf, tor[0], tor[1], tor[2], tor[3], radians(angle))
-            pdb = oechem.oemolostream('{}/{}_{}_{}.pdb'.format(angle_folder, filename, tor_name, angle))
+            pdb = oechem.oemolostream('{}/{}_{}_{}.pdb'.format(angle_folder, base_name, tor_name, angle))
             oechem.OEWritePDBFile(pdb, newconf)
 
 
