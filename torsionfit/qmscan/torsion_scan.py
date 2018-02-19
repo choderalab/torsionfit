@@ -16,9 +16,10 @@ import numpy as np
 from cclib.parser import Gaussian, Psi
 from cclib.parser.utils import convertor
 import re
+import tarfile
 
 
-def generate_torsions(inp_mol, output_path, interval, base_name=None):
+def generate_torsions(inp_mol, output_path, interval, base_name=None, tar=True):
     """
     This function takes a 3D molecule (pdf, mol2 or sd file) and generates structures for a torsion drive on all torsions
     in the molecule. This function uses OpenEye
@@ -32,6 +33,8 @@ def generate_torsions(inp_mol, output_path, interval, base_name=None):
         angle (in degrees) of interval for torsion drive
     base_name: str
         base name for file. Default is None. If default, use title in OEMol for base name
+    tar: bool
+        If true, will compress output
 
     """
     if not base_name:
@@ -128,6 +131,13 @@ def generate_torsions(inp_mol, output_path, interval, base_name=None):
             oechem.OESetTorsion(newconf, tor[0], tor[1], tor[2], tor[3], radians(angle))
             pdb = oechem.oemolostream('{}/{}_{}_{}.pdb'.format(angle_folder, base_name, tor_name, angle))
             oechem.OEWritePDBFile(pdb, newconf)
+    if tar:
+        # tar archive output
+        out = tarfile.open('{}.tar.gz'.format(output_path), mode='w:gz')
+        os.chdir(output_path)
+        os.chdir('../')
+        out.add('{}'.format(base_name))
+        out.close()
 
 
 def pdb_to_psi4(starting_geom, mol_name, method, basis_set, charge=0, multiplicity=1, symmetry='C1', geom_opt=True,
