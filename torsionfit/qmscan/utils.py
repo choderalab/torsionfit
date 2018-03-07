@@ -175,3 +175,50 @@ def png_atoms_labeled(smiles, fname):
 
     disp = oedepict.OE2DMolDisplay(mol, opts)
     return oedepict.OERenderMolecule(fname, disp)
+
+
+def png_wiberg_labels(mol, fname, width=600, height=400):
+    """
+    Generate png figure of molecule. Bonds are labeled with Wiberg bond order
+
+    Parameters
+    ----------
+    mol: OpenEye OEMol
+    fname: str
+        filename for png
+    width: int
+    height: int
+
+    Returns
+    -------
+    bool:
+    """
+
+    oedepict.OEPrepareDepiction(mol)
+
+
+    opts = oedepict.OE2DMolDisplayOptions(width, height, oedepict.OEScale_AutoScale)
+    # opts.SetAtomPropertyFunctor(oedepict.OEDisplayAtomIdx())
+    # opts.SetAtomPropLabelFont(oedepict.OEFont(oechem.OEDarkGreen))
+
+    bondlabel = LabelBondOrder()
+    opts.SetBondPropertyFunctor(bondlabel)
+
+    disp = oedepict.OE2DMolDisplay(mol, opts)
+    return oedepict.OERenderMolecule(fname, disp)
+
+
+class LabelBondOrder(oedepict.OEDisplayBondPropBase):
+    def __init__(self):
+        oedepict.OEDisplayBondPropBase.__init__(self)
+
+    def __call__(self, bond):
+        bondOrder = bond.GetData('WibergBondOrder')
+        label = "{:.2f}".format(bondOrder)
+        return label
+
+    def CreateCopy(self):
+        copy = LabelBondOrder()
+        return copy.__disown__()
+
+
