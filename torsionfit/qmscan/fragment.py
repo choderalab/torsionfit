@@ -36,9 +36,10 @@ import copy
 import itertools
 
 from torsionfit.qmscan import utils
+from torsionfit.utils import logger
 
 
-def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_ROTORS=2):
+def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_ROTORS=2, strict_stereo=True):
     """
     This function generates fragment SMILES files sorted by rotatable bonds from an input molecule file.
     The output .smi files are written out to `output_dir` and named `nrotor_n.smi` where n corresponds to the number
@@ -65,8 +66,8 @@ def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_RO
     if ifs.open(inputf):
         while oechem.OEReadMolecule(ifs, mol):
             openeye.normalize_molecule(mol)
-            print('fragmenting {}...'.format(mol.GetTitle()))
-            charged, frags = _generate_fragments(mol)
+            logger().info('fragmenting {}...'.format(mol.GetTitle()))
+            charged, frags = _generate_fragments(mol, strict_stereo=strict_stereo)
             if combinatorial:
                 smiles = smiles_with_combined(frags, charged, MAX_ROTORS=MAX_ROTORS)
             else:
@@ -81,8 +82,6 @@ def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_RO
     # Generate oedatabase for all fragments
     split_fname = inputf.split('.')
     base = split_fname[-2].split('/')[-1]
-    #base, ext = inputf.split('.')
-    #base = base.split('/')[-1]
     ofname = base + '_frags'
     utils.to_smi(list(smiles_unique), output_dir, ofname)
     ofname_ext = ofname + '.smi'
@@ -91,7 +90,7 @@ def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_RO
     _sort_by_rotbond(oedb_name, outdir=output_dir)
 
 
-def _generate_fragments(mol):
+def _generate_fragments(mol, strict_stereo=True):
     """
     This function generates fragments from a molecule.
 
@@ -105,7 +104,7 @@ def _generate_fragments(mol):
     frags: dict of AtomBondSet mapped to rotatable bond index the fragment was built up from.
     """
 
-    charged = openeye.get_charges(mol, keep_confs=1)
+    charged = openeye.get_charges(mol, keep_confs=1, strictStereo=strict_stereo)
 
     tagged_rings, tagged_fgroups = tag_molecule(charged)
 
@@ -397,7 +396,6 @@ def _build_frag(bond, mol, tagged_fgroups, tagged_rings):
     -------
     atoms, bonds: sets of atom and bond indices for fragment
     """
-
 
     atoms = set()
     bonds = set()
@@ -873,7 +871,7 @@ def SmilesToFragments(smiles, fgroup_smarts, bondOrderThreshold=1.2, chargesMol=
     charged = openeye.get_charges(oemol, keep_confs=1)
 
     # Tag functional groups
-    tag_fgroups(charged, fgroups_smarts=fgroup_smarts)
+    _tag_fgroups(charged, fgroups_smarts=fgroup_smarts)
 
     # Generate fragments
     G = OeMolToGraph(charged)
