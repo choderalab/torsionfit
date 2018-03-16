@@ -222,3 +222,69 @@ class LabelBondOrder(oedepict.OEDisplayBondPropBase):
         return copy.__disown__()
 
 
+def mol2_to_psi4json(infile):
+    """
+
+    Parameters
+    ----------
+    infile
+
+    Returns
+    -------
+
+    """
+    pass
+
+
+def create_mapped_smiles(mol):
+    """
+    Generate an index-tagged explicit hydrogen SMILES.
+    Exmaple:
+    SMILES string for carbon monoxide "CO"
+    With index-tagged explicit hydrogen SMILES this becomes
+    '[H:3][C:1]([H:4])([H:5])[O:2][H:6]'
+
+    Parameters
+    ----------
+    mol: OEMOl
+
+    Returns
+    -------
+    index-tagged explicit hydrogen SMILES str
+
+    """
+    # Check if molecule already has explicit hydrogens
+    HAS_HYDROGENS = oechem.OEHasExplicitHydrogens(mol)
+    if not HAS_HYDROGENS:
+        # Add explicit hydrogens
+        oechem.OEAddExplicitHydrogens(mol)
+    for atom in mol.GetAtoms():
+        atom.SetMapIdx(atom.GetIdx() + 1)
+
+    return oechem.OEMolToSmiles(mol)
+
+
+def mol_to_tagged_smiles(infile, outfile):
+    """
+    Generate .smi from input mol with index-tagged explicit hydrogen SMILES
+    Parameters
+    ----------
+    infile: str
+        input molecule file
+    outfile: str
+        output smi file. Must be smi or ism
+
+    """
+    ifs = oechem.oemolistream()
+    if not ifs.open(infile):
+        oechem.OEThrow.Fatal("Unable to open {} for reading".format(infile))
+
+    ofs = oechem.oemolostream()
+    if not ofs.open(outfile):
+        oechem.OEThrow.Fatal("Unable to open {} for writing".format(outfile))
+    if ofs.GetFormat() not in [oechem.OEFormat_ISM, oechem.OEFormat_SMI]:
+        oechem.OEThrow.Fatal("Output format must be SMILES")
+
+    for mol in ifs.GetOEMols():
+        smiles = create_mapped_smiles(mol)
+        oechem.OEWriteMolecule(ofs, mol)
