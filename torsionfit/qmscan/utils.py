@@ -3,6 +3,8 @@ import os
 import numpy as np
 from torsionfit.utils import logger
 import time
+import json
+import psi4
 
 def write_oedatabase(moldb, ofs, mlist, size):
     """
@@ -341,7 +343,7 @@ def get_atom_map(tagged_smiles, molecule=None):
         return atom_map, target
 
 
-def to_mapped_xyz(molecule, atom_map, conformer=None):
+def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False):
     """
     Generate xyz coordinates for molecule in the order given by the atom_map. atom_map is a dictionary that maps the
     tag on the SMILES to the atom idex in OEMol.
@@ -356,21 +358,63 @@ def to_mapped_xyz(molecule, atom_map, conformer=None):
     str: XYZ file format
 
     """
-
     xyz = ""
     for k, mol in enumerate(molecule.GetConfs()):
         if k == conformer or conformer is None:
-            xyz += "\n{}".format(mol.GetMaxAtomIdx())
-            xyz += "\n{}".format(mol.GetTitle())
+            if xyz_format:
+                xyz += "{}\n".format(mol.GetMaxAtomIdx())
+                xyz += "{}\n".format(mol.GetTitle())
             coords = oechem.OEFloatArray(mol.GetMaxAtomIdx() * 3)
             mol.GetCoords(coords)
-            for mapping in range(1, len(atom_map)):
+            for mapping in range(1, len(atom_map)+1):
                 idx = atom_map[mapping]
                 atom = mol.GetAtom(oechem.OEHasAtomIdx(idx))
                 syb = oechem.OEGetAtomicSymbol(atom.GetAtomicNum())
 
-                xyz += "\n  {}      {:05.3f}   {:05.3f}   {:05.3f}".format(syb,
+                xyz += "  {}      {:05.3f}   {:05.3f}   {:05.3f}\n".format(syb,
                                                                            coords[idx * 3],
                                                                            coords[idx * 3 + 1],
                                                                            coords[idx * 3 + 2])
     return xyz
+
+
+# def run_psi4_json(tagged_smiles, molecule, driver, method, basis, properties=None, return_output=True, xyz_file=True):
+#     """
+#
+#     Parameters
+#     ----------
+#     tagged_smiles
+#     xyz
+#     driver
+#     method
+#     basis
+#     properties
+#     return_output
+#     xyz_file
+#
+#     Returns
+#     -------
+#
+#     """
+#     json_data = {}
+#     json_data["tagged_smiles"] = tagged_smiles
+#     json_data["molecule"] = molecule
+#     json_data["driver"] = "property"
+#     json_data["kwargs"] = {"properties": properties}
+#     json_data["method"] = method
+#     json_data["options"] = {"BASIS": basis}
+#     json_data["return_output"] = return_output
+#
+#     name = molecule.split("\n")[2]
+#     if xyz_file:
+#         file = open("{}.xyz".format(name), 'w')
+#         file.write(molecule)
+#         file.close()
+#
+#     j = json.dumb(json_data, indent=4, sort_keys=True)
+#     f = open("{}.input.json".format(name), 'w')
+#     f.close()
+#
+#     psi4.json_wrapper.run_json(json_data)
+#     j = json.dump(json_data, indent=4, sort_keys=True)
+    f = open("{}.output.json".format(name))
