@@ -1,6 +1,8 @@
 from openeye import oechem, oeiupac, oedepict
 import os
-
+import numpy as np
+from torsionfit.utils import logger
+import time
 
 def write_oedatabase(moldb, ofs, mlist, size):
     """
@@ -288,3 +290,87 @@ def mol_to_tagged_smiles(infile, outfile):
     for mol in ifs.GetOEMols():
         smiles = create_mapped_smiles(mol)
         oechem.OEWriteMolecule(ofs, mol)
+
+
+def get_atom_map(tagged_smiles, molecule=None):
+    """
+    Maps tag index in SMILES to atom index in OEMol.
+    Parameters
+    ----------
+    tagged_smiles: str
+        index-tagged explicit Hydrogen SMILES string
+    molecule: OEMOl
+        The OEMol to get the map for. Default is None.
+        When None, a new OEMol will be generated from SMILES. If an OEMol is provided, the map will be to that OEMol.
+
+    Returns
+    -------
+    map: dict
+        maps tag to index in returned OEMol. {map_idx: atom_idx}
+    molecule: OEMol. Only if no OEMol was provided.
+
+    """
+    target = molecule
+    if not molecule:
+        target = oechem.OEMol()
+        oechem.OESmilesToMol(target, tagged_smiles)
+
+    # create maximum common substructure object
+    mcss = oechem.OEMCSSearch(tagged_smiles, oechem.OEMCSType_Approximate)
+    mcss.SetMaxMatches(1)
+    mcss.SetMinAtoms(target.GetMaxAtomIdx())
+    # Scoring function
+    mcss.SetMCSFunc(oechem.OEMCSMaxAtoms())
+
+    atom_map = {}
+    unique = True
+    t1 = time.time()
+    for count, match in enumerate(mcss.Match(target, unique)):
+        for ma in match.GetAtoms():
+            atom_map[ma.pattern.GetMapIdx()] = ma.target.GetIdx()
+    t2 = time.time()
+    logger().info('MCSS took {} seconds'.format(t2-t1))
+
+    m = oechem.OEGraphMol()
+    oechem.OESubsetMol(m, match, True)
+    logger().info("Match SMILES: {}".format(oechem.OEMolToSmiles(m)))
+
+    if molecule:
+        return atom_map
+    else:
+        return atom_map, target
+
+
+def to_mapped_xyz(molecule, atom_map, conformer=None):
+    """
+    Generate xyz coordinates for molecule in the order given by the atom_map. atom_map is a dictionary that maps the
+    tag on the SMILES to the atom idex in OEMol.
+    Parameters
+    ----------
+    molecule
+    atom_map
+    conformer
+
+    Returns
+    -------
+    str: XYZ file format
+
+    """
+
+    xyz = ""
+    for k, mol in enumerate(molecule.GetConfs()):
+        if k == conformer or conformer is None:
+            xyz += "\n{}".format(mol.GetMaxAtomIdx())
+            xyz += "\n{}".format(mol.GetTitle())
+            coords = oechem.OEFloatArray(mol.GetMaxAtomIdx() * 3)
+            mol.GetCoords(coords)
+            for mapping in range(1, len(atom_map)):
+                idx = atom_map[mapping]
+                atom = mol.GetAtom(oechem.OEHasAtomIdx(idx))
+                syb = oechem.OEGetAtomicSymbol(atom.GetAtomicNum())
+
+                xyz += "\n  {}      {:05.3f}   {:05.3f}   {:05.3f}".format(syb,
+                                                                           coords[idx * 3],
+                                                                           coords[idx * 3 + 1],
+                                                                           coords[idx * 3 + 2])
+    return xyz

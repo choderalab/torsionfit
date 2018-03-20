@@ -39,7 +39,7 @@ from torsionfit.qmscan import utils
 from torsionfit.utils import logger
 
 
-def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_ROTORS=2, strict_stereo=True):
+def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_ROTORS=2, strict_stereo=True, remove_map=True):
     """
     This function generates fragment SMILES files sorted by rotatable bonds from an input molecule file.
     The output .smi files are written out to `output_dir` and named `nrotor_n.smi` where n corresponds to the number
@@ -67,7 +67,16 @@ def generate_fragments(inputf, output_dir, pdf=False, combinatorial=True, MAX_RO
         while oechem.OEReadMolecule(ifs, mol):
             openeye.normalize_molecule(mol)
             logger().info('fragmenting {}...'.format(mol.GetTitle()))
-            charged, frags = _generate_fragments(mol, strict_stereo=strict_stereo)
+            if remove_map:
+                # Remove tags from smiles. This is done to make it easier to find duplicate fragments
+                for a in mol.GetAtoms():
+                    a.SetMapIdx(0)
+            frags = _generate_fragments(mol, strict_stereo=strict_stereo)
+            if not frags:
+                logger().warn('Skipping {}, SMILES: {}'.format(mol.GetTitle(), oechem.OECreateSmiString(mol)))
+                continue
+            charged = frags[0]
+            frags = frags[-1]
             if combinatorial:
                 smiles = smiles_with_combined(frags, charged, MAX_ROTORS=MAX_ROTORS)
             else:
@@ -105,6 +114,15 @@ def _generate_fragments(mol, strict_stereo=True):
     """
 
     charged = openeye.get_charges(mol, keep_confs=1, strictStereo=strict_stereo)
+
+    # Check if WBO were calculated
+    bonds = [bond for bond in charged.GetBonds()]
+    for bond in bonds[:1]:
+        try:
+            bond.GetData('WibergBondOrder')
+        except ValueError:
+            logger().warn("WBO were not calculate. Cannot fragment molecule {}".format(charged.GetTitle()))
+            return False
 
     tagged_rings, tagged_fgroups = tag_molecule(charged)
 
@@ -602,7 +620,7 @@ def frag_to_smiles(frags, mol):
         fragment = oechem.OEGraphMol()
         adjustHCount = True
         oechem.OESubsetMol(fragment, mol, fragatompred, fragbondpred, adjustHCount)
-        s = oechem.OEMolToSmiles(fragment)
+        s = oechem.OECreateIsoSmiString(fragment)
         if s not in smiles:
             smiles[s] = []
         smiles[s].append(frag)

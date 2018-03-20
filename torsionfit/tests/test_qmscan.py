@@ -4,6 +4,7 @@ import unittest
 from torsionfit.tests.utils import get_fn, has_openeye
 import torsionfit.qmscan.torsion_scan as qmscan
 from torsionfit.qmscan import utils
+from openmoltools import openeye
 import tempfile
 import os
 from fnmatch import fnmatch
@@ -59,6 +60,65 @@ class TestQmscan(unittest.TestCase):
         # Tags should always be the same as mol2 molecule ordering
         self.assertEqual(tagged_smiles, '[H:5][C:1]#[N+:4][C:3]([H:9])([H:10])[C:2]([H:6])([H:7])[H:8]')
 
+    @unittest.skipUnless(has_openeye, "Cannot test without OpneEye")
+    def test_atom_map(self):
+        """Test get atom map"""
+        from openeye import oechem
+        tagged_smiles = '[H:5][C:1]#[N+:4][C:3]([H:9])([H:10])[C:2]([H:6])([H:7])[H:8]'
+        mol_1 = openeye.smiles_to_oemol('CC[N+]#C')
+        inf = get_fn('ethylmethylidyneamonium.mol2')
+        ifs = oechem.oemolistream(inf)
+        mol_2 = oechem.OEMol()
+        oechem.OEReadMolecule(ifs, mol_2)
 
+        atom_map = utils.get_atom_map(tagged_smiles, mol_1)
 
-#
+        for i, mapping in enumerate(atom_map):
+            atom_1 = mol_1.GetAtom(oechem.OEHasAtomIdx(atom_map[mapping]))
+            atom_1.SetAtomicNum(i+1)
+            atom_2 = mol_2.GetAtom(oechem.OEHasAtomIdx(mapping-1))
+            atom_2.SetAtomicNum(i+1)
+            self.assertEqual(oechem.OECreateCanSmiString(mol_1), oechem.OECreateCanSmiString(mol_2))
+
+        # Test aromatic molecule
+        tagged_smiles = '[H:10][c:4]1[c:3]([c:2]([c:1]([c:6]([c:5]1[H:11])[H:12])[C:7]([H:13])([H:14])[H:15])[H:8])[H:9]'
+        mol_1 = openeye.smiles_to_oemol('Cc1ccccc1')
+        inf = get_fn('toluene.mol2')
+        ifs = oechem.oemolistream(inf)
+        mol_2 = oechem.OEMol()
+        oechem.OEReadMolecule(ifs, mol_2)
+
+        atom_map = utils.get_atom_map(tagged_smiles, mol_1)
+        for i, mapping in enumerate(atom_map):
+            atom_1 = mol_1.GetAtom(oechem.OEHasAtomIdx(atom_map[mapping]))
+            atom_1.SetAtomicNum(i+1)
+            atom_2 = mol_2.GetAtom(oechem.OEHasAtomIdx(mapping-1))
+            atom_2.SetAtomicNum(i+1)
+            self.assertEqual(oechem.OECreateCanSmiString(mol_1), oechem.OECreateCanSmiString(mol_2))
+
+    @unittest.skipUnless(has_openeye, "Cannot test without OpneEye")
+    def test_mapped_xyz(self):
+        """Test writing out mapped xyz"""
+        from openeye import oechem, oeomega
+        tagged_smiles = '[H:10][c:4]1[c:3]([c:2]([c:1]([c:6]([c:5]1[H:11])[H:12])[C:7]([H:13])([H:14])[H:15])[H:8])[H:9]'
+        mol_1 = openeye.smiles_to_oemol('Cc1ccccc1')
+        inf = get_fn('toluene.mol2')
+        ifs = oechem.oemolistream(inf)
+        mol_2 = oechem.OEMol()
+        oechem.OEReadMolecule(ifs, mol_2)
+
+        atom_map = utils.get_atom_map(tagged_smiles, mol_1)
+        for i, mapping in enumerate(atom_map):
+            atom_1 = mol_1.GetAtom(oechem.OEHasAtomIdx(atom_map[mapping]))
+            atom_1.SetAtomicNum(i+1)
+            atom_2 = mol_2.GetAtom(oechem.OEHasAtomIdx(mapping-1))
+            atom_2.SetAtomicNum(i+1)
+
+        xyz_1 = utils.to_mapped_xyz(mol_1, atom_map)
+        # molecule generated from mol2 should be in the right order.
+        atom_map_mol2 = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9, 11:10, 12:11, 13:12, 14:13, 15:14}
+        xyz_2 = utils.to_mapped_xyz(mol_2, atom_map_mol2)
+
+        for ele1, ele2 in zip(xyz_1.split('\n')[3:], xyz_2.split('\n')[3:]):
+            self.assertEqual(ele1.split(' ')[2], ele2.split(' ')[2])
+
