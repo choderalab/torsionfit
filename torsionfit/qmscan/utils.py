@@ -310,18 +310,15 @@ def get_atom_map(tagged_smiles, molecule=None):
     molecule: OEMol. Only if no OEMol was provided.
 
     """
-    pattern = oechem.OEMol()
     target = molecule
     if not molecule:
         target = oechem.OEMol()
         oechem.OESmilesToMol(target, tagged_smiles)
 
-    oechem.OESmilesToMol(pattern, tagged_smiles)
-
-    atomexpr = oechem.OEExprOpts_DefaultAtoms
-    bondexpr = oechem.OEExprOpts_DefaultBonds
     # create maximum common substructure object
-    mcss = oechem.OEMCSSearch(pattern, atomexpr, bondexpr, oechem.OEMCSType_Exhaustive)
+    mcss = oechem.OEMCSSearch(tagged_smiles, oechem.OEMCSType_Approximate)
+    mcss.SetMaxMatches(1)
+    mcss.SetMinAtoms(target.GetMaxAtomIdx())
     # Scoring function
     mcss.SetMCSFunc(oechem.OEMCSMaxAtoms())
 
@@ -367,9 +364,9 @@ def to_mapped_xyz(molecule, atom_map, conformer=None):
             xyz += "\n{}".format(mol.GetTitle())
             coords = oechem.OEFloatArray(mol.GetMaxAtomIdx() * 3)
             mol.GetCoords(coords)
-            for i in range(1, len(atom_map)):
-                idx = atom_map[i]
-                atom = mol.GetAtom(oechem.OEHasAtomIdx(i))
+            for mapping in range(1, len(atom_map)):
+                idx = atom_map[mapping]
+                atom = mol.GetAtom(oechem.OEHasAtomIdx(idx))
                 syb = oechem.OEGetAtomicSymbol(atom.GetAtomicNum())
 
                 xyz += "\n  {}      {:05.3f}   {:05.3f}   {:05.3f}".format(syb,
