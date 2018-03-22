@@ -5,6 +5,9 @@ from torsionfit.utils import logger
 import time
 import json
 import psi4
+import signal
+import warnings
+
 
 def write_oedatabase(moldb, ofs, mlist, size):
     """
@@ -86,14 +89,14 @@ def new_output_stream(outname):
     return ofs
 
 
-def to_oemol(filename, title=None):
+def to_oemol(filename, title=True, verbose=True):
     """Create OEMol from file. If more than one mol in file, return list of OEMols.
 
     Parameters
     ----------
     filename: str
         absolute path to
-    title: str
+    title: str, title
         title for molecule. If None, IUPAC name will be given as title.
 
     Returns
@@ -101,13 +104,25 @@ def to_oemol(filename, title=None):
     mollist: list
         list of OEMol for multiple molecules. OEMol if file only has one molecule.
     """
+
+    if not os.path.exists(filename):
+        raise Exception("File {} not found".format(filename))
+    if verbose:
+        logger().info("Loading molecules from {}".format(filename))
+
     ifs = oechem.oemolistream(filename)
-    moldb = oechem.OEMolDatabase(ifs)
+    #moldb = oechem.OEMolDatabase(ifs)
     mollist = []
 
-    for mol in moldb.GetOEMols():
-        molecule = oechem.OEMol(mol)
-        mollist.append(normalize_molecule(molecule, title))
+    molecule = oechem.OECreateOEGraphMol()
+    while oechem.OEReadMolecule(ifs, molecule):
+        molecule_copy = oechem.OEMol(molecule)
+        if title:
+            title = molecule_copy.GetTitle()
+            if verbose:
+                logger().infor("Reading molecule {}".format(title))
+
+        mollist.append(normalize_molecule(molecule_copy, title))
 
     if len(mollist) <= 1:
         mollist = mollist[0]
@@ -151,7 +166,6 @@ def normalize_molecule(molecule, title=None):
     # Check for any missing atom names, if found reassign all of them.
     if any([atom.GetName() == '' for atom in molcopy.GetAtoms()]):
         oechem.OETriposAtomNames(molcopy)
-
     return molcopy
 
 
@@ -294,7 +308,7 @@ def mol_to_tagged_smiles(infile, outfile):
         oechem.OEWriteMolecule(ofs, mol)
 
 
-def get_atom_map(tagged_smiles, molecule=None):
+def get_atom_map(tagged_smiles, molecule=None, max_time=200):
     """
     Maps tag index in SMILES to atom index in OEMol.
     Parameters
@@ -304,6 +318,8 @@ def get_atom_map(tagged_smiles, molecule=None):
     molecule: OEMOl
         The OEMol to get the map for. Default is None.
         When None, a new OEMol will be generated from SMILES. If an OEMol is provided, the map will be to that OEMol.
+    max_time: int
+        seconds. If MCSS takes longer than max_time, get_atom_map returns None
 
     Returns
     -------
@@ -327,7 +343,21 @@ def get_atom_map(tagged_smiles, molecule=None):
     atom_map = {}
     unique = True
     t1 = time.time()
-    for count, match in enumerate(mcss.Match(target, unique)):
+
+    signal.signal(signal.SIGALRM, _handle_timeout)
+    signal.alarm(max_time)
+    try:
+        matches = [m for m in mcss.Match(target, unique)]
+    except SystemError:
+        logger().info("MCSS timed out for {}, SMILES: {}".format(target.GetTitle()), tagged_smiles)
+        return None
+    finally:
+        signal.alarm(0)
+
+    if not matches:
+        logger().info("MCSS failed for {}, SMILES {}".format(target.GetTitle(), tagged_smiles))
+        return None
+    for match in matches:
         for ma in match.GetAtoms():
             atom_map[ma.pattern.GetMapIdx()] = ma.target.GetIdx()
     t2 = time.time()
@@ -343,7 +373,7 @@ def get_atom_map(tagged_smiles, molecule=None):
         return atom_map, target
 
 
-def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False):
+def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=False):
     """
     Generate xyz coordinates for molecule in the order given by the atom_map. atom_map is a dictionary that maps the
     tag on the SMILES to the atom idex in OEMol.
@@ -370,11 +400,16 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False):
                 idx = atom_map[mapping]
                 atom = mol.GetAtom(oechem.OEHasAtomIdx(idx))
                 syb = oechem.OEGetAtomicSymbol(atom.GetAtomicNum())
-
                 xyz += "  {}      {:05.3f}   {:05.3f}   {:05.3f}\n".format(syb,
                                                                            coords[idx * 3],
                                                                            coords[idx * 3 + 1],
                                                                            coords[idx * 3 + 2])
+            if not xyz_format:
+                xyz += "*"
+    if to_file:
+        file = open("{}.xyz".format(molecule.GetTitle()), 'w')
+        file.write(xyz)
+        file.close()
     return xyz
 
 
@@ -417,4 +452,9 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False):
 #
 #     psi4.json_wrapper.run_json(json_data)
 #     j = json.dump(json_data, indent=4, sort_keys=True)
-    f = open("{}.output.json".format(name))
+#
+#     f = open("{}.output.json".format(name))
+
+def _handle_timeout(signum, frame):
+    warnings.warn("MCSS timed out")
+    raise TimeoutError
