@@ -1,10 +1,9 @@
 import os
 import time
-import warnings
-import multiprocessing
 
 from openeye import oechem, oeiupac, oedepict
 from torsionfit.utils import logger
+from openmoltools import openeye
 
 
 def write_oedatabase(moldb, ofs, mlist, size):
@@ -306,66 +305,43 @@ def mol_to_tagged_smiles(infile, outfile):
         oechem.OEWriteMolecule(ofs, mol)
 
 
-def get_atom_map(tagged_smiles, molecule, max_time=200):
+def get_atom_map(tagged_smiles, molecule=None):
     """
-    Maps tag index in SMILES to atom index in OEMol.
+
     Parameters
     ----------
-    tagged_smiles: str
-        index-tagged explicit Hydrogen SMILES string
-    molecule: OEMOl
-        The OEMol to get the map for.
-    max_time: int
-        seconds. If MCSS takes longer than max_time, get_atom_map returns None
+    tagged_smiles
+    molecule
 
     Returns
     -------
-    map: dict
-        maps tag to index in returned OEMol. {map_idx: atom_idx}
-    molecule: OEMol. Only if no OEMol was provided.
 
     """
-    pool = multiprocessing.Pool(processes=1)
-    results = pool.apply_async(_try_match, args=(molecule, tagged_smiles))
+    if molecule is None:
+        molecule = openeye.smiles_to_oemol(tagged_smiles)
 
-    try:
-        atom_map = results.get(timeout=max_time)
-    except multiprocessing.TimeoutError as ex:
-        warnings.warn("MCSS timed out")
-        logger().info("MCSS timed out for {}, SMILES: {}".format(molecule.GetTitle(), tagged_smiles))
-        return None
+    ss = oechem.OESubSearch(tagged_smiles)
+    oechem.OEPrepareSearch(molecule, ss)
+    ss.SetMaxMatches(1)
 
-    return atom_map
-
-
-def _try_match(molecule, tagged_smiles):
-    target = molecule
-    if not molecule:
-        target = oechem.OEMol()
-        oechem.OESmilesToMol(target, tagged_smiles)
-
-    # create maximum common substructure object
-    mcss = oechem.OEMCSSearch(tagged_smiles, oechem.OEMCSType_Approximate)
-    mcss.SetMaxMatches(1)
-    mcss.SetMinAtoms(target.GetMaxAtomIdx())
-    # Scoring function
-    mcss.SetMCSFunc(oechem.OEMCSMaxAtoms())
     atom_map = {}
-    unique = True
     t1 = time.time()
-    matches = [m for m in mcss.Match(target, unique)]
+    matches = [m for m in ss.Match(molecule)]
     t2 = time.time()
+    seconds = t2-t1
+    logger().info("Substructure search took {} seconds".format(seconds))
     if not matches:
-        logger().info("MCSS failed for {}, smiles: {}".format(target.GetTitle(), tagged_smiles))
+        logger().info("MCSS failed for {}, smiles: {}".format(molecule.GetTitle(), tagged_smiles))
         return False
     for match in matches:
         for ma in match.GetAtoms():
             atom_map[ma.pattern.GetMapIdx()] = ma.target.GetIdx()
+
     # sanity check
     mol = oechem.OEGraphMol()
     oechem.OESubsetMol(mol, match, True)
     logger().info("Match SMILES: {}".format(oechem.OEMolToSmiles(mol)))
-    logger().info("MCSS took {} seconds".format(t2-t1))
+
     return atom_map
 
 
@@ -402,8 +378,7 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=
                                                                            coords[idx * 3],
                                                                            coords[idx * 3 + 1],
                                                                            coords[idx * 3 + 2])
-            #if not xyz_format:
-            #    xyz += "*"
+
     if to_file:
         file = open("{}.xyz".format(molecule.GetTitle()), 'w')
         file.write(xyz)
@@ -452,8 +427,3 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=
 #     j = json.dump(json_data, indent=4, sort_keys=True)
 #
 #     f = open("{}.output.json".format(name))
-
-# def _handle_timeout(signum, frame):
-#     print("received alarm")
-#     warnings.warn("MCSS timed out")
-#     raise TimeoutError
