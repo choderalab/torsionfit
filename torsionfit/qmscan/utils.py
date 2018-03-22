@@ -1,12 +1,10 @@
-from openeye import oechem, oeiupac, oedepict
 import os
-import numpy as np
-from torsionfit.utils import logger
 import time
-import json
-import psi4
-import signal
 import warnings
+import multiprocessing
+
+from openeye import oechem, oeiupac, oedepict
+from torsionfit.utils import logger
 
 
 def write_oedatabase(moldb, ofs, mlist, size):
@@ -308,7 +306,7 @@ def mol_to_tagged_smiles(infile, outfile):
         oechem.OEWriteMolecule(ofs, mol)
 
 
-def get_atom_map(tagged_smiles, molecule=None, max_time=200):
+def get_atom_map(tagged_smiles, molecule, max_time=200):
     """
     Maps tag index in SMILES to atom index in OEMol.
     Parameters
@@ -316,8 +314,7 @@ def get_atom_map(tagged_smiles, molecule=None, max_time=200):
     tagged_smiles: str
         index-tagged explicit Hydrogen SMILES string
     molecule: OEMOl
-        The OEMol to get the map for. Default is None.
-        When None, a new OEMol will be generated from SMILES. If an OEMol is provided, the map will be to that OEMol.
+        The OEMol to get the map for.
     max_time: int
         seconds. If MCSS takes longer than max_time, get_atom_map returns None
 
@@ -328,6 +325,20 @@ def get_atom_map(tagged_smiles, molecule=None, max_time=200):
     molecule: OEMol. Only if no OEMol was provided.
 
     """
+    pool = multiprocessing.Pool(processes=1)
+    results = pool.apply_async(_try_match, args=(molecule, tagged_smiles))
+
+    try:
+        atom_map = results.get(timeout=max_time)
+    except multiprocessing.TimeoutError as ex:
+        warnings.warn("MCSS timed out")
+        logger().info("MCSS timed out for {}, SMILES: {}".format(molecule.GetTitle(), tagged_smiles))
+        return None
+
+    return atom_map
+
+
+def _try_match(molecule, tagged_smiles):
     target = molecule
     if not molecule:
         target = oechem.OEMol()
@@ -339,38 +350,23 @@ def get_atom_map(tagged_smiles, molecule=None, max_time=200):
     mcss.SetMinAtoms(target.GetMaxAtomIdx())
     # Scoring function
     mcss.SetMCSFunc(oechem.OEMCSMaxAtoms())
-
     atom_map = {}
     unique = True
     t1 = time.time()
-
-    signal.signal(signal.SIGALRM, _handle_timeout)
-    signal.alarm(max_time)
-    try:
-        matches = [m for m in mcss.Match(target, unique)]
-    except SystemError:
-        logger().info("MCSS timed out for {}, SMILES: {}".format(target.GetTitle()), tagged_smiles)
-        return None
-    finally:
-        signal.alarm(0)
-
+    matches = [m for m in mcss.Match(target, unique)]
+    t2 = time.time()
     if not matches:
-        logger().info("MCSS failed for {}, SMILES {}".format(target.GetTitle(), tagged_smiles))
-        return None
+        logger().info("MCSS failed for {}, smiles: {}".format(target.GetTitle(), tagged_smiles))
+        return False
     for match in matches:
         for ma in match.GetAtoms():
             atom_map[ma.pattern.GetMapIdx()] = ma.target.GetIdx()
-    t2 = time.time()
-    logger().info('MCSS took {} seconds'.format(t2-t1))
-
-    m = oechem.OEGraphMol()
-    oechem.OESubsetMol(m, match, True)
-    logger().info("Match SMILES: {}".format(oechem.OEMolToSmiles(m)))
-
-    if molecule:
-        return atom_map
-    else:
-        return atom_map, target
+    # sanity check
+    mol = oechem.OEGraphMol()
+    oechem.OESubsetMol(mol, match, True)
+    logger().info("Match SMILES: {}".format(oechem.OEMolToSmiles(mol)))
+    logger().info("MCSS took {} seconds".format(t2-t1))
+    return atom_map
 
 
 def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=False):
@@ -396,6 +392,8 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=
                 xyz += "{}\n".format(mol.GetTitle())
             coords = oechem.OEFloatArray(mol.GetMaxAtomIdx() * 3)
             mol.GetCoords(coords)
+            if k != 0 and not xyz_format:
+                    xyz += "*"
             for mapping in range(1, len(atom_map)+1):
                 idx = atom_map[mapping]
                 atom = mol.GetAtom(oechem.OEHasAtomIdx(idx))
@@ -404,8 +402,8 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=
                                                                            coords[idx * 3],
                                                                            coords[idx * 3 + 1],
                                                                            coords[idx * 3 + 2])
-            if not xyz_format:
-                xyz += "*"
+            #if not xyz_format:
+            #    xyz += "*"
     if to_file:
         file = open("{}.xyz".format(molecule.GetTitle()), 'w')
         file.write(xyz)
@@ -455,6 +453,7 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=
 #
 #     f = open("{}.output.json".format(name))
 
-def _handle_timeout(signum, frame):
-    warnings.warn("MCSS timed out")
-    raise TimeoutError
+# def _handle_timeout(signum, frame):
+#     print("received alarm")
+#     warnings.warn("MCSS timed out")
+#     raise TimeoutError
