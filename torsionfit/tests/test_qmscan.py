@@ -96,6 +96,20 @@ class TestQmscan(unittest.TestCase):
             atom_2.SetAtomicNum(i+1)
             self.assertEqual(oechem.OECreateCanSmiString(mol_1), oechem.OECreateCanSmiString(mol_2))
 
+    @unittest.skipUnless(has_openeye, "Cannot test without OpenEye")
+    def test_atom_map_order(self):
+        """Test atom map"""
+        from openeye import oechem
+        tagged_smiles = '[H:5][C:1]#[N+:4][C:3]([H:9])([H:10])[C:2]([H:6])([H:7])[H:8]'
+        mol_from_tagged_smiles = openeye.smiles_to_oemol(tagged_smiles)
+        atom_map = utils.get_atom_map(tagged_smiles, mol_from_tagged_smiles)
+
+        # Compare atom map to tag
+        for i in range(1, len(atom_map) +1):
+            atom_1 = mol_from_tagged_smiles.GetAtom(oechem.OEHasAtomIdx(atom_map[i]))
+            self.assertEqual(i, atom_1.GetMapIdx())
+
+
     @unittest.skipUnless(has_openeye, "Cannot test without OpneEye")
     def test_mapped_xyz(self):
         """Test writing out mapped xyz"""
