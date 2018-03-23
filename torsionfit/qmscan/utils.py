@@ -307,15 +307,21 @@ def mol_to_tagged_smiles(infile, outfile):
 
 def get_atom_map(tagged_smiles, molecule=None):
     """
-
+    Returns a dictionary that maps tag on SMILES to atom index in molecule.
     Parameters
     ----------
-    tagged_smiles
-    molecule
+    tagged_smiles: str
+        index-tagged explicit hydrogen SMILES string
+    molecule: OEMol
+        molecule to generate map for. If None, a new OEMol will be generated from the tagged SMILES, the map will map to
+        this molecule and it will be returned.
 
     Returns
     -------
-
+    atom_map: dict
+        a dictionary that maps tag to atom index {tag:idx}
+    molecule: OEMol
+        If a molecule was not provided, the generated molecule will be returned.
     """
     if molecule is None:
         molecule = openeye.smiles_to_oemol(tagged_smiles)
@@ -341,23 +347,31 @@ def get_atom_map(tagged_smiles, molecule=None):
     mol = oechem.OEGraphMol()
     oechem.OESubsetMol(mol, match, True)
     logger().info("Match SMILES: {}".format(oechem.OEMolToSmiles(mol)))
+    if molecule is None:
+        return molecule, atom_map
 
     return atom_map
 
 
-def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=False):
+def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, filename=None):
     """
     Generate xyz coordinates for molecule in the order given by the atom_map. atom_map is a dictionary that maps the
     tag on the SMILES to the atom idex in OEMol.
     Parameters
     ----------
-    molecule
-    atom_map
-    conformer
+    molecule: OEMol with conformers
+    atom_map: dict
+        maps tag in SMILES to atom index
+    conformer: int
+        Which conformer to write xyz file for. If None, write out all conformers. Default is None
+    xyz_format: bool
+        If True, will write out number of atoms and molecule name. If false, will only write out elements and coordinates
+    filename: str
+        Name of file to save to. If None, only returns a string.
 
     Returns
     -------
-    str: XYZ file format
+    str: elements and xyz coordinates in order of tagged SMILES
 
     """
     xyz = ""
@@ -379,8 +393,8 @@ def to_mapped_xyz(molecule, atom_map, conformer=None, xyz_format=False, to_file=
                                                                            coords[idx * 3 + 1],
                                                                            coords[idx * 3 + 2])
 
-    if to_file:
-        file = open("{}.xyz".format(molecule.GetTitle()), 'w')
+    if filename:
+        file = open("{}.xyz".format(filename, 'w'))
         file.write(xyz)
         file.close()
     return xyz
