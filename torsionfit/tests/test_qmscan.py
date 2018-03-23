@@ -119,6 +119,6 @@ class TestQmscan(unittest.TestCase):
         atom_map_mol2 = {1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 7:6, 8:7, 9:8, 10:9, 11:10, 12:11, 13:12, 14:13, 15:14}
         xyz_2 = utils.to_mapped_xyz(mol_2, atom_map_mol2)
 
-        for ele1, ele2 in zip(xyz_1.split('\n')[3:], xyz_2.split('\n')[3:]):
+        for ele1, ele2 in zip(xyz_1.split('\n')[:-1], xyz_2.split('\n')[:-1]):
             self.assertEqual(ele1.split(' ')[2], ele2.split(' ')[2])
 
